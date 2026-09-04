@@ -1,0 +1,38 @@
+---
+description: GraphiQ agent workflow — one checklist step, local dev branch, Senuka Deneth commits, self-review before commit
+alwaysApply: true
+---
+
+# GraphiQ agent rules
+
+Follow [docs/GRAPHIQ_BUILD_GUIDE.md](docs/GRAPHIQ_BUILD_GUIDE.md). Implement only the next incomplete checklist step. Do not skip steps. Do not invent diagram kinds or replace the locked stack.
+
+## Models
+
+- Plan: Grok 4.6 Extra High
+- Build: Composer 2.5
+- If the step is marked **Escalate**, stop and tell the user to run it with Grok 4.6 Extra High (raise thinking if it still fails). Do not implement Escalate steps on Composer 2.5.
+
+## Local `dev` only
+
+- Build and verify on this machine. Deploy is not verification.
+- Work only on `dev`. If you are not on `dev`, check it out before editing.
+- After a step is done, commit on `dev`. Do not push unless the user asks.
+
+## Self-review before commit
+
+Re-read the full diff. Stay inside the step’s allowed paths. Fix every issue (types, rules, notation, tests, exhaustive `switch`/`never`). Re-run the step’s verification. Then commit. Do not commit a known broken step.
+
+## Git identity (every commit)
+
+Never run `git config`. Never use Cursor Agent as author or committer. Never `--no-verify` unless the user asks. Never `Co-authored-by`.
+
+```bash
+git -c user.name="Senuka Deneth" -c user.email="113520257+Senuka-Deneth@users.noreply.github.com" commit -m "$(cat <<'EOF'
+Add <what this step added>
+
+EOF
+)"
+```
+
+Message: one imperative sentence of what was added. No author line. No “documentation updated” / “docs updated”. GitHub contributors must remain only Senuka Deneth.
