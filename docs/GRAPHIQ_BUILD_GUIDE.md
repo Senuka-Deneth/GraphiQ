@@ -12,7 +12,7 @@ This file is the architecture bible and the **agent operating checklist**. Imple
 | Build the next step | Composer 2.5 |
 | Step marked **Escalate** | Stop before coding. Tell the user this step needs Grok 4.6 Extra High (raise thinking if the step still fails). Do not implement an Escalate step on Composer 2.5. |
 
-After every step: run the step’s verification, re-read the full diff, fix every issue, re-run verification, then commit on `dev` as Senuka Deneth. Follow `.cursor/rules/graphiq-agent.mdc`.
+After every step: run the step’s verification, re-read the full diff, fix every issue, re-run verification, then commit on `dev` as Senuka Deneth and push `dev` to `origin`. Follow `.cursor/rules/graphiq-agent.mdc`.
 
 ---
 
@@ -1018,7 +1018,7 @@ Every package that has logic ships `src/**/*.test.ts`. A step is not done if the
 - Author and committer: `Senuka Deneth` `<113520257+Senuka-Deneth@users.noreply.github.com>`.
 - Set identity per commit with `git -c user.name=... -c user.email=...`. Never `git config`. Never Cursor Agent. Never `Co-authored-by`. Never `--no-verify` unless the user asks.
 - Message: one imperative sentence of **what was added**. No author, no “docs updated”, no “documentation updated”, no issue numbers unless the user asks.
-- Do not push unless the user asks.
+- After each commit on `dev`, push to the cloud repo: `git push -u origin dev`. Never force-push.
 - Contributors on GitHub must remain only Senuka Deneth.
 
 ---
@@ -1033,6 +1033,7 @@ Before commit, the implementing agent must:
 4. Run the step’s verification commands and fix failures.
 5. Grep the diff for `any`, PlantUML, Monaco, JointJS, Dagre-as-primary, Next.js, and extra diagram kinds.
 6. Fix every issue found, then re-run verification.
+7. Commit on `dev`, then `git push -u origin dev`. Never force-push.
 
 If review finds the step is too large or an Escalate step was started on Composer 2.5, stop and say so. Do not commit a partial Escalate implementation.
 
@@ -1040,7 +1041,7 @@ If review finds the step is too large or an Escalate step was started on Compose
 
 ## 14. Agent checklist
 
-Execute **one** step per session (or one step then stop). Mark the step complete only when Done when is true and the commit exists on `dev`.
+Execute **one** step per session (or one step then stop). Mark the step complete only when Done when is true, the commit exists on `dev`, and `dev` is pushed to `origin`.
 
 Shared verification unless a step overrides it:
 
@@ -1067,7 +1068,7 @@ pnpm --filter @graphiq/web build
 
 **Out of scope:** application code
 
-**Done when:** both files exist on `dev` and are committed as Senuka Deneth.
+**Done when:** both files exist on `dev`, are committed as Senuka Deneth, and `dev` is pushed to `origin`.
 
 **Commit message:** `Add GraphiQ build guide and agent rules`
 

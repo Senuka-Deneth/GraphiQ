@@ -1,5 +1,5 @@
 ---
-description: GraphiQ agent workflow — one checklist step, local dev branch, Senuka Deneth commits, self-review before commit
+description: GraphiQ agent workflow — one checklist step, local dev branch, Senuka Deneth commits, push to origin after commit
 alwaysApply: true
 ---
 
@@ -17,11 +17,11 @@ Follow [docs/GRAPHIQ_BUILD_GUIDE.md](docs/GRAPHIQ_BUILD_GUIDE.md). Implement onl
 
 - Build and verify on this machine. Deploy is not verification.
 - Work only on `dev`. If you are not on `dev`, check it out before editing.
-- After a step is done, commit on `dev`. Do not push unless the user asks.
+- After a step is done, commit on `dev`, then push `dev` to `origin` (`git push -u origin dev`). Never force-push.
 
 ## Self-review before commit
 
-Re-read the full diff. Stay inside the step’s allowed paths. Fix every issue (types, rules, notation, tests, exhaustive `switch`/`never`). Re-run the step’s verification. Then commit. Do not commit a known broken step.
+Re-read the full diff. Stay inside the step’s allowed paths. Fix every issue (types, rules, notation, tests, exhaustive `switch`/`never`). Re-run the step’s verification. Then commit and push. Do not commit a known broken step.
 
 ## Git identity (every commit)
 
@@ -33,6 +33,7 @@ Add <what this step added>
 
 EOF
 )"
+git push -u origin dev
 ```
 
-Message: one imperative sentence of what was added. No author line. No “documentation updated” / “docs updated”. GitHub contributors must remain only Senuka Deneth.
+Message: one imperative sentence of what was added. No author line. No “documentation updated” / “docs updated”. GitHub contributors must remain only Senuka Deneth. Never force-push.
