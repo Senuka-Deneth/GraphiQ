@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureClassNode, measureObjectNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -13,22 +13,24 @@ import {
 } from "@graphiq/uml-model";
 import type { RelationshipType } from "@graphiq/uml-model";
 import { parse } from "@graphiq/uml-dsl";
-import { classAstToModel, print } from "@graphiq/uml-print";
+import { astToModel, print } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
-import { bindClassDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
+import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
+
+export type ImplementedDiagramKind = "class" | "object";
 
 export type GraphiqDocument = {
   id: string;
-  kind: "class";
+  kind: ImplementedDiagramKind;
   title: string;
   model: UmlModel;
   overlay: NotationOverlay;
   dsl: string;
 };
 
-export type RelationshipTool = Extract<
+export type ClassRelationshipTool = Extract<
   RelationshipType,
   | "association"
   | "aggregation"
@@ -38,7 +40,20 @@ export type RelationshipTool = Extract<
   | "dependency"
 >;
 
-export type StencilDropKind = "class" | "interface" | "enumeration" | "abstract-class" | "note";
+export type ObjectRelationshipTool = Extract<RelationshipType, "link" | "dependency">;
+
+export type RelationshipTool = ClassRelationshipTool | ObjectRelationshipTool;
+
+export type ClassStencilDropKind =
+  | "class"
+  | "interface"
+  | "enumeration"
+  | "abstract-class"
+  | "note";
+
+export type ObjectStencilDropKind = "instance" | "note";
+
+export type StencilDropKind = ClassStencilDropKind | ObjectStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -53,6 +68,7 @@ type DocumentStoreState = {
   setDsl: (dsl: string) => void;
   setDslEditorFocused: (focused: boolean) => void;
   setRelationshipTool: (tool: RelationshipTool) => void;
+  createDocument: (kind: ImplementedDiagramKind) => void;
   runParse: () => Promise<void>;
   updateNodePosition: (nodeId: string, x: number, y: number) => void;
   dropStencilElement: (kind: StencilDropKind, x: number, y: number) => Promise<void>;
@@ -63,19 +79,37 @@ type DocumentStoreState = {
   editFirstAttribute: (elementId: string, value: string) => Promise<void>;
 };
 
-const INITIAL_DSL = "diagram class\n";
+const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
+  class: "diagram class\n",
+  object: "diagram object\n",
+};
+
+const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
+  class: "Untitled class diagram",
+  object: "Untitled object diagram",
+};
+
+const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
+  class: "generalization",
+  object: "link",
+};
+
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
 
-function createInitialDocument(): GraphiqDocument {
-  const model = emptyModel("class");
+function createDocumentForKind(kind: ImplementedDiagramKind): GraphiqDocument {
+  const model = emptyModel(kind);
   return {
     id: createId(),
-    kind: "class",
-    title: "Untitled class diagram",
+    kind,
+    title: DEFAULT_TITLE_BY_KIND[kind],
     model,
     overlay: emptyOverlay(),
-    dsl: INITIAL_DSL,
+    dsl: INITIAL_DSL_BY_KIND[kind],
   };
+}
+
+function createInitialDocument(): GraphiqDocument {
+  return createDocumentForKind("class");
 }
 
 function hasFatalErrors(diagnostics: readonly Diagnostic[]): boolean {
@@ -95,11 +129,12 @@ function uniqueElementName(model: UmlModel, base: string): string {
 }
 
 function printDocumentDsl(document: GraphiqDocument, model: UmlModel): string {
+  const defaultTitle = DEFAULT_TITLE_BY_KIND[document.kind];
   const title =
-    document.title.trim().length > 0 && document.title !== "Untitled class diagram"
+    document.title.trim().length > 0 && document.title !== defaultTitle
       ? document.title
       : undefined;
-  return print("class", model, { name: title });
+  return print(document.kind, model, { name: title });
 }
 
 function canApplyStructuralCommand(state: DocumentStoreState): boolean {
@@ -113,7 +148,7 @@ async function commitStructuralModelChange(
   overlayPatch?: (overlay: NotationOverlay, model: UmlModel) => NotationOverlay,
 ): Promise<boolean> {
   const { document, lastGoodOverlay } = get();
-  const diagnostics = validate("class", nextModel);
+  const diagnostics = validate(document.kind, nextModel);
 
   if (hasFatalErrors(diagnostics)) {
     set({ diagnostics });
@@ -125,7 +160,7 @@ async function commitStructuralModelChange(
     Object.keys(overlayBase.nodes).length === 0
       ? "first-open-empty-overlay"
       : "topology-changed";
-  const overlay = await layoutDocument("class", nextModel, overlayBase, reason);
+  const overlay = await layoutDocument(document.kind, nextModel, overlayBase, reason);
   const dsl = printDocumentDsl(document, nextModel);
 
   set((state) => ({
@@ -174,10 +209,24 @@ function applyModelCommand(
   return commitStructuralModelChange(get, set, result.value, overlayPatch);
 }
 
-function defaultOverlayNode(model: UmlModel, elementId: string, x: number, y: number) {
+function defaultOverlayNode(
+  model: UmlModel,
+  elementId: string,
+  x: number,
+  y: number,
+) {
   const element = model.elements.find((item) => item.id === elementId);
   if (element === undefined) {
     return { x, y, width: 180, height: 72 };
+  }
+
+  if (model.kind === "object") {
+    if (element.elementType === "note") {
+      return { x, y, width: 120, height: 60 };
+    }
+    if (element.elementType === "instanceSpecification") {
+      return { x, y, ...measureObjectNode(element) };
+    }
   }
 
   if (element.elementType === "note") {
@@ -228,6 +277,19 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       set({ relationshipTool: tool });
     },
 
+    createDocument: (kind) => {
+      const document = createDocumentForKind(kind);
+      set({
+        document,
+        diagnostics: [],
+        lastGoodModel: document.model,
+        lastGoodOverlay: document.overlay,
+        dslRevision: 0,
+        parseTimer: null,
+        relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[kind],
+      });
+    },
+
     setDsl: (dsl) => {
       const { parseTimer } = get();
       if (parseTimer !== null) {
@@ -249,7 +311,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
     runParse: async () => {
       const { document, lastGoodModel, lastGoodOverlay } = get();
-      const parseResult = parse("class", document.dsl);
+      const parseResult = parse(document.kind, document.dsl);
 
       if (!parseResult.ok) {
         set({
@@ -269,9 +331,9 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         return;
       }
 
-      const model = classAstToModel(ast, lastGoodModel);
-      const modelDiagnostics = validate("class", model);
-      const diagnostics = bindClassDiagnosticSpans(ast, model, [
+      const model = astToModel(ast, lastGoodModel);
+      const modelDiagnostics = validate(document.kind, model);
+      const diagnostics = bindDiagnosticSpans(ast, model, [
         ...parseDiagnostics,
         ...modelDiagnostics,
       ]);
@@ -281,7 +343,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         Object.keys(overlayBase.nodes).length === 0
           ? "first-open-empty-overlay"
           : "topology-changed";
-      const overlay = await layoutDocument("class", model, overlayBase, reason);
+      const overlay = await layoutDocument(document.kind, model, overlayBase, reason);
 
       set({
         document: {
@@ -335,10 +397,34 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
     },
 
     dropStencilElement: async (kind, x, y) => {
+      const { document } = get();
+
       await applyModelCommand(
         get,
         set,
         (model) => {
+          if (document.kind === "object") {
+            switch (kind) {
+              case "instance":
+                return addElement(model, {
+                  elementType: "instanceSpecification",
+                  name: uniqueElementName(model, "instance"),
+                  classifierName: "Class",
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "instanceSpecification",
+                  name: uniqueElementName(model, "instance"),
+                  classifierName: "Class",
+                });
+            }
+          }
+
           switch (kind) {
             case "class":
               return addElement(model, {
@@ -407,7 +493,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
       if (
         !isConnectorAllowed({
-          kind: "class",
+          kind: document.kind,
           relationship: relationshipTool,
           source: source.elementType,
           target: target.elementType,
@@ -419,7 +505,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               id: createId(),
               ruleId: ILLEGAL_CONNECTOR_RULE_ID,
               severity: "error",
-              message: `Relationship "${relationshipTool}" from ${source.elementType} to ${target.elementType} is not allowed on a class diagram`,
+              message: `Relationship "${relationshipTool}" from ${source.elementType} to ${target.elementType} is not allowed on a ${document.kind} diagram`,
               elementIds: [sourceId, targetId],
             },
           ],

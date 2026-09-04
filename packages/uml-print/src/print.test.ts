@@ -125,7 +125,11 @@ describe("print class diagram", () => {
       throw new Error("expected initial parse to succeed");
     }
 
-    const initialModel = classAstToModel(initialParse.value.ast);
+    const initialAst = initialParse.value.ast;
+    if (initialAst.kind !== "class") {
+      throw new Error("expected class ast");
+    }
+    const initialModel = classAstToModel(initialAst);
     const printed = print("class", initialModel, { name: "OrderDomain" });
     expect(JSON.stringify(printed)).not.toMatch(/"x"|"y"|"width"|"height"/);
 
@@ -135,7 +139,11 @@ describe("print class diagram", () => {
       throw new Error("expected reparsed print to succeed");
     }
 
-    const reparsedModel = classAstToModel(reparsed.value.ast);
+    const reparsedAst = reparsed.value.ast;
+    if (reparsedAst.kind !== "class") {
+      throw new Error("expected class ast");
+    }
+    const reparsedModel = classAstToModel(reparsedAst);
     expect(modelToStructural(reparsedModel)).toEqual(
       modelToStructural(initialModel),
     );
@@ -148,8 +156,13 @@ describe("print class diagram", () => {
       throw new Error("expected initial parse to succeed");
     }
 
-    const firstModel = classAstToModel(initialParse.value.ast);
-    const secondModel = classAstToModel(initialParse.value.ast, firstModel);
+    const ast = initialParse.value.ast;
+    if (ast.kind !== "class") {
+      throw new Error("expected class ast");
+    }
+
+    const firstModel = classAstToModel(ast);
+    const secondModel = classAstToModel(ast, firstModel);
 
     expect(secondModel.elements.map((element) => element.id)).toEqual(
       firstModel.elements.map((element) => element.id),
@@ -161,7 +174,7 @@ describe("print class diagram", () => {
 
   it("throws not implemented for non-class diagram kinds", () => {
     for (const kind of DIAGRAM_KINDS) {
-      if (kind === "class") {
+      if (kind === "class" || kind === "object") {
         continue;
       }
       const model = classAstToModel({

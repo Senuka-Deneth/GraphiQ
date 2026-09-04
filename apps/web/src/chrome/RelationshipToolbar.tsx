@@ -1,6 +1,11 @@
-import type { RelationshipTool } from "../store/documentStore.js";
+import type {
+  ClassRelationshipTool,
+  ImplementedDiagramKind,
+  ObjectRelationshipTool,
+  RelationshipTool,
+} from "../store/documentStore.js";
 
-const RELATIONSHIP_TOOLS: readonly { id: RelationshipTool; label: string }[] = [
+const CLASS_RELATIONSHIP_TOOLS: readonly { id: ClassRelationshipTool; label: string }[] = [
   { id: "association", label: "Association" },
   { id: "aggregation", label: "Aggregation" },
   { id: "composition", label: "Composition" },
@@ -9,7 +14,13 @@ const RELATIONSHIP_TOOLS: readonly { id: RelationshipTool; label: string }[] = [
   { id: "dependency", label: "Dependency" },
 ] as const;
 
+const OBJECT_RELATIONSHIP_TOOLS: readonly { id: ObjectRelationshipTool; label: string }[] = [
+  { id: "link", label: "Link" },
+  { id: "dependency", label: "Dependency" },
+] as const;
+
 type RelationshipToolbarProps = {
+  diagramKind: ImplementedDiagramKind;
   selectedTool: RelationshipTool;
   onSelectTool: (tool: RelationshipTool) => void;
   onEditMember?: () => void;
@@ -17,11 +28,15 @@ type RelationshipToolbarProps = {
 };
 
 export function RelationshipToolbar({
+  diagramKind,
   selectedTool,
   onSelectTool,
   onEditMember,
   canEditMember = false,
 }: RelationshipToolbarProps) {
+  const tools =
+    diagramKind === "object" ? OBJECT_RELATIONSHIP_TOOLS : CLASS_RELATIONSHIP_TOOLS;
+
   return (
     <div
       className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white px-2 py-1.5"
@@ -30,7 +45,7 @@ export function RelationshipToolbar({
       <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
         Connect
       </span>
-      {RELATIONSHIP_TOOLS.map((tool) => (
+      {tools.map((tool) => (
         <button
           key={tool.id}
           type="button"

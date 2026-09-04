@@ -6,5 +6,6 @@ export {
   registerRule,
 } from "./registry.js";
 export { CLASS_RULES } from "./rules/class/index.js";
+export { OBJECT_RULES } from "./rules/object/index.js";
 export type { ConnectorKey, ConnectorTriple, UmlRule } from "./types.js";
 export { validate } from "./validate.js";

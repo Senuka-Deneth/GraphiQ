@@ -3,11 +3,16 @@ export type {
   AstClassifier,
   AstEnumerationClassifier,
   AstClassClassifier,
+  AstInstance,
   AstInterfaceClassifier,
+  AstObjectRelationship,
   AstOperation,
   AstOperationParameter,
   AstRelationship,
+  AstSlot,
   ClassDiagramAst,
+  DiagramAst,
+  ObjectDiagramAst,
   DslSpan,
 } from "./ast.js";
 export {

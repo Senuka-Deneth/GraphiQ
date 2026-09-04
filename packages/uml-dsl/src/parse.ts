@@ -1,7 +1,7 @@
 import { assertNever, err, ok } from "@graphiq/uml-core";
 import type { DiagramKind, Diagnostic, Result } from "@graphiq/uml-core";
 import type { CstNode } from "chevrotain";
-import type { ClassDiagramAst } from "./ast.js";
+import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst } from "./ast.js";
 import {
   KIND_MISMATCH_RULE_ID,
   headerParseDiagnostic,
@@ -11,9 +11,10 @@ import {
   unsupportedKindDiagnostic,
 } from "./diagnostics.js";
 import { parseClassCst, parseClassDocument } from "./grammars/class.js";
+import { parseObjectCst, parseObjectDocument } from "./grammars/object.js";
 
 export type ParseSuccess = {
-  ast: ClassDiagramAst;
+  ast: DiagramAst;
   cst: CstNode;
   diagnostics: Diagnostic[];
 };
@@ -30,6 +31,7 @@ export function parse(
     case "class":
       return parseClass(kind, text);
     case "object":
+      return parseObject(kind, text);
     case "package":
     case "compositeStructure":
     case "component":
@@ -84,6 +86,51 @@ function parseClass(
   });
 }
 
+function parseObject(
+  expectedKind: "object",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseObjectCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseObjectDocument(cst);
+  const completeInstances = ast.instances.filter((instance) =>
+    instanceDeclarationHasColon(text, instance),
+  );
+
+  return ok({
+    ast: {
+      ...ast,
+      instances: completeInstances,
+    },
+    cst,
+    diagnostics,
+  });
+}
+
+function instanceDeclarationHasColon(text: string, instance: ObjectDiagramAst["instances"][number]): boolean {
+  const snippet = text.slice(instance.span.start, instance.span.end);
+  return /:\s*[A-Za-z_]/.test(snippet);
+}
+
 function detectHeaderKindMismatch(
   text: string,
   expectedKind: DiagramKind,
@@ -108,3 +155,5 @@ function detectHeaderKindMismatch(
     },
   };
 }
+
+export type { ClassDiagramAst, ObjectDiagramAst, DiagramAst };

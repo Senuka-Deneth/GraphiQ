@@ -1,64 +1,54 @@
 import { describe, expect, it } from "vitest";
 import type { Diagnostic } from "@graphiq/uml-core";
-import type { ClassDiagramAst } from "@graphiq/uml-dsl";
-import { bindClassDiagnosticSpans, buildDiagnosticSeverityMap } from "./bindDiagnosticSpans.js";
+import type { ObjectDiagramAst } from "@graphiq/uml-dsl";
+import { bindDiagnosticSpans, buildDiagnosticSeverityMap } from "./bindDiagnosticSpans.js";
 
-const sampleAst: ClassDiagramAst = {
-  kind: "class",
-  classifiers: [
+const sampleObjectAst: ObjectDiagramAst = {
+  kind: "object",
+  instances: [
     {
-      classifierKind: "class",
-      name: "A",
-      isAbstract: false,
-      attributes: [],
-      operations: [],
+      name: "a",
+      classifierName: "Order",
+      slots: [],
       span: { start: 20, end: 40 },
-    },
-    {
-      classifierKind: "interface",
-      name: "B",
-      attributes: [],
-      operations: [],
-      span: { start: 42, end: 62 },
     },
   ],
   relationships: [
     {
-      sourceName: "A",
-      targetName: "B",
-      relationshipType: "generalization",
-      span: { start: 64, end: 74 },
+      sourceName: "a",
+      targetName: "b",
+      relationshipType: "link",
+      span: { start: 42, end: 52 },
     },
   ],
-  span: { start: 0, end: 74 },
+  span: { start: 0, end: 52 },
 };
 
-describe("bindClassDiagnosticSpans", () => {
-  it("copies relationship span onto model diagnostics", () => {
+describe("bindDiagnosticSpans", () => {
+  it("copies object relationship span onto model diagnostics", () => {
     const model = {
       id: "m1",
-      kind: "class" as const,
+      kind: "object" as const,
       elements: [
         {
           id: "el-a",
-          elementType: "class" as const,
-          name: "A",
-          isAbstract: false,
-          attributes: [],
-          operations: [],
+          elementType: "instanceSpecification" as const,
+          name: "a",
+          classifierName: "Order",
+          slots: [],
         },
         {
           id: "el-b",
-          elementType: "interface" as const,
-          name: "B",
-          attributes: [],
-          operations: [],
+          elementType: "instanceSpecification" as const,
+          name: "b",
+          classifierName: "LineItem",
+          slots: [],
         },
       ],
       relationships: [
         {
           id: "rel-1",
-          relationshipType: "generalization" as const,
+          relationshipType: "link" as const,
           sourceId: "el-a",
           targetId: "el-b",
         },
@@ -68,15 +58,15 @@ describe("bindClassDiagnosticSpans", () => {
     const diagnostics: Diagnostic[] = [
       {
         id: "d1",
-        ruleId: "class.gen.same-metaclass",
+        ruleId: "object.link-two-instances",
         severity: "error",
-        message: "bad generalization",
-        elementIds: ["rel-1", "el-a", "el-b"],
+        message: "bad link",
+        elementIds: ["rel-1"],
       },
     ];
 
-    const bound = bindClassDiagnosticSpans(sampleAst, model, diagnostics);
-    expect(bound[0]?.dslSpan).toEqual({ start: 64, end: 74 });
+    const bound = bindDiagnosticSpans(sampleObjectAst, model, diagnostics);
+    expect(bound[0]?.dslSpan).toEqual({ start: 42, end: 52 });
   });
 });
 

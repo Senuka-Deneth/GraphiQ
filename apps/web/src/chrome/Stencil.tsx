@@ -1,4 +1,9 @@
-import type { StencilDropKind } from "../store/documentStore.js";
+import type {
+  ClassStencilDropKind,
+  ImplementedDiagramKind,
+  ObjectStencilDropKind,
+  StencilDropKind,
+} from "../store/documentStore.js";
 
 export type StencilItem = {
   id: StencilDropKind;
@@ -13,11 +18,31 @@ export const CLASS_STENCIL_ITEMS: readonly StencilItem[] = [
   { id: "note", label: "Note" },
 ] as const;
 
+export const OBJECT_STENCIL_ITEMS: readonly StencilItem[] = [
+  { id: "instance", label: "Instance" },
+  { id: "note", label: "Note" },
+] as const;
+
+export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly StencilItem[] {
+  switch (kind) {
+    case "class":
+      return CLASS_STENCIL_ITEMS;
+    case "object":
+      return OBJECT_STENCIL_ITEMS;
+    default:
+      return CLASS_STENCIL_ITEMS;
+  }
+}
+
+export type { ClassStencilDropKind, ObjectStencilDropKind, StencilDropKind };
+
 type StencilProps = {
-  items?: readonly StencilItem[];
+  kind: ImplementedDiagramKind;
 };
 
-export function Stencil({ items = CLASS_STENCIL_ITEMS }: StencilProps) {
+export function Stencil({ kind }: StencilProps) {
+  const items = stencilItemsForKind(kind);
+
   return (
     <aside
       className="flex w-44 shrink-0 flex-col border-r border-slate-300 bg-white"

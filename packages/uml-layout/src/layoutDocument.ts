@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import type { DiagramKind } from "@graphiq/uml-core";
 import type { UmlModel } from "@graphiq/uml-model";
 import { layoutClass } from "./layoutClass.js";
+import { layoutObject } from "./layoutObject.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
 import { reasonToLayoutMode } from "./overlay.js";
 
@@ -17,6 +18,7 @@ export async function layoutDocument(
     case "class":
       return layoutClass(model, overlay, mode);
     case "object":
+      return layoutObject(model, overlay, mode);
     case "package":
     case "compositeStructure":
     case "component":

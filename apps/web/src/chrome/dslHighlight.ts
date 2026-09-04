@@ -34,6 +34,8 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "interface",
       "enum",
       "abstract",
+      "object",
+      "instance",
     ] as const;
 
     for (const keyword of keywords) {

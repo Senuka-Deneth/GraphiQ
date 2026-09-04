@@ -5,6 +5,7 @@ import type { UmlModel } from "@graphiq/uml-model";
 import { isConnectorAllowed } from "./connectors.js";
 import { getRegisteredRules } from "./registry.js";
 import { CLASS_RULES } from "./rules/class/index.js";
+import { OBJECT_RULES } from "./rules/object/index.js";
 import type { UmlRule } from "./types.js";
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -15,6 +16,7 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
     case "class":
       return CLASS_RULES;
     case "object":
+      return OBJECT_RULES;
     case "package":
     case "compositeStructure":
     case "component":

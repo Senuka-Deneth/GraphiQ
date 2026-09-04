@@ -73,3 +73,34 @@ export type ClassDiagramAst = {
   relationships: AstRelationship[];
   span: DslSpan;
 };
+
+export type AstSlot = {
+  featureName: string;
+  value: string;
+  span: DslSpan;
+};
+
+export type AstInstance = {
+  name: string;
+  classifierName: string;
+  slots: AstSlot[];
+  span: DslSpan;
+};
+
+export type AstObjectRelationship = {
+  sourceName: string;
+  targetName: string;
+  relationshipType: Extract<RelationshipType, "link" | "dependency">;
+  name?: string;
+  span: DslSpan;
+};
+
+export type ObjectDiagramAst = {
+  kind: "object";
+  name?: string;
+  instances: AstInstance[];
+  relationships: AstObjectRelationship[];
+  span: DslSpan;
+};
+
+export type DiagramAst = ClassDiagramAst | ObjectDiagramAst;

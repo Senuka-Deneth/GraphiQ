@@ -1,71 +1,105 @@
 import type { Diagnostic } from "@graphiq/uml-core";
-import type { ClassDiagramAst } from "@graphiq/uml-dsl";
+import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst } from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
 
-function findAstRelationshipSpan(
+function findClassRelationshipSpan(
   ast: ClassDiagramAst,
   sourceName: string,
   targetName: string,
   relationshipType: string,
-): { start: number; end: number } | undefined {
-  const match = ast.relationships.find(
+) {
+  return ast.relationships.find(
     (relationship) =>
       relationship.sourceName === sourceName &&
       relationship.targetName === targetName &&
       relationship.relationshipType === relationshipType,
-  );
-  return match?.span;
+  )?.span;
 }
 
-function findAstClassifierSpan(
-  ast: ClassDiagramAst,
-  name: string,
-): { start: number; end: number } | undefined {
-  const match = ast.classifiers.find((classifier) => classifier.name === name);
-  return match?.span;
+function findClassClassifierSpan(ast: ClassDiagramAst, name: string) {
+  return ast.classifiers.find((classifier) => classifier.name === name)?.span;
 }
 
-export function bindClassDiagnosticSpans(
-  ast: ClassDiagramAst,
+function findObjectRelationshipSpan(
+  ast: ObjectDiagramAst,
+  sourceName: string,
+  targetName: string,
+  relationshipType: string,
+) {
+  return ast.relationships.find(
+    (relationship) =>
+      relationship.sourceName === sourceName &&
+      relationship.targetName === targetName &&
+      relationship.relationshipType === relationshipType,
+  )?.span;
+}
+
+function findObjectInstanceSpan(ast: ObjectDiagramAst, name: string) {
+  return ast.instances.find((instance) => instance.name === name)?.span;
+}
+
+function bindOneDiagnostic(
+  ast: DiagramAst,
   model: UmlModel,
-  diagnostics: readonly Diagnostic[],
-): Diagnostic[] {
+  diagnostic: Diagnostic,
+): Diagnostic {
+  if (diagnostic.dslSpan !== undefined) {
+    return diagnostic;
+  }
+
   const nameById = new Map(model.elements.map((element) => [element.id, element.name]));
 
-  return diagnostics.map((diagnostic) => {
-    if (diagnostic.dslSpan !== undefined) {
-      return diagnostic;
-    }
-
-    for (const elementId of diagnostic.elementIds) {
-      const relationship = model.relationships.find((item) => item.id === elementId);
-      if (relationship !== undefined) {
-        const sourceName = nameById.get(relationship.sourceId);
-        const targetName = nameById.get(relationship.targetId);
-        if (sourceName !== undefined && targetName !== undefined) {
-          const span = findAstRelationshipSpan(
-            ast,
-            sourceName,
-            targetName,
-            relationship.relationshipType,
-          );
-          if (span !== undefined) {
-            return { ...diagnostic, dslSpan: span };
-          }
-        }
-      }
-
-      const element = model.elements.find((item) => item.id === elementId);
-      if (element !== undefined) {
-        const span = findAstClassifierSpan(ast, element.name);
+  for (const elementId of diagnostic.elementIds) {
+    const relationship = model.relationships.find((item) => item.id === elementId);
+    if (relationship !== undefined) {
+      const sourceName = nameById.get(relationship.sourceId);
+      const targetName = nameById.get(relationship.targetId);
+      if (sourceName !== undefined && targetName !== undefined) {
+        const span =
+          ast.kind === "class"
+            ? findClassRelationshipSpan(
+                ast,
+                sourceName,
+                targetName,
+                relationship.relationshipType,
+              )
+            : ast.kind === "object"
+              ? findObjectRelationshipSpan(
+                  ast,
+                  sourceName,
+                  targetName,
+                  relationship.relationshipType,
+                )
+              : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
         }
       }
     }
 
-    return diagnostic;
-  });
+    const element = model.elements.find((item) => item.id === elementId);
+    if (element !== undefined) {
+      const span =
+        ast.kind === "class"
+          ? findClassClassifierSpan(ast, element.name)
+          : ast.kind === "object"
+            ? findObjectInstanceSpan(ast, element.name)
+            : undefined;
+      if (span !== undefined) {
+        return { ...diagnostic, dslSpan: span };
+      }
+    }
+  }
+
+  return diagnostic;
+}
+
+export function bindDiagnosticSpans(
+  ast: DiagramAst,
+  model: UmlModel,
+  diagnostics: readonly Diagnostic[],
+): Diagnostic[] {
+  return diagnostics.map((diagnostic) => bindOneDiagnostic(ast, model, diagnostic));
 }
 
 export type DiagnosticSeverity = "error" | "warning";

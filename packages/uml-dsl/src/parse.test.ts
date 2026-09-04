@@ -26,6 +26,9 @@ describe("parse class diagram", () => {
 
     const { ast } = result.value;
     expect(ast.kind).toBe("class");
+    if (ast.kind !== "class") {
+      throw new Error("expected class ast");
+    }
     expect(ast.name).toBe("OrderDomain");
     expect(ast.classifiers).toHaveLength(4);
 
@@ -173,6 +176,9 @@ class Good {
     expect(result.value.diagnostics.some((item) => item.ruleId === PARSE_RULE_ID)).toBe(
       true,
     );
+    if (result.value.ast.kind !== "class") {
+      throw new Error("expected class ast");
+    }
     expect(
       result.value.ast.classifiers.some(
         (classifier) =>
@@ -183,7 +189,7 @@ class Good {
 
   it("returns dsl.unsupported-kind for non-class diagram kinds", () => {
     for (const kind of DIAGRAM_KINDS) {
-      if (kind === "class") {
+      if (kind === "class" || kind === "object") {
         continue;
       }
 
@@ -219,6 +225,9 @@ class Good {}`,
     expect(
       result.value.diagnostics.some((item) => item.ruleId === PARSE_RULE_ID),
     ).toBe(true);
+    if (result.value.ast.kind !== "class") {
+      throw new Error("expected class ast");
+    }
     expect(
       result.value.ast.classifiers.some(
         (classifier) =>

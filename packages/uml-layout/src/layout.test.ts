@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addElement, emptyModel } from "@graphiq/uml-model";
 import { layoutDocument } from "./layoutDocument.js";
+import { layoutObject } from "./layoutObject.js";
 import { createClassFixtureModel, layoutClass, measureClassNode } from "./layoutClass.js";
 import { emptyOverlay } from "./overlay.js";
 
@@ -89,6 +90,43 @@ describe("layoutClass", () => {
     expect(addedNode).toBeDefined();
     expect(Number.isFinite(addedNode?.x)).toBe(true);
     expect(Number.isFinite(addedNode?.y)).toBe(true);
+  });
+});
+
+describe("layoutObject", () => {
+  it("lays out instances with finite coordinates left-to-right", async () => {
+    let model = emptyModel("object");
+    const a = addElement(model, {
+      elementType: "instanceSpecification",
+      name: "a",
+      classifierName: "Order",
+    });
+    const b = addElement(a.ok ? a.value : model, {
+      elementType: "instanceSpecification",
+      name: "b",
+      classifierName: "LineItem",
+    });
+    if (!a.ok || !b.ok) {
+      throw new Error("expected instances");
+    }
+    model = b.value;
+
+    const overlay = await layoutObject(model, emptyOverlay(), "full");
+    const aId = model.elements.find((element) => element.name === "a")?.id;
+    const bId = model.elements.find((element) => element.name === "b")?.id;
+    const aNode = aId !== undefined ? overlay.nodes[aId] : undefined;
+    const bNode = bId !== undefined ? overlay.nodes[bId] : undefined;
+
+    for (const node of [aNode, bNode]) {
+      expect(node).toBeDefined();
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+    }
+
+    if (aNode === undefined || bNode === undefined) {
+      throw new Error("expected positioned nodes");
+    }
+    expect(bNode.x).toBeGreaterThanOrEqual(aNode.x);
   });
 });
 

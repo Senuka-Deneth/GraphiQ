@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import type { DiagramKind } from "@graphiq/uml-core";
 import type { UmlModel } from "@graphiq/uml-model";
 import { printClass } from "./printClass.js";
+import { printObject } from "./printObject.js";
 
 export type PrintOptions = {
   cst?: unknown;
@@ -13,6 +14,7 @@ export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions
     case "class":
       return printClass(model, { name: options?.name });
     case "object":
+      return printObject(model, { name: options?.name });
     case "package":
     case "compositeStructure":
     case "component":
