@@ -6,8 +6,11 @@ import { dslHighlightExtension } from "./dslHighlight.js";
 
 type DslEditorProps = {
   value?: string;
+  revision?: number;
   onChange?: (value: string) => void;
   readOnly?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 };
 
 const editorTheme = EditorView.theme({
@@ -37,15 +40,23 @@ const editorTheme = EditorView.theme({
 });
 
 export function DslEditor({
-  value = "// GraphiQ DSL\n",
+  value = "diagram class\n",
+  revision = 0,
   onChange,
   readOnly = false,
+  onFocus,
+  onBlur,
 }: DslEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
+  const onFocusRef = useRef(onFocus);
+  const onBlurRef = useRef(onBlur);
+  const lastRevisionRef = useRef(revision);
 
   onChangeRef.current = onChange;
+  onFocusRef.current = onFocus;
+  onBlurRef.current = onBlur;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -56,6 +67,13 @@ export function DslEditor({
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         onChangeRef.current?.(update.state.doc.toString());
+      }
+      if (update.focusChanged) {
+        if (update.view.hasFocus) {
+          onFocusRef.current?.();
+        } else {
+          onBlurRef.current?.();
+        }
       }
     });
 
@@ -92,13 +110,18 @@ export function DslEditor({
       return;
     }
 
+    if (lastRevisionRef.current === revision) {
+      return;
+    }
+
+    lastRevisionRef.current = revision;
     const current = view.state.doc.toString();
     if (current !== value) {
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
       });
     }
-  }, [value]);
+  }, [revision, value]);
 
   return (
     <div

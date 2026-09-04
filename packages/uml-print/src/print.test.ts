@@ -141,6 +141,24 @@ describe("print class diagram", () => {
     );
   });
 
+  it("preserves element ids when applying the same AST twice", () => {
+    const initialParse = parse("class", orderDomainFixture);
+    expect(initialParse.ok).toBe(true);
+    if (!initialParse.ok) {
+      throw new Error("expected initial parse to succeed");
+    }
+
+    const firstModel = classAstToModel(initialParse.value.ast);
+    const secondModel = classAstToModel(initialParse.value.ast, firstModel);
+
+    expect(secondModel.elements.map((element) => element.id)).toEqual(
+      firstModel.elements.map((element) => element.id),
+    );
+    expect(secondModel.relationships.map((relationship) => relationship.id)).toEqual(
+      firstModel.relationships.map((relationship) => relationship.id),
+    );
+  });
+
   it("throws not implemented for non-class diagram kinds", () => {
     for (const kind of DIAGRAM_KINDS) {
       if (kind === "class") {

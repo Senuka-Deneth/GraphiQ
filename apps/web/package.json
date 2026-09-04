@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
@@ -14,15 +15,20 @@
     "@codemirror/state": "^6.7.3",
     "@codemirror/view": "^6.43.11",
     "@graphiq/uml-core": "workspace:*",
+    "@graphiq/uml-dsl": "workspace:*",
     "@graphiq/uml-layout": "workspace:*",
     "@graphiq/uml-model": "workspace:*",
     "@graphiq/uml-notation": "workspace:*",
+    "@graphiq/uml-print": "workspace:*",
+    "@graphiq/uml-rules": "workspace:*",
     "@lezer/highlight": "^1.2.3",
     "@xyflow/react": "^12.10.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

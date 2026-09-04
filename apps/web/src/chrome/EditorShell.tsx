@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useDocumentStore } from "../store/documentStore.js";
 import { ClassCanvas } from "../canvas/class/ClassCanvas.js";
 import { DiagnosticsList } from "./DiagnosticsList.js";
 import { DslEditor } from "./DslEditor.js";
 import { Stencil } from "./Stencil.js";
 
 export function EditorShell() {
-  const [title, setTitle] = useState("Untitled class diagram");
-  const [dsl, setDsl] = useState("// GraphiQ DSL\n");
+  const title = useDocumentStore((state) => state.document.title);
+  const dsl = useDocumentStore((state) => state.document.dsl);
+  const dslRevision = useDocumentStore((state) => state.dslRevision);
+  const diagnostics = useDocumentStore((state) => state.diagnostics);
+  const setTitle = useDocumentStore((state) => state.setTitle);
+  const setDsl = useDocumentStore((state) => state.setDsl);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -38,11 +42,11 @@ export function EditorShell() {
           <div className="border-b border-slate-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
             DSL
           </div>
-          <DslEditor value={dsl} onChange={setDsl} />
+          <DslEditor value={dsl} revision={dslRevision} onChange={setDsl} />
         </div>
       </div>
 
-      <DiagnosticsList />
+      <DiagnosticsList diagnostics={diagnostics} />
     </div>
   );
 }

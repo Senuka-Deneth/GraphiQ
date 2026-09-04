@@ -1,8 +1,13 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { App } from "./App";
+import { resetDocumentStoreForTests } from "./store/documentStore";
 
 describe("App", () => {
+  afterEach(() => {
+    resetDocumentStoreForTests();
+  });
+
   it("renders the GraphiQ heading", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: "GraphiQ" })).toBeInTheDocument();
