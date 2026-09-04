@@ -3,6 +3,7 @@ import type { DiagramKind, Diagnostic } from "@graphiq/uml-core";
 import { isElementAllowedOn } from "@graphiq/uml-model";
 import type { UmlModel } from "@graphiq/uml-model";
 import { isConnectorAllowed } from "./connectors.js";
+import "./rules/index.js";
 import { getRegisteredRules } from "./registry.js";
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";

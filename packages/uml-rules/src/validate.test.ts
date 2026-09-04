@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createId, DIAGRAM_KINDS } from "@graphiq/uml-core";
 import type { Diagnostic } from "@graphiq/uml-core";
 import { addElement, addRelationship, emptyModel } from "@graphiq/uml-model";
@@ -25,13 +25,20 @@ import {
   clearRegisteredRules,
   registerRule,
 } from "./registry.js";
+import { registerClassRules } from "./rules/class/index.js";
 import { validate } from "./validate.js";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+beforeEach(() => {
+  clearRegisteredRules();
+  registerClassRules();
+});
+
 afterEach(() => {
   clearRegisteredRules();
+  registerClassRules();
 });
 
 describe("validate", () => {
@@ -42,7 +49,7 @@ describe("validate", () => {
     }
   });
 
-  it("reports illegal-connector for a class generalization until the matrix is filled", () => {
+  it("allows class generalization when the matrix is filled", () => {
     let model = emptyModel("class");
 
     const first = addElement(model, { elementType: "class", name: "A" });
@@ -71,20 +78,7 @@ describe("validate", () => {
     }
     model = withRelationship.value;
 
-    const diagnostics = validate("class", model);
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      ruleId: "rules.illegal-connector",
-      severity: "error",
-      elementIds: [
-        model.relationships[0]?.id,
-        sourceId,
-        targetId,
-      ],
-    });
-    expect(diagnostics[0]?.id).toMatch(UUID_PATTERN);
-    expect(diagnostics[0]?.message).toContain("generalization");
-    expect(diagnostics[0]?.message).toContain("class");
+    expect(validate("class", model)).toEqual([]);
   });
 
   it("reports illegal-element-on-diagram for a forged lifeline on a class model", () => {
@@ -100,13 +94,15 @@ describe("validate", () => {
     };
 
     const diagnostics = validate("class", model);
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      ruleId: "rules.illegal-element-on-diagram",
-      severity: "error",
-      elementIds: [model.elements[0]?.id],
-      message: 'Element type "lifeline" is not allowed on a class diagram',
-    });
+    expect(diagnostics.length).toBeGreaterThanOrEqual(1);
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({
+        ruleId: "rules.illegal-element-on-diagram",
+        severity: "error",
+        elementIds: [model.elements[0]?.id],
+        message: 'Element type "lifeline" is not allowed on a class diagram',
+      }),
+    );
     expect(diagnostics[0]?.id).toMatch(UUID_PATTERN);
   });
 
@@ -138,8 +134,8 @@ describe("validate", () => {
 });
 
 describe("connector matrices", () => {
-  it("exports empty matrices for all 14 kinds", () => {
-    expect(CLASS_CONNECTORS).toHaveLength(0);
+  it("exports empty matrices for non-class kinds and a filled class matrix", () => {
+    expect(CLASS_CONNECTORS.length).toBeGreaterThan(0);
     expect(OBJECT_CONNECTORS).toHaveLength(0);
     expect(PACKAGE_CONNECTORS).toHaveLength(0);
     expect(COMPOSITE_STRUCTURE_CONNECTORS).toHaveLength(0);
@@ -155,17 +151,32 @@ describe("connector matrices", () => {
     expect(INTERACTION_OVERVIEW_CONNECTORS).toHaveLength(0);
 
     for (const kind of DIAGRAM_KINDS) {
-      expect(getConnectorMatrix(kind)).toHaveLength(0);
+      if (kind === "class") {
+        expect(getConnectorMatrix(kind).length).toBeGreaterThan(0);
+      } else {
+        expect(getConnectorMatrix(kind)).toHaveLength(0);
+      }
     }
   });
 
-  it("rejects class generalization triples while the class matrix is empty", () => {
+  it("allows class generalization triples in the class matrix", () => {
     expect(
       isConnectorAllowed({
         kind: "class",
         relationship: "generalization",
         source: "class",
         target: "class",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects class generalization to interface in the class matrix", () => {
+    expect(
+      isConnectorAllowed({
+        kind: "class",
+        relationship: "generalization",
+        source: "class",
+        target: "interface",
       }),
     ).toBe(false);
   });
