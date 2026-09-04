@@ -7,6 +7,7 @@ import type {
   ObjectRelationshipTool,
   PackageRelationshipTool,
   ProfileRelationshipTool,
+  UseCaseRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -49,6 +50,13 @@ const PROFILE_RELATIONSHIP_TOOLS: readonly { id: ProfileRelationshipTool; label:
   { id: "generalization", label: "Generalization" },
 ] as const;
 
+const USE_CASE_RELATIONSHIP_TOOLS: readonly { id: UseCaseRelationshipTool; label: string }[] = [
+  { id: "association", label: "Association" },
+  { id: "include", label: "Include" },
+  { id: "extend", label: "Extend" },
+  { id: "generalization", label: "Generalization" },
+] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -63,6 +71,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return DEPLOYMENT_RELATIONSHIP_TOOLS;
     case "profile":
       return PROFILE_RELATIONSHIP_TOOLS;
+    case "useCase":
+      return USE_CASE_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }

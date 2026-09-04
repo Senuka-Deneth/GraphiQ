@@ -33,6 +33,11 @@ export type {
   AstProfileRelationship,
   AstStereotypeDeclaration,
   AstTaggedValue,
+  AstActorDeclaration,
+  AstUseCaseDeclaration,
+  AstSubjectDeclaration,
+  AstUseCaseRelationship,
+  UseCaseDiagramAst,
   DslSpan,
 } from "./ast.js";
 export {

@@ -13,3 +13,5 @@ export { packageAstToModel } from "./packageAstToModel.js";
 export { printPackage, structuralPackageModel } from "./printPackage.js";
 export { profileAstToModel } from "./profileAstToModel.js";
 export { printProfile, structuralProfileModel } from "./printProfile.js";
+export { useCaseAstToModel } from "./useCaseAstToModel.js";
+export { printUseCase, structuralUseCaseModel } from "./printUseCase.js";

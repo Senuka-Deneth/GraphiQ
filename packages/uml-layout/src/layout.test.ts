@@ -290,6 +290,52 @@ describe("layoutProfile", () => {
   });
 });
 
+describe("layoutUseCase", () => {
+  it("places actors outside the subject boundary", async () => {
+    let model = emptyModel("useCase");
+    const subject = addElement(model, { elementType: "subject", name: "Shop" });
+    if (!subject.ok) {
+      throw new Error("expected subject");
+    }
+    model = subject.value;
+    const subjectId = model.elements.find((element) => element.name === "Shop")?.id;
+    if (subjectId === undefined) {
+      throw new Error("expected subject id");
+    }
+
+    const checkout = addElement(model, {
+      elementType: "useCase",
+      name: "Checkout",
+      parentId: subjectId,
+    });
+    if (!checkout.ok) {
+      throw new Error("expected use case");
+    }
+    model = checkout.value;
+
+    const customer = addElement(model, { elementType: "actor", name: "Customer" });
+    if (!customer.ok) {
+      throw new Error("expected actor");
+    }
+    model = customer.value;
+
+    const overlay = await layoutDocument(
+      "useCase",
+      model,
+      emptyOverlay(),
+      "first-open-empty-overlay",
+    );
+
+    const actorNode = overlay.nodes[customer.value.elements.find((e) => e.name === "Customer")!.id];
+    const subjectNode = overlay.nodes[subjectId];
+    expect(actorNode).toBeDefined();
+    expect(subjectNode).toBeDefined();
+    if (actorNode && subjectNode) {
+      expect(actorNode.x + actorNode.width).toBeLessThanOrEqual(subjectNode.x);
+    }
+  });
+});
+
 describe("layoutDocument", () => {
   it("throws for non-implemented diagram kinds", async () => {
     const model = emptyModel("sequence");
@@ -298,7 +344,7 @@ describe("layoutDocument", () => {
     ).rejects.toThrow("layout not implemented for sequence");
 
     await expect(
-      layoutDocument("useCase", emptyModel("useCase"), emptyOverlay(), "topology-changed"),
-    ).rejects.toThrow("layout not implemented for useCase");
+      layoutDocument("compositeStructure", emptyModel("compositeStructure"), emptyOverlay(), "topology-changed"),
+    ).rejects.toThrow("layout not implemented for compositeStructure");
   });
 });

@@ -295,10 +295,47 @@ export type ProfileDiagramAst = {
   span: DslSpan;
 };
 
+export type AstActorDeclaration = {
+  name: string;
+  span: DslSpan;
+};
+
+export type AstUseCaseDeclaration = {
+  name: string;
+  span: DslSpan;
+};
+
+export type AstSubjectDeclaration = {
+  name: string;
+  useCases: AstUseCaseDeclaration[];
+  span: DslSpan;
+};
+
+export type AstUseCaseRelationship = {
+  sourceName: string;
+  targetName: string;
+  relationshipType: Extract<
+    RelationshipType,
+    "association" | "include" | "extend" | "generalization" | "dependency"
+  >;
+  span: DslSpan;
+};
+
+export type UseCaseDiagramAst = {
+  kind: "useCase";
+  name?: string;
+  actors: AstActorDeclaration[];
+  subjects: AstSubjectDeclaration[];
+  useCases: AstUseCaseDeclaration[];
+  relationships: AstUseCaseRelationship[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
   | PackageDiagramAst
   | ComponentDiagramAst
   | DeploymentDiagramAst
-  | ProfileDiagramAst;
+  | ProfileDiagramAst
+  | UseCaseDiagramAst;

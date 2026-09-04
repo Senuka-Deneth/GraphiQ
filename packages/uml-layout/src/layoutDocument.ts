@@ -7,6 +7,7 @@ import { layoutDeployment } from "./layoutDeployment.js";
 import { layoutObject } from "./layoutObject.js";
 import { layoutPackage } from "./layoutPackage.js";
 import { layoutProfile } from "./layoutProfile.js";
+import { layoutUseCase } from "./layoutUseCase.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
 import { reasonToLayoutMode } from "./overlay.js";
 
@@ -31,8 +32,9 @@ export async function layoutDocument(
       return layoutDeployment(model, overlay, mode);
     case "profile":
       return layoutProfile(model, overlay, mode);
-    case "compositeStructure":
     case "useCase":
+      return layoutUseCase(model, overlay, mode);
+    case "compositeStructure":
     case "activity":
     case "stateMachine":
     case "sequence":

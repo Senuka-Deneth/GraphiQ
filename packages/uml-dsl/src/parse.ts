@@ -1,7 +1,7 @@
 import { assertNever, err, ok } from "@graphiq/uml-core";
 import type { DiagramKind, Diagnostic, Result } from "@graphiq/uml-core";
 import type { CstNode } from "chevrotain";
-import type { ClassDiagramAst, ComponentDiagramAst, DeploymentDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst, ProfileDiagramAst } from "./ast.js";
+import type { ClassDiagramAst, ComponentDiagramAst, DeploymentDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst, ProfileDiagramAst, UseCaseDiagramAst } from "./ast.js";
 import {
   KIND_MISMATCH_RULE_ID,
   headerParseDiagnostic,
@@ -16,6 +16,7 @@ import { parseDeploymentCst, parseDeploymentDocument } from "./grammars/deployme
 import { parseObjectCst, parseObjectDocument } from "./grammars/object.js";
 import { parsePackageCst, parsePackageDocument } from "./grammars/package.js";
 import { parseProfileCst, parseProfileDocument } from "./grammars/profile.js";
+import { parseUseCaseCst, parseUseCaseDocument } from "./grammars/useCase.js";
 
 export type ParseSuccess = {
   ast: DiagramAst;
@@ -44,8 +45,9 @@ export function parse(
       return parseDeployment(kind, text);
     case "profile":
       return parseProfile(kind, text);
-    case "compositeStructure":
     case "useCase":
+      return parseUseCase(kind, text);
+    case "compositeStructure":
     case "activity":
     case "stateMachine":
     case "sequence":
@@ -275,6 +277,40 @@ function parseProfile(
   });
 }
 
+function parseUseCase(
+  expectedKind: "useCase",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseUseCaseCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseUseCaseDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
 function detectHeaderKindMismatch(
   text: string,
   expectedKind: DiagramKind,
@@ -307,5 +343,6 @@ export type {
   ObjectDiagramAst,
   PackageDiagramAst,
   ProfileDiagramAst,
+  UseCaseDiagramAst,
   DiagramAst,
 };

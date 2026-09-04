@@ -7,6 +7,7 @@ import type {
   ObjectDiagramAst,
   PackageDiagramAst,
   ProfileDiagramAst,
+  UseCaseDiagramAst,
 } from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
 
@@ -201,6 +202,45 @@ function findProfileRelationshipSpan(
   )?.span;
 }
 
+function findUseCaseElementSpan(ast: UseCaseDiagramAst, name: string) {
+  const actor = ast.actors.find((item) => item.name === name);
+  if (actor !== undefined) {
+    return actor.span;
+  }
+
+  for (const subject of ast.subjects) {
+    if (subject.name === name) {
+      return subject.span;
+    }
+    for (const useCase of subject.useCases) {
+      if (useCase.name === name) {
+        return useCase.span;
+      }
+    }
+  }
+
+  const standalone = ast.useCases.find((item) => item.name === name);
+  if (standalone !== undefined) {
+    return standalone.span;
+  }
+
+  return undefined;
+}
+
+function findUseCaseRelationshipSpan(
+  ast: UseCaseDiagramAst,
+  sourceName: string,
+  targetName: string,
+  relationshipType: string,
+) {
+  return ast.relationships.find(
+    (relationship) =>
+      relationship.sourceName === sourceName &&
+      relationship.targetName === targetName &&
+      relationship.relationshipType === relationshipType,
+  )?.span;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -261,7 +301,14 @@ function bindOneDiagnostic(
                       targetName,
                       relationship.relationshipType,
                     )
-                : undefined;
+                  : ast.kind === "useCase"
+                    ? findUseCaseRelationshipSpan(
+                        ast,
+                        sourceName,
+                        targetName,
+                        relationship.relationshipType,
+                      )
+                    : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
         }
@@ -283,7 +330,9 @@ function bindOneDiagnostic(
                   ? findDeploymentElementSpan(ast, element.name)
                 : ast.kind === "profile"
                   ? findProfileElementSpan(ast, element.name)
-                  : undefined;
+                  : ast.kind === "useCase"
+                    ? findUseCaseElementSpan(ast, element.name)
+                    : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };
       }

@@ -180,7 +180,8 @@ describe("print class diagram", () => {
         kind === "package" ||
         kind === "component" ||
         kind === "deployment" ||
-        kind === "profile"
+        kind === "profile" ||
+        kind === "useCase"
       ) {
         continue;
       }

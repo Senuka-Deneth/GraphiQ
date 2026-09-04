@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase";
 
 export type GraphiqDocument = {
   id: string;
@@ -63,13 +63,19 @@ export type DeploymentRelationshipTool = Extract<
 
 export type ProfileRelationshipTool = Extract<RelationshipType, "extension" | "generalization">;
 
+export type UseCaseRelationshipTool = Extract<
+  RelationshipType,
+  "association" | "include" | "extend" | "generalization"
+>;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
   | PackageRelationshipTool
   | ComponentRelationshipTool
   | DeploymentRelationshipTool
-  | ProfileRelationshipTool;
+  | ProfileRelationshipTool
+  | UseCaseRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -108,13 +114,16 @@ export type ProfileStencilDropKind =
   | "profile"
   | "note";
 
+export type UseCaseStencilDropKind = "actor" | "useCase" | "subject" | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
   | PackageStencilDropKind
   | ComponentStencilDropKind
   | DeploymentStencilDropKind
-  | ProfileStencilDropKind;
+  | ProfileStencilDropKind
+  | UseCaseStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -147,6 +156,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   component: "diagram component\n",
   deployment: "diagram deployment\n",
   profile: "diagram profile\n",
+  useCase: "diagram useCase\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -156,6 +166,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   component: "Untitled component diagram",
   deployment: "Untitled deployment diagram",
   profile: "Untitled profile diagram",
+  useCase: "Untitled use case diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -165,6 +176,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   component: "assemblyConnector",
   deployment: "communicationPath",
   profile: "extension",
+  useCase: "association",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -316,6 +328,10 @@ function defaultOverlayNode(
 
   if (model.kind === "profile") {
     return { x, y, ...measureProfileNode(element) };
+  }
+
+  if (model.kind === "useCase") {
+    return { x, y, ...measureUseCaseNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -652,6 +668,41 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 return addElement(model, {
                   elementType: "stereotype",
                   name: uniqueElementName(model, "Stereotype"),
+                });
+            }
+          }
+
+          if (document.kind === "useCase") {
+            const singleSubject = model.elements.find(
+              (element) => element.elementType === "subject" && element.parentId === undefined,
+            );
+
+            switch (kind) {
+              case "actor":
+                return addElement(model, {
+                  elementType: "actor",
+                  name: uniqueElementName(model, "Actor"),
+                });
+              case "useCase":
+                return addElement(model, {
+                  elementType: "useCase",
+                  name: uniqueElementName(model, "UseCase"),
+                  ...(singleSubject !== undefined ? { parentId: singleSubject.id } : {}),
+                });
+              case "subject":
+                return addElement(model, {
+                  elementType: "subject",
+                  name: uniqueElementName(model, "Subject"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "actor",
+                  name: uniqueElementName(model, "Actor"),
                 });
             }
           }

@@ -7,6 +7,7 @@ import { deploymentAstToModel } from "./deploymentAstToModel.js";
 import { objectAstToModel } from "./objectAstToModel.js";
 import { packageAstToModel } from "./packageAstToModel.js";
 import { profileAstToModel } from "./profileAstToModel.js";
+import { useCaseAstToModel } from "./useCaseAstToModel.js";
 
 export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
   switch (ast.kind) {
@@ -22,6 +23,8 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
       return deploymentAstToModel(ast, previous?.kind === "deployment" ? previous : undefined);
     case "profile":
       return profileAstToModel(ast, previous?.kind === "profile" ? previous : undefined);
+    case "useCase":
+      return useCaseAstToModel(ast, previous?.kind === "useCase" ? previous : undefined);
     default:
       return assertNever(ast);
   }
