@@ -3,6 +3,8 @@ import type { NotationOverlay } from "@graphiq/uml-layout";
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
 import type { ClassNodeData, ClassFlowNode } from "./ClassNode.js";
 import { classNodeTypeName } from "./ClassNode.js";
+import type { NoteFlowNode } from "./NoteNode.js";
+import { noteNodeTypeName } from "./NoteNode.js";
 import type { UmlFlowEdge } from "./UmlEdge.js";
 import { umlEdgeTypeName } from "./UmlEdge.js";
 
@@ -53,7 +55,7 @@ function elementToNodeData(element: UmlElement, overlayNode: NotationOverlay["no
   };
 }
 
-function isCanvasElement(
+function isClassLikeElement(
   element: UmlElement,
 ): element is Extract<
   UmlElement,
@@ -66,29 +68,46 @@ function isCanvasElement(
   );
 }
 
+export type CanvasFlowNode = ClassFlowNode | NoteFlowNode;
+
 export function modelToFlow(
   model: UmlModel,
   overlay: NotationOverlay,
-): { nodes: ClassFlowNode[]; edges: UmlFlowEdge[] } {
-  const nodes: ClassFlowNode[] = [];
+): { nodes: CanvasFlowNode[]; edges: UmlFlowEdge[] } {
+  const nodes: CanvasFlowNode[] = [];
 
   for (const element of model.elements) {
-    if (!isCanvasElement(element)) {
-      continue;
-    }
     const layout = overlay.nodes[element.id];
     if (layout === undefined) {
       continue;
     }
 
-    nodes.push({
-      id: element.id,
-      type: classNodeTypeName,
-      position: { x: layout.x, y: layout.y },
-      data: elementToNodeData(element, layout),
-      draggable: true,
-      selectable: true,
-    });
+    if (isClassLikeElement(element)) {
+      nodes.push({
+        id: element.id,
+        type: classNodeTypeName,
+        position: { x: layout.x, y: layout.y },
+        data: elementToNodeData(element, layout),
+        draggable: true,
+        selectable: true,
+      });
+      continue;
+    }
+
+    if (element.elementType === "note") {
+      nodes.push({
+        id: element.id,
+        type: noteNodeTypeName,
+        position: { x: layout.x, y: layout.y },
+        data: {
+          label: element.name,
+          width: layout.width,
+          height: layout.height,
+        },
+        draggable: true,
+        selectable: true,
+      });
+    }
   }
 
   const edges: UmlFlowEdge[] = model.relationships.map((relationship: UmlRelationship) => ({

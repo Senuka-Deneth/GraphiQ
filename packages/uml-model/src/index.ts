@@ -62,4 +62,7 @@ export {
   addRelationship,
   removeElement,
   removeRelationship,
+  renameElement,
+  setClassAttribute,
+  setClassOperation,
 } from "./commands.js";

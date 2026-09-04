@@ -2,6 +2,7 @@ import { createId, err, ok } from "@graphiq/uml-core";
 import type { Result } from "@graphiq/uml-core";
 import { isElementAllowedOn, isRelationshipAllowedOn } from "./allowed.js";
 import type { NewUmlElement, UmlElement } from "./element.js";
+import type { Attribute, Operation } from "./members.js";
 import type { UmlModel } from "./model.js";
 import type { NewUmlRelationship, UmlRelationship } from "./relationship.js";
 
@@ -282,5 +283,126 @@ export function removeRelationship(
     relationships: model.relationships.filter(
       (relationship) => relationship.id !== id,
     ),
+  });
+}
+
+export function renameElement(
+  model: UmlModel,
+  id: string,
+  name: string,
+): Result<UmlModel, ModelCommandError> {
+  const index = model.elements.findIndex((element) => element.id === id);
+  if (index === -1) {
+    return err({
+      code: "unknown-element",
+      message: `Element "${id}" was not found`,
+    });
+  }
+
+  const elements = [...model.elements];
+  const current = elements[index];
+  if (current === undefined) {
+    return err({
+      code: "unknown-element",
+      message: `Element "${id}" was not found`,
+    });
+  }
+
+  elements[index] = {
+    ...current,
+    name,
+  };
+
+  return ok({
+    ...model,
+    elements,
+  });
+}
+
+export function setClassAttribute(
+  model: UmlModel,
+  elementId: string,
+  attributeId: string,
+  attribute: Attribute,
+): Result<UmlModel, ModelCommandError> {
+  const index = model.elements.findIndex((element) => element.id === elementId);
+  if (index === -1) {
+    return err({
+      code: "unknown-element",
+      message: `Element "${elementId}" was not found`,
+    });
+  }
+
+  const current = model.elements[index];
+  if (
+    current?.elementType !== "class" &&
+    current?.elementType !== "interface" &&
+    current?.elementType !== "dataType" &&
+    current?.elementType !== "primitiveType" &&
+    current?.elementType !== "associationClass"
+  ) {
+    return err({
+      code: "unknown-element",
+      message: `Element "${elementId}" does not support attributes`,
+    });
+  }
+
+  const attributes = current.attributes.map((existing) =>
+    existing.id === attributeId ? attribute : existing,
+  );
+
+  const elements = [...model.elements];
+  elements[index] = {
+    ...current,
+    attributes,
+  };
+
+  return ok({
+    ...model,
+    elements,
+  });
+}
+
+export function setClassOperation(
+  model: UmlModel,
+  elementId: string,
+  operationId: string,
+  operation: Operation,
+): Result<UmlModel, ModelCommandError> {
+  const index = model.elements.findIndex((element) => element.id === elementId);
+  if (index === -1) {
+    return err({
+      code: "unknown-element",
+      message: `Element "${elementId}" was not found`,
+    });
+  }
+
+  const current = model.elements[index];
+  if (
+    current?.elementType !== "class" &&
+    current?.elementType !== "interface" &&
+    current?.elementType !== "dataType" &&
+    current?.elementType !== "primitiveType" &&
+    current?.elementType !== "associationClass"
+  ) {
+    return err({
+      code: "unknown-element",
+      message: `Element "${elementId}" does not support operations`,
+    });
+  }
+
+  const operations = current.operations.map((existing) =>
+    existing.id === operationId ? operation : existing,
+  );
+
+  const elements = [...model.elements];
+  elements[index] = {
+    ...current,
+    operations,
+  };
+
+  return ok({
+    ...model,
+    elements,
   });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addElement, addRelationship, removeElement } from "./commands.js";
+import { addElement, addRelationship, removeElement, renameElement, setClassAttribute } from "./commands.js";
 import { emptyModel } from "./model.js";
 
 describe("emptyModel", () => {
@@ -178,5 +178,71 @@ describe("removeElement", () => {
     }
     expect(removed.value.elements).toHaveLength(1);
     expect(removed.value.relationships).toHaveLength(0);
+  });
+});
+
+describe("renameElement", () => {
+  it("renames a class without changing its id", () => {
+    let model = emptyModel("class");
+    const added = addElement(model, { elementType: "class", name: "Order" });
+    expect(added.ok).toBe(true);
+    if (!added.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+    model = added.value;
+    const classId = model.elements[0]?.id;
+    expect(classId).toBeDefined();
+
+    const renamed = renameElement(model, classId!, "PurchaseOrder");
+    expect(renamed.ok).toBe(true);
+    if (!renamed.ok) {
+      throw new Error("expected renameElement to succeed");
+    }
+
+    const element = renamed.value.elements[0];
+    expect(element?.name).toBe("PurchaseOrder");
+    expect(element?.id).toBe(classId);
+  });
+});
+
+describe("setClassAttribute", () => {
+  it("updates an attribute while preserving its id", () => {
+    let model = emptyModel("class");
+    const added = addElement(model, {
+      elementType: "class",
+      name: "Order",
+      attributes: [{ id: "attr-1", visibility: "private", name: "id", typeName: "UUID" }],
+    });
+    expect(added.ok).toBe(true);
+    if (!added.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+    model = added.value;
+    const classId = model.elements[0]?.id;
+    if (classId === undefined || model.elements[0]?.elementType !== "class") {
+      throw new Error("expected class element");
+    }
+
+    const updated = setClassAttribute(model, classId, "attr-1", {
+      id: "attr-1",
+      visibility: "public",
+      name: "orderId",
+      typeName: "UUID",
+    });
+    expect(updated.ok).toBe(true);
+    if (!updated.ok) {
+      throw new Error("expected setClassAttribute to succeed");
+    }
+
+    const element = updated.value.elements[0];
+    if (element?.elementType !== "class") {
+      throw new Error("expected class element");
+    }
+    expect(element.attributes[0]).toEqual({
+      id: "attr-1",
+      visibility: "public",
+      name: "orderId",
+      typeName: "UUID",
+    });
   });
 });

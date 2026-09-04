@@ -1,5 +1,7 @@
+import type { StencilDropKind } from "../store/documentStore.js";
+
 export type StencilItem = {
-  id: string;
+  id: StencilDropKind;
   label: string;
 };
 
@@ -29,7 +31,12 @@ export function Stencil({ items = CLASS_STENCIL_ITEMS }: StencilProps) {
         {items.map((item) => (
           <li key={item.id}>
             <div
-              className="cursor-default rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-800"
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData("application/graphiq-stencil", item.id);
+                event.dataTransfer.effectAllowed = "move";
+              }}
+              className="cursor-grab rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-800 active:cursor-grabbing"
               data-stencil-item={item.id}
             >
               {item.label}

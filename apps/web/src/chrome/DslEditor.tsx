@@ -53,6 +53,7 @@ export function DslEditor({
   const onFocusRef = useRef(onFocus);
   const onBlurRef = useRef(onBlur);
   const lastRevisionRef = useRef(revision);
+  const suppressOnChangeRef = useRef(false);
 
   onChangeRef.current = onChange;
   onFocusRef.current = onFocus;
@@ -65,7 +66,7 @@ export function DslEditor({
     }
 
     const updateListener = EditorView.updateListener.of((update) => {
-      if (update.docChanged) {
+      if (update.docChanged && !suppressOnChangeRef.current) {
         onChangeRef.current?.(update.state.doc.toString());
       }
       if (update.focusChanged) {
@@ -117,9 +118,11 @@ export function DslEditor({
     lastRevisionRef.current = revision;
     const current = view.state.doc.toString();
     if (current !== value) {
+      suppressOnChangeRef.current = true;
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
       });
+      suppressOnChangeRef.current = false;
     }
   }, [revision, value]);
 
