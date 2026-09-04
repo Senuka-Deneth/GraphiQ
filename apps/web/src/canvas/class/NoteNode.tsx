@@ -4,6 +4,7 @@ export type NoteNodeData = {
   label: string;
   width: number;
   height: number;
+  diagnosticSeverity?: "error" | "warning";
 };
 
 export const noteNodeTypeName = "noteNode" as const;
@@ -13,7 +14,13 @@ export type NoteFlowNode = Node<NoteNodeData, typeof noteNodeTypeName>;
 export function NoteNode({ data }: NodeProps<NoteFlowNode>) {
   return (
     <div
-      className="rounded-sm border border-amber-500 bg-amber-50 px-2 py-2 text-sm text-amber-950 shadow-sm"
+      className={`rounded-sm border px-2 py-2 text-sm shadow-sm ${
+        data.diagnosticSeverity === "error"
+          ? "border-red-500 bg-red-50 text-red-950 ring-1 ring-red-400"
+          : data.diagnosticSeverity === "warning"
+            ? "border-amber-600 bg-amber-50 text-amber-950 ring-1 ring-amber-400"
+            : "border-amber-500 bg-amber-50 text-amber-950"
+      }`}
       style={{
         width: data.width,
         minHeight: data.height,

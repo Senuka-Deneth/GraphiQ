@@ -42,6 +42,7 @@ function ClassCanvasInner({
 }: ClassCanvasInnerProps) {
   const model = useDocumentStore((state) => state.document.model);
   const overlay = useDocumentStore((state) => state.document.overlay);
+  const diagnostics = useDocumentStore((state) => state.diagnostics);
   const updateNodePosition = useDocumentStore((state) => state.updateNodePosition);
   const dropStencilElement = useDocumentStore((state) => state.dropStencilElement);
   const connectElements = useDocumentStore((state) => state.connectElements);
@@ -53,8 +54,8 @@ function ClassCanvasInner({
   const { screenToFlowPosition } = useReactFlow();
 
   const { nodes, edges } = useMemo(
-    () => modelToFlow(model, overlay),
-    [model, overlay],
+    () => modelToFlow(model, overlay, diagnostics),
+    [model, overlay, diagnostics],
   );
 
   const onConnect = useCallback(

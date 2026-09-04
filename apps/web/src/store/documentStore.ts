@@ -17,6 +17,7 @@ import { classAstToModel, print } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
+import { bindClassDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
 export type GraphiqDocument = {
   id: string;
@@ -270,7 +271,10 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
       const model = classAstToModel(ast, lastGoodModel);
       const modelDiagnostics = validate("class", model);
-      const diagnostics = [...parseDiagnostics, ...modelDiagnostics];
+      const diagnostics = bindClassDiagnosticSpans(ast, model, [
+        ...parseDiagnostics,
+        ...modelDiagnostics,
+      ]);
 
       const overlayBase = lastGoodOverlay;
       const reason =

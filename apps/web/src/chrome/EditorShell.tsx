@@ -71,6 +71,7 @@ export function EditorShell() {
           <DslEditor
             value={dsl}
             revision={dslRevision}
+            diagnostics={diagnostics}
             onChange={setDsl}
             onFocus={() => setDslEditorFocused(true)}
             onBlur={() => setDslEditorFocused(false)}

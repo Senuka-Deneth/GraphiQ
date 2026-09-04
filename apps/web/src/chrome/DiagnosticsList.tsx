@@ -4,6 +4,17 @@ type DiagnosticsListProps = {
   diagnostics?: readonly Diagnostic[];
 };
 
+function severityTextClass(severity: Diagnostic["severity"]): string {
+  switch (severity) {
+    case "error":
+      return "text-red-700";
+    case "warning":
+      return "text-amber-700";
+    default:
+      return "text-slate-800";
+  }
+}
+
 export function DiagnosticsList({ diagnostics = [] }: DiagnosticsListProps) {
   return (
     <section
@@ -22,9 +33,13 @@ export function DiagnosticsList({ diagnostics = [] }: DiagnosticsListProps) {
             <li
               key={diagnostic.id}
               className="border-b border-slate-100 py-1 text-sm last:border-b-0"
+              data-rule-id={diagnostic.ruleId}
+              data-severity={diagnostic.severity}
             >
               <span className="font-mono text-xs text-slate-500">{diagnostic.ruleId}</span>
-              <span className="ml-2 text-slate-800">{diagnostic.message}</span>
+              <span className={`ml-2 ${severityTextClass(diagnostic.severity)}`}>
+                {diagnostic.message}
+              </span>
             </li>
           ))}
         </ul>

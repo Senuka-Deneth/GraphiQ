@@ -1,12 +1,16 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { lintGutter } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import type { Diagnostic } from "@graphiq/uml-core";
 import { useEffect, useRef } from "react";
+import { createInitialDslLintExtension, reconfigureDslLint } from "./dslLint.js";
 import { dslHighlightExtension } from "./dslHighlight.js";
 
 type DslEditorProps = {
   value?: string;
   revision?: number;
+  diagnostics?: readonly Diagnostic[];
   onChange?: (value: string) => void;
   readOnly?: boolean;
   onFocus?: () => void;
@@ -37,11 +41,24 @@ const editorTheme = EditorView.theme({
   "&.cm-focused .cm-cursor": {
     borderLeftColor: "#0f172a",
   },
+  ".cm-lintRange-error": {
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3' viewBox='0 0 6 3'%3E%3Cpath d='m0 3 l2 -2 l1 0 l2 2 l1 0' stroke='%23dc2626' fill='none' stroke-width='1'/%3E%3C/svg%3E\")",
+    backgroundRepeat: "repeat-x",
+    backgroundPosition: "left bottom",
+  },
+  ".cm-lintRange-warning": {
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3' viewBox='0 0 6 3'%3E%3Cpath d='m0 3 l2 -2 l1 0 l2 2 l1 0' stroke='%23d97706' fill='none' stroke-width='1'/%3E%3C/svg%3E\")",
+    backgroundRepeat: "repeat-x",
+    backgroundPosition: "left bottom",
+  },
 });
 
 export function DslEditor({
   value = "diagram class\n",
   revision = 0,
+  diagnostics = [],
   onChange,
   readOnly = false,
   onFocus,
@@ -85,6 +102,8 @@ export function DslEditor({
         history(),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         dslHighlightExtension,
+        lintGutter(),
+        createInitialDslLintExtension(diagnostics),
         editorTheme,
         EditorView.lineWrapping,
         updateListener,
@@ -104,6 +123,17 @@ export function DslEditor({
       viewRef.current = null;
     };
   }, [readOnly]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: reconfigureDslLint(diagnostics),
+    });
+  }, [diagnostics]);
 
   useEffect(() => {
     const view = viewRef.current;

@@ -11,6 +11,7 @@ import { dashStrokeStyle } from "./ClassNode.js";
 export type UmlEdgeData = {
   relationshipType: RelationshipType;
   label?: string;
+  diagnosticSeverity?: "error" | "warning";
 };
 
 export const umlEdgeTypeName = "umlEdge" as const;
@@ -49,6 +50,13 @@ export function UmlEdge({
   const computedMarkerStart = markerUrl(notation.sourceMarkerId);
   const computedMarkerEnd = markerUrl(notation.targetMarkerId);
 
+  const diagnosticStroke =
+    data?.diagnosticSeverity === "error"
+      ? "#dc2626"
+      : data?.diagnosticSeverity === "warning"
+        ? "#d97706"
+        : "currentColor";
+
   return (
     <BaseEdge
       id={id}
@@ -56,10 +64,11 @@ export function UmlEdge({
       markerStart={computedMarkerStart ?? markerStart}
       markerEnd={computedMarkerEnd ?? markerEnd}
       label={data?.label}
+      data-diagnostic={data?.diagnosticSeverity}
       style={{
         ...style,
-        stroke: "currentColor",
-        strokeWidth: 1.5,
+        stroke: diagnosticStroke,
+        strokeWidth: data?.diagnosticSeverity !== undefined ? 2.5 : 1.5,
         ...(notation.lineStyle === "dash" ? dashStrokeStyle : {}),
       }}
     />

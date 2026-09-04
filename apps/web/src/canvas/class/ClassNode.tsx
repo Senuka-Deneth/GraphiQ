@@ -11,6 +11,7 @@ export type ClassNodeData = {
   literals?: readonly string[];
   width: number;
   height: number;
+  diagnosticSeverity?: "error" | "warning";
 };
 
 export const classNodeTypeName = "classNode" as const;
@@ -57,7 +58,13 @@ export function ClassNode({ data }: NodeProps<ClassFlowNode>) {
 
   return (
     <div
-      className="overflow-hidden rounded-sm border border-slate-700 bg-white text-slate-900 shadow-sm"
+      className={`overflow-hidden rounded-sm border bg-white text-slate-900 shadow-sm ${
+        data.diagnosticSeverity === "error"
+          ? "border-red-500 ring-1 ring-red-400"
+          : data.diagnosticSeverity === "warning"
+            ? "border-amber-500 ring-1 ring-amber-400"
+            : "border-slate-700"
+      }`}
       style={{
         width: data.width,
         minHeight: data.height,

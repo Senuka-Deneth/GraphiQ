@@ -1,6 +1,11 @@
+import type { Diagnostic } from "@graphiq/uml-core";
 import { getElementNotation } from "@graphiq/uml-notation";
 import type { NotationOverlay } from "@graphiq/uml-layout";
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
+import {
+  buildDiagnosticSeverityMap,
+  type DiagnosticSeverity,
+} from "../../diagnostics/bindDiagnosticSpans.js";
 import type { ClassNodeData, ClassFlowNode } from "./ClassNode.js";
 import { classNodeTypeName } from "./ClassNode.js";
 import type { NoteFlowNode } from "./NoteNode.js";
@@ -70,10 +75,22 @@ function isClassLikeElement(
 
 export type CanvasFlowNode = ClassFlowNode | NoteFlowNode;
 
+function diagnosticClassName(severity: DiagnosticSeverity | undefined): string | undefined {
+  if (severity === "error") {
+    return "graphiq-diagnostic-error";
+  }
+  if (severity === "warning") {
+    return "graphiq-diagnostic-warning";
+  }
+  return undefined;
+}
+
 export function modelToFlow(
   model: UmlModel,
   overlay: NotationOverlay,
+  diagnostics: readonly Diagnostic[] = [],
 ): { nodes: CanvasFlowNode[]; edges: UmlFlowEdge[] } {
+  const severityById = buildDiagnosticSeverityMap(diagnostics);
   const nodes: CanvasFlowNode[] = [];
 
   for (const element of model.elements) {
@@ -82,12 +99,19 @@ export function modelToFlow(
       continue;
     }
 
+    const nodeSeverity = severityById.get(element.id);
+    const nodeClassName = diagnosticClassName(nodeSeverity);
+
     if (isClassLikeElement(element)) {
       nodes.push({
         id: element.id,
         type: classNodeTypeName,
         position: { x: layout.x, y: layout.y },
-        data: elementToNodeData(element, layout),
+        data: {
+          ...elementToNodeData(element, layout),
+          diagnosticSeverity: nodeSeverity,
+        },
+        className: nodeClassName,
         draggable: true,
         selectable: true,
       });
@@ -103,24 +127,31 @@ export function modelToFlow(
           label: element.name,
           width: layout.width,
           height: layout.height,
+          diagnosticSeverity: nodeSeverity,
         },
+        className: nodeClassName,
         draggable: true,
         selectable: true,
       });
     }
   }
 
-  const edges: UmlFlowEdge[] = model.relationships.map((relationship: UmlRelationship) => ({
-    id: relationship.id,
-    source: relationship.sourceId,
-    target: relationship.targetId,
-    type: umlEdgeTypeName,
-    data: {
-      relationshipType: relationship.relationshipType,
-      label: relationship.name,
-    },
-    selectable: true,
-  }));
+  const edges: UmlFlowEdge[] = model.relationships.map((relationship: UmlRelationship) => {
+    const edgeSeverity = severityById.get(relationship.id);
+    return {
+      id: relationship.id,
+      source: relationship.sourceId,
+      target: relationship.targetId,
+      type: umlEdgeTypeName,
+      data: {
+        relationshipType: relationship.relationshipType,
+        label: relationship.name,
+        diagnosticSeverity: edgeSeverity,
+      },
+      className: diagnosticClassName(edgeSeverity),
+      selectable: true,
+    };
+  });
 
   return { nodes, edges };
 }
