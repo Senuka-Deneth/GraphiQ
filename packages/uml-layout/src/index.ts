@@ -1,2 +1,16 @@
-/** Stub only. UML types are later checklist steps — see docs/GRAPHIQ_BUILD_GUIDE.md. */
-export const packageName = "@graphiq/uml-layout";
+export { layoutWithElk } from "./elk.js";
+export type { ElkGraphInput, ElkGraphOutput } from "./elk.js";
+export {
+  createClassFixtureModel,
+  layoutClass,
+  measureClassNode,
+} from "./layoutClass.js";
+export { layoutDocument } from "./layoutDocument.js";
+export type {
+  LayoutMode,
+  NotationOverlay,
+  OverlayEdge,
+  OverlayNode,
+  RelayoutReason,
+} from "./overlay.js";
+export { emptyOverlay, reasonToLayoutMode } from "./overlay.js";
