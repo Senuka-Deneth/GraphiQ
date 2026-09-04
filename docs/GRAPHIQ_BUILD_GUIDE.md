@@ -2,7 +2,7 @@
 
 GraphiQ is a local-first UML modeling web app: a Lucidchart-style interactive canvas plus a Notion-style text-to-diagram panel. The product is **UML 2.5.1 notation and well-formedness**, not a general drawing tool and not a PlantUML clone.
 
-This file is the architecture bible and the **agent operating checklist**. Implement only the next incomplete checklist step. Do not skip ahead. Do not invent a fifteenth diagram kind. Do not replace the locked stack.
+This file is the architecture bible and the **agent operating checklist**. Implement up to the next three incomplete checklist steps per session. Finish each step completely before starting the next. Do not skip ahead. Do not invent a fifteenth diagram kind. Do not replace the locked stack.
 
 ## How agents must work
 
@@ -47,6 +47,7 @@ PlantUML and Mermaid importers, a shared project model across diagrams, XMI, and
 5. **Round-trip with layout isolation.** Adding `+total(): Money` in text updates the class box. Adding a private attribute on the canvas reprints the DSL. Dragging the box does **not** change the DSL.
 6. **Kind-correct notation.** Generalization is a solid line and a hollow closed triangle. Realization is dashed with the same triangle. Sequence synchronous call is a solid filled arrowhead. Reply is dashed open.
 7. **Local save.** The user reloads the tab and the last document is restored from IndexedDB. Export to SVG/PNG exists after the editor works.
+8. **DSL guide download and import.** The user downloads a Markdown GraphiQ DSL guide, gives it to a person or an LLM, then types or uploads the returned `diagram <kind>` code to generate any of the 14 kinds.
 
 ---
 
@@ -891,6 +892,8 @@ Design rules:
 
 Do not implement PlantUML’s `skinparam`, `!include`, or non-UML arrows in the core.
 
+**Shareable language guide:** the editor ships a checked-in Markdown file (`graphiq-dsl-guide.md`) that is the prompt and reference for producing GraphiQ DSL. It is not Mermaid, not PlantUML, and not JSON. A Download button saves that file. An Import button loads a `.md` / `.dsl` / `.txt` file into the DSL pane (extract the first `diagram <kind>` document if the file also contains prose). Parsing still follows the active document kind and the grammars that exist; unimplemented kinds stay parse errors until their kind steps land.
+
 ---
 
 ## 7. Rules engine
@@ -974,7 +977,7 @@ Lucidchart-like density, not a marketing landing page.
 - Left: stencil of **legal** elements for the active `DiagramKind` only.
 - Center: canvas (kind renderer), grid, snap, zoom, mini-map optional after class slice.
 - Right or bottom split: CodeMirror DSL.
-- Top bar: diagram kind (locked to document kind in v1; changing kind is a later conversion step — do not silently convert), title, auto-layout, export (when that step exists).
+- Top bar: diagram kind (locked to document kind in v1; changing kind is a later conversion step — do not silently convert), title, auto-layout, export (when that step exists), **Download DSL guide** (`.md`), **Import DSL** (`.md` / `.dsl` / `.txt`).
 - Bottom: diagnostics list.
 
 Stencil drag must call model commands, not insert raw XYFlow nodes.
@@ -993,6 +996,14 @@ Stencil drag must call model commands, not insert raw XYFlow nodes.
 
 - Serialize the visible diagram SVG (including markers).
 - PNG via `HTMLCanvasElement` from SVG blob. Do not use a third-party paid exporter.
+
+**Export GraphiQ DSL guide (Markdown)** after editor chrome exists:
+
+- Filename `graphiq-dsl-guide.md`.
+- Contents: how GraphiQ DSL works, the closed 14-kind list, per-kind keywords and arrows, one complete example per kind from §5, and instructions to return a single document starting with `diagram <kind>`.
+- Do not ask an LLM to generate this file at runtime. It is a static asset in the app.
+
+**Import generated DSL:** a file picker loads text into the CodeMirror buffer. If the file is the guide plus generated code, take the first block that starts with `diagram` and a legal `DiagramKind`. If that kind differs from the open document and a new-document control exists, open a document of that kind; otherwise it is a kind-mismatch parse error.
 
 No backend in v1.
 
@@ -1041,7 +1052,7 @@ If review finds the step is too large or an Escalate step was started on Compose
 
 ## 14. Agent checklist
 
-Execute **one** step per session (or one step then stop). Mark the step complete only when Done when is true, the commit exists on `dev`, and `dev` is pushed to `origin`.
+Execute up to **three** steps per session. Finish one step fully before starting the next (or stop after any finished step). Mark a step complete only when Done when is true, the commit exists on `dev`, and `dev` is pushed to `origin`.
 
 Shared verification unless a step overrides it:
 
@@ -1580,6 +1591,48 @@ pnpm --filter @graphiq/web build
 **Done when:** `pnpm --filter @graphiq/web test:e2e` (or repo-equivalent) passes locally.
 
 **Commit message:** `Add Playwright smoke tests for implemented diagram kinds`
+
+---
+
+### Step 33 — Download GraphiQ DSL guide and import generated DSL
+
+**Model:** Composer 2.5
+
+**In scope:**
+
+- Checked-in Markdown guide the Download button serves (do not generate it with an LLM at click time)
+- Top-bar **Download DSL guide** — saves `graphiq-dsl-guide.md`
+- Top-bar **Import DSL** — file picker for `.md`, `.dsl`, `.txt`; loads GraphiQ DSL into the editor
+
+**Allowed paths:** `apps/web/**` (chrome, public/static asset, tests). Optional `docs/GRAPHIQ_DSL_GUIDE.md` only if the app copies or imports that same file; do not fork two guides.
+
+**Guide file must contain:**
+
+- What GraphiQ DSL is (text → model → canvas; not Mermaid, not PlantUML, not JSON, no coordinates in the DSL)
+- Header: `diagram <kind> <OptionalName>`
+- The exact 14 `DiagramKind` strings; do not list extra kinds
+- Per kind: legal element keywords, relationship tokens, and the §5 DSL sketch as a complete copy-paste example
+- Class arrow table: `--|>` generalization, `..|>` realization, `-->` navigable association, `--` association, `o--` aggregation, `*--` composition, `..>` dependency
+- How to use it: give this file to a person or LLM; they return only a GraphiQ DSL document (or a fenced block) starting with `diagram <kind>`; type it into the DSL pane or use Import
+- Forbidden output: Mermaid, PlantUML, `skinparam`, invented kinds, drawing JSON, `x`/`y` in the source
+
+**Import behavior:**
+
+- Read the file as UTF-8 text.
+- If the file starts with `diagram`, load it whole.
+- Else extract the first fenced or unfenced document whose first token line matches `diagram` + `isDiagramKind`.
+- If the extracted kind is not the open document’s kind and the new-document control exists, create/open a document of that kind, then set the DSL buffer.
+- Then run the existing parse → validate → layout path. Unimplemented kinds stay the existing unsupported-kind diagnostic.
+
+**Out of scope:** PlantUML/Mermaid adapters, XMI, sending the file to a hosted LLM, changing notation or adding kinds
+
+**Done when:**
+
+- Download produces a `.md` file whose body includes `diagram class`, `diagram activity`, `diagram stateMachine`, and the other 11 kind headers from `DIAGRAM_KINDS`
+- Playwright: Import of a small `diagram class` fixture fills the editor and (for class) yields class nodes
+- Import of Mermaid `classDiagram` text does not become a GraphiQ class model
+
+**Commit message:** `Add GraphiQ DSL guide download and DSL file import`
 
 ---
 

@@ -1,11 +1,11 @@
 ---
-description: GraphiQ agent workflow — one checklist step, local dev branch, Senuka Deneth commits, push to origin after commit
+description: GraphiQ agent workflow — up to three checklist steps per session, each finished with self-review before the next, local dev branch, Senuka Deneth commits, push to origin after commit
 alwaysApply: true
 ---
 
 # GraphiQ agent rules
 
-Follow [docs/GRAPHIQ_BUILD_GUIDE.md](docs/GRAPHIQ_BUILD_GUIDE.md). Implement only the next incomplete checklist step. Do not skip steps. Do not invent diagram kinds or replace the locked stack.
+Follow [docs/GRAPHIQ_BUILD_GUIDE.md](docs/GRAPHIQ_BUILD_GUIDE.md). Implement up to the next three incomplete checklist steps per session. Finish each step completely (verification, self-review, fix, commit, push) before starting the next. Do not skip steps. Do not invent diagram kinds or replace the locked stack.
 
 ## Models
 
