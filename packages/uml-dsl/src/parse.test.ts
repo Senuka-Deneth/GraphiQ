@@ -189,7 +189,13 @@ class Good {
 
   it("returns dsl.unsupported-kind for non-class diagram kinds", () => {
     for (const kind of DIAGRAM_KINDS) {
-      if (kind === "class" || kind === "object" || kind === "package" || kind === "component") {
+      if (
+        kind === "class" ||
+        kind === "object" ||
+        kind === "package" ||
+        kind === "component" ||
+        kind === "deployment"
+      ) {
         continue;
       }
 

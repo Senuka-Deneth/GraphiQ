@@ -2,6 +2,7 @@ import type { Diagnostic } from "@graphiq/uml-core";
 import type {
   ClassDiagramAst,
   ComponentDiagramAst,
+  DeploymentDiagramAst,
   DiagramAst,
   ObjectDiagramAst,
   PackageDiagramAst,
@@ -130,6 +131,34 @@ function findComponentRelationshipSpan(
   return undefined;
 }
 
+function findDeploymentElementSpan(ast: DeploymentDiagramAst, name: string) {
+  for (const node of ast.nodes) {
+    if (node.name === name) {
+      return node.span;
+    }
+    for (const item of node.items) {
+      if (item.name === name) {
+        return item.span;
+      }
+    }
+  }
+  return undefined;
+}
+
+function findDeploymentRelationshipSpan(
+  ast: DeploymentDiagramAst,
+  sourceName: string,
+  targetName: string,
+  relationshipType: string,
+) {
+  return ast.relationships.find(
+    (relationship) =>
+      relationship.relationshipKind === relationshipType &&
+      relationship.sourceName === sourceName &&
+      relationship.targetName === targetName,
+  )?.span;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -176,6 +205,13 @@ function bindOneDiagnostic(
                       targetName,
                       relationship.relationshipType,
                     )
+                : ast.kind === "deployment"
+                  ? findDeploymentRelationshipSpan(
+                      ast,
+                      sourceName,
+                      targetName,
+                      relationship.relationshipType,
+                    )
                 : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
@@ -194,7 +230,9 @@ function bindOneDiagnostic(
               ? findPackageElementSpan(ast, element.name)
               : ast.kind === "component"
                 ? findComponentElementSpan(ast, element.name)
-              : undefined;
+                : ast.kind === "deployment"
+                  ? findDeploymentElementSpan(ast, element.name)
+                  : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };
       }

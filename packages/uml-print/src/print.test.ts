@@ -174,7 +174,13 @@ describe("print class diagram", () => {
 
   it("throws not implemented for non-class diagram kinds", () => {
     for (const kind of DIAGRAM_KINDS) {
-      if (kind === "class" || kind === "object" || kind === "package" || kind === "component") {
+      if (
+        kind === "class" ||
+        kind === "object" ||
+        kind === "package" ||
+        kind === "component" ||
+        kind === "deployment"
+      ) {
         continue;
       }
       const model = classAstToModel({

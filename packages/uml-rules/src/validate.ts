@@ -6,6 +6,7 @@ import { isConnectorAllowed } from "./connectors.js";
 import { getRegisteredRules } from "./registry.js";
 import { CLASS_RULES } from "./rules/class/index.js";
 import { COMPONENT_RULES } from "./rules/component/index.js";
+import { DEPLOYMENT_RULES } from "./rules/deployment/index.js";
 import { OBJECT_RULES } from "./rules/object/index.js";
 import { PACKAGE_RULES } from "./rules/package/index.js";
 import type { UmlRule } from "./types.js";
@@ -23,8 +24,9 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
       return PACKAGE_RULES;
     case "component":
       return COMPONENT_RULES;
-    case "compositeStructure":
     case "deployment":
+      return DEPLOYMENT_RULES;
+    case "compositeStructure":
     case "profile":
     case "useCase":
     case "activity":

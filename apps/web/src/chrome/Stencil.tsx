@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import type {
   ClassStencilDropKind,
   ComponentStencilDropKind,
+  DeploymentStencilDropKind,
   ImplementedDiagramKind,
   ObjectStencilDropKind,
   PackageStencilDropKind,
@@ -42,6 +43,14 @@ export const COMPONENT_STENCIL_ITEMS: readonly StencilItem[] = [
   { id: "note", label: "Note" },
 ] as const;
 
+export const DEPLOYMENT_STENCIL_ITEMS: readonly StencilItem[] = [
+  { id: "node", label: "Node" },
+  { id: "device", label: "Device" },
+  { id: "executionEnvironment", label: "Execution environment" },
+  { id: "artifact", label: "Artifact" },
+  { id: "note", label: "Note" },
+] as const;
+
 export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly StencilItem[] {
   switch (kind) {
     case "class":
@@ -52,6 +61,8 @@ export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly Sten
       return PACKAGE_STENCIL_ITEMS;
     case "component":
       return COMPONENT_STENCIL_ITEMS;
+    case "deployment":
+      return DEPLOYMENT_STENCIL_ITEMS;
     default:
       return assertNever(kind);
   }
@@ -60,6 +71,7 @@ export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly Sten
 export type {
   ClassStencilDropKind,
   ComponentStencilDropKind,
+  DeploymentStencilDropKind,
   ObjectStencilDropKind,
   PackageStencilDropKind,
   StencilDropKind,

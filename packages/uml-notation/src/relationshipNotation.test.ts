@@ -33,6 +33,14 @@ describe("getRelationshipNotation", () => {
     });
   });
 
+  it("maps communicationPath to a solid line with no diamond markers", () => {
+    expect(getRelationshipNotation("communicationPath")).toEqual({
+      lineStyle: "solid",
+      sourceMarkerId: null,
+      targetMarkerId: null,
+    });
+  });
+
   it("maps composition to a filled diamond on the source end", () => {
     expect(getRelationshipNotation("composition")).toEqual({
       lineStyle: "solid",

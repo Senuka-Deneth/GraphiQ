@@ -212,6 +212,49 @@ describe("layoutComponent", () => {
   });
 });
 
+describe("layoutDeployment", () => {
+  it("lays out a nested artifact inside a device with finite coordinates", async () => {
+    let model = emptyModel("deployment");
+    const cluster = addElement(model, { elementType: "device", name: "AppCluster" });
+    if (!cluster.ok) {
+      throw new Error("expected device");
+    }
+    model = cluster.value;
+    const clusterId = model.elements.find((element) => element.name === "AppCluster")?.id;
+    if (clusterId === undefined) {
+      throw new Error("expected cluster id");
+    }
+
+    const artifact = addElement(model, {
+      elementType: "artifact",
+      name: "shop.war",
+      parentId: clusterId,
+    });
+    if (!artifact.ok) {
+      throw new Error("expected artifact");
+    }
+    model = artifact.value;
+
+    const overlay = await layoutDocument(
+      "deployment",
+      model,
+      emptyOverlay(),
+      "first-open-empty-overlay",
+    );
+    const clusterNode = overlay.nodes[clusterId];
+    const artifactId = model.elements.find((element) => element.name === "shop.war")?.id;
+    const artifactNode = artifactId !== undefined ? overlay.nodes[artifactId] : undefined;
+
+    for (const node of [clusterNode, artifactNode]) {
+      expect(node).toBeDefined();
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+      expect(Number.isFinite(node?.width)).toBe(true);
+      expect(Number.isFinite(node?.height)).toBe(true);
+    }
+  });
+});
+
 describe("layoutDocument", () => {
   it("throws for non-implemented diagram kinds", async () => {
     const model = emptyModel("sequence");

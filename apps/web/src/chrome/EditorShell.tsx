@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import { useRef, useState, type ReactElement, type RefObject } from "react";
 import { ClassCanvas } from "../canvas/class/ClassCanvas.js";
 import { ComponentCanvas } from "../canvas/component/ComponentCanvas.js";
+import { DeploymentCanvas } from "../canvas/deployment/DeploymentCanvas.js";
 import { ObjectCanvas } from "../canvas/object/ObjectCanvas.js";
 import { PackageCanvas } from "../canvas/package/PackageCanvas.js";
 import {
@@ -18,6 +19,7 @@ const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
   "object",
   "package",
   "component",
+  "deployment",
 ];
 
 export function EditorShell() {
@@ -153,6 +155,8 @@ function KindCanvas({
       return <PackageCanvas onSelectedNodeChange={onSelectedNodeChange} />;
     case "component":
       return <ComponentCanvas onSelectedNodeChange={onSelectedNodeChange} />;
+    case "deployment":
+      return <DeploymentCanvas onSelectedNodeChange={onSelectedNodeChange} />;
     default:
       return assertNever(kind);
   }

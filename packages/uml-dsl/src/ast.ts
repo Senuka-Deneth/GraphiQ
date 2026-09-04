@@ -198,8 +198,53 @@ export type ComponentDiagramAst = {
   span: DslSpan;
 };
 
+export type AstDeploymentNodeKind = "node" | "device" | "executionEnvironment";
+
+export type AstDeploymentBodyItem = {
+  itemKind: "artifact";
+  name: string;
+  span: DslSpan;
+};
+
+export type AstDeploymentNode = {
+  name: string;
+  nodeKind: AstDeploymentNodeKind;
+  items: AstDeploymentBodyItem[];
+  span: DslSpan;
+};
+
+export type AstDeploymentRelationship =
+  | {
+      relationshipKind: "communicationPath";
+      sourceName: string;
+      targetName: string;
+      name?: string;
+      span: DslSpan;
+    }
+  | {
+      relationshipKind: "deployment";
+      sourceName: string;
+      targetName: string;
+      span: DslSpan;
+    }
+  | {
+      relationshipKind: "generalization";
+      sourceName: string;
+      targetName: string;
+      span: DslSpan;
+    };
+
+export type DeploymentDiagramAst = {
+  kind: "deployment";
+  name?: string;
+  nodes: AstDeploymentNode[];
+  relationships: AstDeploymentRelationship[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
   | PackageDiagramAst
-  | ComponentDiagramAst;
+  | ComponentDiagramAst
+  | DeploymentDiagramAst;

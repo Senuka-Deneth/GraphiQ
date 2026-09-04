@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import type {
   ClassRelationshipTool,
   ComponentRelationshipTool,
+  DeploymentRelationshipTool,
   ImplementedDiagramKind,
   ObjectRelationshipTool,
   PackageRelationshipTool,
@@ -36,6 +37,12 @@ const COMPONENT_RELATIONSHIP_TOOLS: readonly { id: ComponentRelationshipTool; la
   { id: "dependency", label: "Dependency" },
 ] as const;
 
+const DEPLOYMENT_RELATIONSHIP_TOOLS: readonly { id: DeploymentRelationshipTool; label: string }[] = [
+  { id: "communicationPath", label: "Communication path" },
+  { id: "deployment", label: "Deploy" },
+  { id: "generalization", label: "Generalization" },
+] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -46,6 +53,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return PACKAGE_RELATIONSHIP_TOOLS;
     case "component":
       return COMPONENT_RELATIONSHIP_TOOLS;
+    case "deployment":
+      return DEPLOYMENT_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }

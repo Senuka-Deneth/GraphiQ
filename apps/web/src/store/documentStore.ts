@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureObjectNode, measurePackageNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureDeploymentNode, measureObjectNode, measurePackageNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment";
 
 export type GraphiqDocument = {
   id: string;
@@ -56,11 +56,17 @@ export type ComponentRelationshipTool = Extract<
   | "dependency"
 >;
 
+export type DeploymentRelationshipTool = Extract<
+  RelationshipType,
+  "communicationPath" | "deployment" | "generalization"
+>;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
   | PackageRelationshipTool
-  | ComponentRelationshipTool;
+  | ComponentRelationshipTool
+  | DeploymentRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -85,11 +91,19 @@ export type ComponentStencilDropKind =
   | "artifact"
   | "note";
 
+export type DeploymentStencilDropKind =
+  | "node"
+  | "device"
+  | "executionEnvironment"
+  | "artifact"
+  | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
   | PackageStencilDropKind
-  | ComponentStencilDropKind;
+  | ComponentStencilDropKind
+  | DeploymentStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -120,6 +134,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   object: "diagram object\n",
   package: "diagram package\n",
   component: "diagram component\n",
+  deployment: "diagram deployment\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -127,6 +142,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   object: "Untitled object diagram",
   package: "Untitled package diagram",
   component: "Untitled component diagram",
+  deployment: "Untitled deployment diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -134,6 +150,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   object: "link",
   package: "packageImport",
   component: "assemblyConnector",
+  deployment: "communicationPath",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -277,6 +294,10 @@ function defaultOverlayNode(
 
   if (model.kind === "component") {
     return { x, y, ...measureComponentNode(element) };
+  }
+
+  if (model.kind === "deployment") {
+    return { x, y, ...measureDeploymentNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -542,6 +563,41 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 return addElement(model, {
                   elementType: "component",
                   name: uniqueElementName(model, "Component"),
+                });
+            }
+          }
+
+          if (document.kind === "deployment") {
+            switch (kind) {
+              case "node":
+                return addElement(model, {
+                  elementType: "node",
+                  name: uniqueElementName(model, "Node"),
+                });
+              case "device":
+                return addElement(model, {
+                  elementType: "device",
+                  name: uniqueElementName(model, "Device"),
+                });
+              case "executionEnvironment":
+                return addElement(model, {
+                  elementType: "executionEnvironment",
+                  name: uniqueElementName(model, "ExecutionEnvironment"),
+                });
+              case "artifact":
+                return addElement(model, {
+                  elementType: "artifact",
+                  name: uniqueElementName(model, "Artifact"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "node",
+                  name: uniqueElementName(model, "Node"),
                 });
             }
           }

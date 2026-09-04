@@ -11,6 +11,7 @@ import { dashStrokeStyle } from "./ClassNode.js";
 export type UmlEdgeData = {
   relationshipType: RelationshipType;
   label?: string;
+  waypoints?: readonly { x: number; y: number }[];
   diagnosticSeverity?: "error" | "warning";
 };
 
