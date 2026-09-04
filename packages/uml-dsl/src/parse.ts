@@ -1,0 +1,426 @@
+import { assertNever, err, ok } from "@graphiq/uml-core";
+import type { DiagramKind, Diagnostic, Result } from "@graphiq/uml-core";
+import type { CstNode } from "chevrotain";
+import type { ClassDiagramAst, ComponentDiagramAst, DeploymentDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst, ProfileDiagramAst, UseCaseDiagramAst } from "./ast.js";
+import {
+  KIND_MISMATCH_RULE_ID,
+  headerParseDiagnostic,
+  kindMismatchDiagnostic,
+  lexerErrorToDiagnostic,
+  parserErrorToDiagnostic,
+  unsupportedKindDiagnostic,
+} from "./diagnostics.js";
+import { parseClassCst, parseClassDocument } from "./grammars/class.js";
+import { parseComponentCst, parseComponentDocument } from "./grammars/component.js";
+import { parseDeploymentCst, parseDeploymentDocument } from "./grammars/deployment.js";
+import { parseObjectCst, parseObjectDocument } from "./grammars/object.js";
+import { parsePackageCst, parsePackageDocument } from "./grammars/package.js";
+import { parseProfileCst, parseProfileDocument } from "./grammars/profile.js";
+import { parseUseCaseCst, parseUseCaseDocument } from "./grammars/useCase.js";
+import {
+  parseCompositeStructureCst,
+  parseCompositeStructureDocument,
+} from "./grammars/compositeStructure.js";
+import {
+  parseCommunicationCst,
+  parseCommunicationDocument,
+} from "./grammars/communication.js";
+
+export type ParseSuccess = {
+  ast: DiagramAst;
+  cst: CstNode;
+  diagnostics: Diagnostic[];
+};
+
+export type ParseFailure = {
+  diagnostics: Diagnostic[];
+};
+
+export function parse(
+  kind: DiagramKind,
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  switch (kind) {
+    case "class":
+      return parseClass(kind, text);
+    case "object":
+      return parseObject(kind, text);
+    case "package":
+      return parsePackage(kind, text);
+    case "component":
+      return parseComponent(kind, text);
+    case "deployment":
+      return parseDeployment(kind, text);
+    case "profile":
+      return parseProfile(kind, text);
+    case "useCase":
+      return parseUseCase(kind, text);
+    case "compositeStructure":
+      return parseCompositeStructure(kind, text);
+    case "communication":
+      return parseCommunication(kind, text);
+    case "activity":
+    case "stateMachine":
+    case "sequence":
+    case "timing":
+    case "interactionOverview":
+      return err({
+        diagnostics: [unsupportedKindDiagnostic(kind)],
+      });
+    default:
+      return assertNever(kind);
+  }
+}
+
+function parseClass(
+  expectedKind: "class",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseClassCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseClassDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseObject(
+  expectedKind: "object",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseObjectCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseObjectDocument(cst);
+  const completeInstances = ast.instances.filter((instance) =>
+    instanceDeclarationHasColon(text, instance),
+  );
+
+  return ok({
+    ast: {
+      ...ast,
+      instances: completeInstances,
+    },
+    cst,
+    diagnostics,
+  });
+}
+
+function instanceDeclarationHasColon(text: string, instance: ObjectDiagramAst["instances"][number]): boolean {
+  const snippet = text.slice(instance.span.start, instance.span.end);
+  return /:\s*[A-Za-z_]/.test(snippet);
+}
+
+function parsePackage(
+  expectedKind: "package",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parsePackageCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parsePackageDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseComponent(
+  expectedKind: "component",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseComponentCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseComponentDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseDeployment(
+  expectedKind: "deployment",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseDeploymentCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseDeploymentDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseProfile(
+  expectedKind: "profile",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseProfileCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseProfileDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseUseCase(
+  expectedKind: "useCase",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseUseCaseCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseUseCaseDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseCompositeStructure(
+  expectedKind: "compositeStructure",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseCompositeStructureCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseCompositeStructureDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseCommunication(
+  expectedKind: "communication",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseCommunicationCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseCommunicationDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function detectHeaderKindMismatch(
+  text: string,
+  expectedKind: DiagramKind,
+): Diagnostic | null {
+  const match = /^\s*diagram\s+([A-Za-z_][A-Za-z0-9_]*)/.exec(text);
+  if (!match) {
+    return null;
+  }
+
+  const actualKind = match[1];
+  if (!actualKind || actualKind === expectedKind) {
+    return null;
+  }
+
+  const start = match.index + match[0].indexOf(actualKind);
+  return {
+    ...kindMismatchDiagnostic(expectedKind, actualKind),
+    ruleId: KIND_MISMATCH_RULE_ID,
+    dslSpan: {
+      start,
+      end: start + actualKind.length,
+    },
+  };
+}
+
+export type {
+  ClassDiagramAst,
+  ComponentDiagramAst,
+  DeploymentDiagramAst,
+  ObjectDiagramAst,
+  PackageDiagramAst,
+  ProfileDiagramAst,
+  UseCaseDiagramAst,
+  DiagramAst,
+};

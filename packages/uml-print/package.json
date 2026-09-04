@@ -1,0 +1,22 @@
+{
+  "name": "@graphiq/uml-print",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@graphiq/uml-core": "workspace:*",
+    "@graphiq/uml-dsl": "workspace:*",
+    "@graphiq/uml-model": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}
