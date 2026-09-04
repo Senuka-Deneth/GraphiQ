@@ -9,6 +9,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@graphiq/uml-core": "workspace:*",
+    "@graphiq/uml-layout": "workspace:*",
+    "@graphiq/uml-model": "workspace:*",
+    "@graphiq/uml-notation": "workspace:*",
+    "@xyflow/react": "^12.10.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
