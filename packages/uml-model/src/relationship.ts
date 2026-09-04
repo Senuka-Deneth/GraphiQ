@@ -128,3 +128,9 @@ export function isActivityFlowRelationship(
     relationship.relationshipType === "objectFlow"
   );
 }
+
+export function isTransitionRelationship(
+  relationship: UmlRelationship,
+): relationship is TransitionRelationship {
+  return relationship.relationshipType === "transition";
+}

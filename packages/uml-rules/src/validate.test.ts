@@ -132,7 +132,7 @@ describe("connector matrices", () => {
     expect(PROFILE_CONNECTORS).toHaveLength(2);
     expect(USE_CASE_CONNECTORS).toHaveLength(6);
     expect(ACTIVITY_CONNECTORS).toHaveLength(67);
-    expect(STATE_MACHINE_CONNECTORS).toHaveLength(0);
+    expect(STATE_MACHINE_CONNECTORS).toHaveLength(9);
     expect(SEQUENCE_CONNECTORS).toHaveLength(0);
     expect(COMMUNICATION_CONNECTORS).toHaveLength(8);
     expect(TIMING_CONNECTORS).toHaveLength(0);
@@ -159,6 +159,8 @@ describe("connector matrices", () => {
         expect(getConnectorMatrix(kind)).toHaveLength(8);
       } else if (kind === "activity") {
         expect(getConnectorMatrix(kind)).toHaveLength(67);
+      } else if (kind === "stateMachine") {
+        expect(getConnectorMatrix(kind)).toHaveLength(9);
       } else {
         expect(getConnectorMatrix(kind)).toHaveLength(0);
       }

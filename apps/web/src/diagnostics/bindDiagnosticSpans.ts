@@ -4,6 +4,8 @@ import type {
   ComponentDiagramAst,
   CommunicationDiagramAst,
   ActivityDiagramAst,
+  StateMachineDiagramAst,
+  AstStateMachineBodyItem,
   CompositeStructureDiagramAst,
   DeploymentDiagramAst,
   DiagramAst,
@@ -359,6 +361,117 @@ function findActivityFlowSpan(
   )?.span;
 }
 
+function findStateMachineTransitionSpan(
+  ast: StateMachineDiagramAst,
+  sourceName: string,
+  targetName: string,
+) {
+  const topLevel = ast.transitions.find(
+    (transition) =>
+      transition.sourceName === sourceName && transition.targetName === targetName,
+  );
+  if (topLevel !== undefined) {
+    return topLevel.span;
+  }
+
+  for (const item of ast.items) {
+    const span = findStateMachineBodyTransitionSpan(item, sourceName, targetName);
+    if (span !== undefined) {
+      return span;
+    }
+  }
+  return undefined;
+}
+
+function findStateMachineBodyTransitionSpan(
+  item: AstStateMachineBodyItem,
+  sourceName: string,
+  targetName: string,
+): { start: number; end: number } | undefined {
+  switch (item.itemKind) {
+    case "transition": {
+      const transition = item.transition;
+      if (transition.sourceName === sourceName && transition.targetName === targetName) {
+        return transition.span;
+      }
+      return undefined;
+    }
+    case "state":
+      for (const nested of item.state.items) {
+        const span = findStateMachineBodyTransitionSpan(nested, sourceName, targetName);
+        if (span !== undefined) {
+          return span;
+        }
+      }
+      return undefined;
+    case "region":
+      for (const nested of item.region.items) {
+        const span = findStateMachineBodyTransitionSpan(nested, sourceName, targetName);
+        if (span !== undefined) {
+          return span;
+        }
+      }
+      return undefined;
+    case "pseudostate":
+      return undefined;
+    default: {
+      const unreachable: never = item;
+      throw new Error(`Unhandled state machine body item: ${String(unreachable)}`);
+    }
+  }
+}
+
+function findStateMachineElementSpan(ast: StateMachineDiagramAst, name: string) {
+  for (const item of ast.items) {
+    const span = findStateMachineBodyElementSpan(item, name);
+    if (span !== undefined) {
+      return span;
+    }
+  }
+  return undefined;
+}
+
+function findStateMachineBodyElementSpan(
+  item: AstStateMachineBodyItem,
+  name: string,
+): { start: number; end: number } | undefined {
+  switch (item.itemKind) {
+    case "state":
+      if (item.state.name === name) {
+        return item.state.span;
+      }
+      for (const nested of item.state.items) {
+        const span = findStateMachineBodyElementSpan(nested, name);
+        if (span !== undefined) {
+          return span;
+        }
+      }
+      return undefined;
+    case "region":
+      if (item.region.name === name) {
+        return item.region.span;
+      }
+      for (const nested of item.region.items) {
+        const span = findStateMachineBodyElementSpan(nested, name);
+        if (span !== undefined) {
+          return span;
+        }
+      }
+      return undefined;
+    case "pseudostate":
+      if (item.pseudostate.name === name) {
+        return item.pseudostate.span;
+      }
+      return undefined;
+    case "transition":
+      return undefined;
+    default: {
+      const unreachable: never = item;
+      throw new Error(`Unhandled state machine body item: ${String(unreachable)}`);
+    }
+  }
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -439,6 +552,8 @@ function bindOneDiagnostic(
                           )
                         : ast.kind === "activity"
                           ? findActivityFlowSpan(ast, sourceName, targetName)
+                          : ast.kind === "stateMachine"
+                            ? findStateMachineTransitionSpan(ast, sourceName, targetName)
                         : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
@@ -469,6 +584,8 @@ function bindOneDiagnostic(
                         ? findCommunicationInstanceSpan(ast, element.name)
                         : ast.kind === "activity"
                           ? findActivityElementSpan(ast, element.name)
+                          : ast.kind === "stateMachine"
+                            ? findStateMachineElementSpan(ast, element.name)
                         : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };

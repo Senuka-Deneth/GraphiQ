@@ -8,6 +8,7 @@ import { PackageCanvas } from "../canvas/package/PackageCanvas.js";
 import { ProfileCanvas } from "../canvas/profile/ProfileCanvas.js";
 import { CommunicationCanvas } from "../canvas/communication/CommunicationCanvas.js";
 import { ActivityCanvas } from "../canvas/activity/ActivityCanvas.js";
+import { StateMachineCanvas } from "../canvas/stateMachine/StateMachineCanvas.js";
 import { CompositeStructureCanvas } from "../canvas/compositeStructure/CompositeStructureCanvas.js";
 import { UseCaseCanvas } from "../canvas/useCase/UseCaseCanvas.js";
 import {
@@ -30,6 +31,7 @@ const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
   "compositeStructure",
   "communication",
   "activity",
+  "stateMachine",
 ];
 
 export function EditorShell() {
@@ -177,6 +179,8 @@ function KindCanvas({
       return <CommunicationCanvas onSelectedNodeChange={onSelectedNodeChange} />;
     case "activity":
       return <ActivityCanvas onSelectedNodeChange={onSelectedNodeChange} />;
+    case "stateMachine":
+      return <StateMachineCanvas onSelectedNodeChange={onSelectedNodeChange} />;
     default:
       return assertNever(kind);
   }

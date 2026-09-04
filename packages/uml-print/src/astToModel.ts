@@ -10,6 +10,7 @@ import { profileAstToModel } from "./profileAstToModel.js";
 import { compositeStructureAstToModel } from "./compositeStructureAstToModel.js";
 import { communicationAstToModel } from "./communicationAstToModel.js";
 import { activityAstToModel } from "./activityAstToModel.js";
+import { stateMachineAstToModel } from "./stateMachineAstToModel.js";
 import { useCaseAstToModel } from "./useCaseAstToModel.js";
 
 export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
@@ -40,6 +41,11 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
       );
     case "activity":
       return activityAstToModel(ast, previous?.kind === "activity" ? previous : undefined);
+    case "stateMachine":
+      return stateMachineAstToModel(
+        ast,
+        previous?.kind === "stateMachine" ? previous : undefined,
+      );
     default:
       return assertNever(ast);
   }

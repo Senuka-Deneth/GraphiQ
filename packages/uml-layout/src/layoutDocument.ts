@@ -11,6 +11,7 @@ import { layoutUseCase } from "./layoutUseCase.js";
 import { layoutCompositeStructure } from "./layoutCompositeStructure.js";
 import { layoutCommunication } from "./layoutCommunication.js";
 import { layoutActivity } from "./layoutActivity.js";
+import { layoutStateMachine } from "./layoutStateMachine.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
 import { reasonToLayoutMode } from "./overlay.js";
 
@@ -44,6 +45,7 @@ export async function layoutDocument(
     case "activity":
       return layoutActivity(model, overlay, mode);
     case "stateMachine":
+      return layoutStateMachine(model, overlay, mode);
     case "sequence":
     case "timing":
     case "interactionOverview":

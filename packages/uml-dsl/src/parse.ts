@@ -26,6 +26,7 @@ import {
   parseCommunicationDocument,
 } from "./grammars/communication.js";
 import { parseActivityCst, parseActivityDocument } from "./grammars/activity.js";
+import { parseStateMachineCst, parseStateMachineDocument } from "./grammars/stateMachine.js";
 
 export type ParseSuccess = {
   ast: DiagramAst;
@@ -63,6 +64,7 @@ export function parse(
     case "activity":
       return parseActivity(kind, text);
     case "stateMachine":
+      return parseStateMachine(kind, text);
     case "sequence":
     case "timing":
     case "interactionOverview":
@@ -417,6 +419,40 @@ function parseActivity(
   }
 
   const ast = parseActivityDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseStateMachine(
+  expectedKind: "stateMachine",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseStateMachineCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseStateMachineDocument(cst);
 
   return ok({
     ast,

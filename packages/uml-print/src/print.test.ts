@@ -184,7 +184,8 @@ describe("print class diagram", () => {
         kind === "useCase" ||
         kind === "compositeStructure" ||
         kind === "communication" ||
-        kind === "activity"
+        kind === "activity" ||
+        kind === "stateMachine"
       ) {
         continue;
       }

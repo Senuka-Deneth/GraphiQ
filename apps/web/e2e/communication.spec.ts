@@ -32,8 +32,9 @@ test("communication document renders instances and numbered message labels", asy
     timeout: 10_000,
   });
   await expect(page.locator('[data-testid="instance-name"]')).toHaveCount(2);
-  await expect(page.getByText("1: placeOrder()")).toBeVisible();
-  await expect(page.getByText("2: confirm()")).toBeVisible();
+  const canvas = page.locator('[data-testid="communication-canvas"]');
+  await expect(canvas.getByText("1: placeOrder()")).toBeVisible();
+  await expect(canvas.getByText("2: confirm()")).toBeVisible();
   await expect(page.locator(".react-flow__edge")).toHaveCount(2);
 });
 

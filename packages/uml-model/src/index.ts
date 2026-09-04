@@ -49,7 +49,11 @@ export type {
   TransitionRelationship,
   UmlRelationship,
 } from "./relationship.js";
-export { isActivityFlowRelationship, isAssociationFamilyRelationship } from "./relationship.js";
+export {
+  isActivityFlowRelationship,
+  isAssociationFamilyRelationship,
+  isTransitionRelationship,
+} from "./relationship.js";
 
 export type { UmlModel } from "./model.js";
 export { emptyModel } from "./model.js";

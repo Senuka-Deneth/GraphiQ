@@ -38,8 +38,9 @@ test("use case document renders actors, ellipses, and include label", async ({ p
 
   await expect(page.locator(".react-flow__edge")).toHaveCount(4);
 
-  await expect(page.getByText("«include»")).toBeVisible();
-  await expect(page.getByText("«extend»")).toBeVisible();
+  const canvas = page.locator('[data-testid="use-case-canvas"]');
+  await expect(canvas.getByText("«include»")).toBeVisible();
+  await expect(canvas.getByText("«extend»")).toBeVisible();
 
   const edgePaths = page.locator(".react-flow__edge-path");
   const pathCount = await edgePaths.count();

@@ -17,3 +17,5 @@ export { useCaseAstToModel } from "./useCaseAstToModel.js";
 export { printUseCase, structuralUseCaseModel } from "./printUseCase.js";
 export { activityAstToModel } from "./activityAstToModel.js";
 export { printActivity, structuralActivityModel } from "./printActivity.js";
+export { stateMachineAstToModel } from "./stateMachineAstToModel.js";
+export { printStateMachine, structuralStateMachineModel } from "./printStateMachine.js";

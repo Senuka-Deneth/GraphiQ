@@ -13,6 +13,7 @@ import { PROFILE_RULES } from "./rules/profile/index.js";
 import { USE_CASE_RULES } from "./rules/useCase/index.js";
 import { COMPOSITE_STRUCTURE_RULES } from "./rules/compositeStructure/index.js";
 import { ACTIVITY_RULES } from "./rules/activity/index.js";
+import { STATE_MACHINE_RULES } from "./rules/stateMachine/index.js";
 import { COMMUNICATION_RULES } from "./rules/communication/index.js";
 import type { UmlRule } from "./types.js";
 
@@ -43,6 +44,7 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
     case "activity":
       return ACTIVITY_RULES;
     case "stateMachine":
+      return STATE_MACHINE_RULES;
     case "sequence":
     case "timing":
     case "interactionOverview":

@@ -39,7 +39,7 @@ export function UmlEdge({
   const relationshipType = data?.relationshipType ?? "association";
   const notation = getRelationshipNotation(relationshipType);
 
-  const [edgePath] = getSmoothStepPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     targetX,
@@ -62,6 +62,8 @@ export function UmlEdge({
     <BaseEdge
       id={id}
       path={edgePath}
+      labelX={labelX}
+      labelY={labelY}
       markerStart={computedMarkerStart ?? markerStart}
       markerEnd={computedMarkerEnd ?? markerEnd}
       label={data?.label}

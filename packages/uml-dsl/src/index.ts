@@ -52,6 +52,13 @@ export type {
   AstActivityBodyItem,
   AstActivityFlow,
   ActivityDiagramAst,
+  StateMachineDiagramAst,
+  AstStateDeclaration,
+  AstRegionDeclaration,
+  AstStateMachineTransition,
+  AstStateMachineBodyItem,
+  AstPseudostateDeclaration,
+  AstPseudostateKind,
   DslSpan,
 } from "./ast.js";
 export {

@@ -443,6 +443,61 @@ export type ActivityDiagramAst = {
   span: DslSpan;
 };
 
+export type AstPseudostateKind =
+  | "choice"
+  | "junction"
+  | "fork"
+  | "join"
+  | "shallowHistory"
+  | "deepHistory"
+  | "terminate";
+
+export type AstPseudostateDeclaration = {
+  pseudostateKind: AstPseudostateKind;
+  name: string;
+  span: DslSpan;
+};
+
+export type AstStateDeclaration = {
+  name: string;
+  entry?: string;
+  do?: string;
+  exit?: string;
+  items: AstStateMachineBodyItem[];
+  span: DslSpan;
+};
+
+export type AstRegionDeclaration = {
+  name: string;
+  items: AstStateMachineBodyItem[];
+  span: DslSpan;
+};
+
+export type AstStateMachineTransition = {
+  sourceName: string;
+  targetName: string;
+  sourceIsStar: boolean;
+  targetIsStar: boolean;
+  trigger?: string;
+  guard?: string;
+  effect?: string;
+  span: DslSpan;
+};
+
+export type AstStateMachineBodyItem =
+  | { itemKind: "state"; state: AstStateDeclaration }
+  | { itemKind: "region"; region: AstRegionDeclaration }
+  | { itemKind: "pseudostate"; pseudostate: AstPseudostateDeclaration }
+  | { itemKind: "transition"; transition: AstStateMachineTransition };
+
+export type StateMachineDiagramAst = {
+  kind: "stateMachine";
+  name?: string;
+  items: AstStateMachineBodyItem[];
+  transitions: AstStateMachineTransition[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
@@ -453,4 +508,5 @@ export type DiagramAst =
   | UseCaseDiagramAst
   | CompositeStructureDiagramAst
   | CommunicationDiagramAst
-  | ActivityDiagramAst;
+  | ActivityDiagramAst
+  | StateMachineDiagramAst;

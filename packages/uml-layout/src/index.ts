@@ -17,6 +17,11 @@ export {
 } from "./layoutCompositeStructure.js";
 export { layoutCommunication, measureCommunicationNode } from "./layoutCommunication.js";
 export { layoutActivity, measureActivityNode } from "./layoutActivity.js";
+export {
+  createStateMachineFixtureModel,
+  layoutStateMachine,
+  measureStateMachineNode,
+} from "./layoutStateMachine.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
   LayoutMode,

@@ -11,6 +11,7 @@ import type {
   CompositeStructureRelationshipTool,
   CommunicationRelationshipTool,
   ActivityRelationshipTool,
+  StateMachineRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -85,6 +86,11 @@ const ACTIVITY_RELATIONSHIP_TOOLS: readonly {
   { id: "objectFlow", label: "Object flow" },
 ] as const;
 
+const STATE_MACHINE_RELATIONSHIP_TOOLS: readonly {
+  id: StateMachineRelationshipTool;
+  label: string;
+}[] = [{ id: "transition", label: "Transition" }] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -107,6 +113,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return COMMUNICATION_RELATIONSHIP_TOOLS;
     case "activity":
       return ACTIVITY_RELATIONSHIP_TOOLS;
+    case "stateMachine":
+      return STATE_MACHINE_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }

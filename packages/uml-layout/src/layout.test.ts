@@ -4,6 +4,10 @@ import { layoutDocument } from "./layoutDocument.js";
 import { layoutObject } from "./layoutObject.js";
 import { createClassFixtureModel, layoutClass, measureClassNode } from "./layoutClass.js";
 import { createActivityFixtureModel, layoutActivity } from "./layoutActivity.js";
+import {
+  createStateMachineFixtureModel,
+  layoutStateMachine,
+} from "./layoutStateMachine.js";
 import { emptyOverlay } from "./overlay.js";
 
 describe("measureClassNode", () => {
@@ -458,6 +462,118 @@ describe("layoutActivity", () => {
 
     const incremental = await layoutActivity(withNote.value, pinnedOverlay, "incremental");
     expect(incremental.nodes["action-receive"]).toEqual(pinnedOverlay.nodes["action-receive"]);
+    const noteId = withNote.value.elements.find((element) => element.name === "Reminder")?.id;
+    expect(noteId).toBeDefined();
+    if (noteId !== undefined) {
+      expect(Number.isFinite(incremental.nodes[noteId]?.x)).toBe(true);
+    }
+  });
+});
+
+describe("layoutStateMachine", () => {
+  it("lays out the section 5.10 fixture with finite coordinates and downward flow", async () => {
+    const model = createStateMachineFixtureModel();
+    const overlay = await layoutStateMachine(model, emptyOverlay(), "full");
+
+    const initial = overlay.nodes.initial;
+    const draft = overlay.nodes["state-draft"];
+    const paid = overlay.nodes["state-paid"];
+    const finalNode = overlay.nodes.final;
+
+    expect(initial).toBeDefined();
+    expect(draft).toBeDefined();
+    expect(paid).toBeDefined();
+    expect(finalNode).toBeDefined();
+
+    for (const node of [initial, draft, paid, finalNode]) {
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+    }
+
+    if (initial !== undefined && draft !== undefined && paid !== undefined) {
+      expect(draft.y).toBeGreaterThan(initial.y);
+      expect(paid.y).toBeGreaterThan(draft.y);
+    }
+  });
+
+  it("lays out nested composite states inside the parent bounds", async () => {
+    let model = emptyModel("stateMachine");
+    const checkout = addElement(model, { elementType: "state", name: "Checkout" });
+    if (!checkout.ok) {
+      throw new Error("failed to add checkout");
+    }
+    model = checkout.value;
+    const checkoutId = model.elements[0]?.id;
+    if (checkoutId === undefined) {
+      throw new Error("missing checkout id");
+    }
+
+    const region = addElement(model, {
+      elementType: "region",
+      name: "__region__",
+      parentId: checkoutId,
+    });
+    if (!region.ok) {
+      throw new Error("failed to add region");
+    }
+    model = region.value;
+    const regionId = model.elements.find((element) => element.elementType === "region")?.id;
+    if (regionId === undefined) {
+      throw new Error("missing region id");
+    }
+
+    const nested = addElement(model, {
+      elementType: "state",
+      name: "Nested",
+      parentId: regionId,
+    });
+    if (!nested.ok) {
+      throw new Error("failed to add nested");
+    }
+    model = nested.value;
+
+    const overlay = await layoutStateMachine(model, emptyOverlay(), "full");
+    const parent = overlay.nodes[checkoutId];
+    const child = overlay.nodes[
+      model.elements.find((element) => element.name === "Nested")?.id ?? ""
+    ];
+
+    expect(parent).toBeDefined();
+    expect(child).toBeDefined();
+    if (parent !== undefined && child !== undefined) {
+      expect(child.x).toBeGreaterThanOrEqual(0);
+      expect(child.y).toBeGreaterThanOrEqual(0);
+      expect(child.x + child.width).toBeLessThanOrEqual(parent.width + 1);
+      expect(child.y + child.height).toBeLessThanOrEqual(parent.height + 1);
+    }
+  });
+
+  it("preserves a positioned state in incremental mode", async () => {
+    const model = createStateMachineFixtureModel();
+    const firstPass = await layoutStateMachine(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["state-draft"];
+    if (pinned === undefined) {
+      throw new Error("expected Draft node");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "state-draft": { ...pinned, x: 12, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutStateMachine(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["state-draft"]).toEqual(pinnedOverlay.nodes["state-draft"]);
     const noteId = withNote.value.elements.find((element) => element.name === "Reminder")?.id;
     expect(noteId).toBeDefined();
     if (noteId !== undefined) {

@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureStateMachineNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine";
 
 export type GraphiqDocument = {
   id: string;
@@ -77,6 +77,8 @@ export type CommunicationRelationshipTool = Extract<RelationshipType, "message" 
 
 export type ActivityRelationshipTool = Extract<RelationshipType, "controlFlow" | "objectFlow">;
 
+export type StateMachineRelationshipTool = Extract<RelationshipType, "transition">;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -87,7 +89,8 @@ export type RelationshipTool =
   | UseCaseRelationshipTool
   | CompositeStructureRelationshipTool
   | CommunicationRelationshipTool
-  | ActivityRelationshipTool;
+  | ActivityRelationshipTool
+  | StateMachineRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -145,6 +148,15 @@ export type ActivityStencilDropKind =
   | "activityPartition"
   | "note";
 
+export type StateMachineStencilDropKind =
+  | "state"
+  | "initial"
+  | "final"
+  | "choice"
+  | "fork"
+  | "join"
+  | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -155,7 +167,8 @@ export type StencilDropKind =
   | UseCaseStencilDropKind
   | CompositeStructureStencilDropKind
   | CommunicationStencilDropKind
-  | ActivityStencilDropKind;
+  | ActivityStencilDropKind
+  | StateMachineStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -192,6 +205,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   compositeStructure: "diagram compositeStructure\n",
   communication: "diagram communication\n",
   activity: "diagram activity\n",
+  stateMachine: "diagram stateMachine\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -205,6 +219,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   compositeStructure: "Untitled composite structure diagram",
   communication: "Untitled communication diagram",
   activity: "Untitled activity diagram",
+  stateMachine: "Untitled state machine diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -218,6 +233,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   compositeStructure: "connector",
   communication: "message",
   activity: "controlFlow",
+  stateMachine: "transition",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -277,6 +293,117 @@ function findActivityPartitionAtPoint(
           parentId: element.id,
           x: x - box.x,
           y: y - box.y,
+          area,
+        };
+      }
+    }
+  }
+
+  if (match === undefined) {
+    return undefined;
+  }
+  return { parentId: match.parentId, x: match.x, y: match.y };
+}
+
+function absoluteOverlayBox(
+  model: UmlModel,
+  overlay: NotationOverlay,
+  elementId: string,
+): { x: number; y: number; width: number; height: number } | undefined {
+  const node = overlay.nodes[elementId];
+  if (node === undefined) {
+    return undefined;
+  }
+
+  const element = model.elements.find((item) => item.id === elementId);
+  if (element?.parentId === undefined) {
+    return node;
+  }
+
+  const parentBox = absoluteOverlayBox(model, overlay, element.parentId);
+  if (parentBox === undefined) {
+    return node;
+  }
+
+  return {
+    x: parentBox.x + node.x,
+    y: parentBox.y + node.y,
+    width: node.width,
+    height: node.height,
+  };
+}
+
+function findStateMachineContainerAtPoint(
+  model: UmlModel,
+  overlay: NotationOverlay,
+  x: number,
+  y: number,
+): { parentId: string; x: number; y: number } | undefined {
+  let match: { parentId: string; x: number; y: number; area: number } | undefined;
+
+  for (const element of model.elements) {
+    if (element.elementType !== "region") {
+      continue;
+    }
+
+    const box = absoluteOverlayBox(model, overlay, element.id);
+    if (box === undefined) {
+      continue;
+    }
+
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      const area = box.width * box.height;
+      if (match === undefined || area < match.area) {
+        match = {
+          parentId: element.id,
+          x: x - box.x,
+          y: y - box.y,
+          area,
+        };
+      }
+    }
+  }
+
+  if (match !== undefined) {
+    return { parentId: match.parentId, x: match.x, y: match.y };
+  }
+
+  for (const element of model.elements) {
+    if (element.elementType !== "state") {
+      continue;
+    }
+
+    const hasRegion = model.elements.some(
+      (child) => child.parentId === element.id && child.elementType === "region",
+    );
+    if (!hasRegion) {
+      continue;
+    }
+
+    const box = absoluteOverlayBox(model, overlay, element.id);
+    if (box === undefined) {
+      continue;
+    }
+
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      const region = model.elements.find(
+        (child) => child.parentId === element.id && child.elementType === "region",
+      );
+      if (region === undefined) {
+        continue;
+      }
+
+      const regionBox = absoluteOverlayBox(model, overlay, region.id);
+      if (regionBox === undefined) {
+        continue;
+      }
+
+      const area = box.width * box.height;
+      if (match === undefined || area < match.area) {
+        match = {
+          parentId: region.id,
+          x: x - regionBox.x,
+          y: y - regionBox.y,
           area,
         };
       }
@@ -435,6 +562,10 @@ function defaultOverlayNode(
 
   if (model.kind === "activity") {
     return { x, y, ...measureActivityNode(element) };
+  }
+
+  if (model.kind === "stateMachine") {
+    return { x, y, ...measureStateMachineNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -609,11 +740,21 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       let dropX = x;
       let dropY = y;
       let activityParentId: string | undefined;
+      let stateMachineParentId: string | undefined;
 
       if (document.kind === "activity" && kind !== "activityPartition") {
         const hit = findActivityPartitionAtPoint(document.model, document.overlay, x, y);
         if (hit !== undefined) {
           activityParentId = hit.parentId;
+          dropX = hit.x;
+          dropY = hit.y;
+        }
+      }
+
+      if (document.kind === "stateMachine") {
+        const hit = findStateMachineContainerAtPoint(document.model, document.overlay, x, y);
+        if (hit !== undefined) {
+          stateMachineParentId = hit.parentId;
           dropX = hit.x;
           dropY = hit.y;
         }
@@ -966,6 +1107,65 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 return addElement(model, {
                   elementType: "action",
                   name: uniqueElementName(model, "Action"),
+                  ...parent,
+                });
+            }
+          }
+
+          if (document.kind === "stateMachine") {
+            const parent =
+              stateMachineParentId !== undefined ? { parentId: stateMachineParentId } : {};
+            switch (kind) {
+              case "state":
+                return addElement(model, {
+                  elementType: "state",
+                  name: uniqueElementName(model, "State"),
+                  ...parent,
+                });
+              case "initial":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: "[*]",
+                  kind: "initial",
+                  ...parent,
+                });
+              case "final":
+                return addElement(model, {
+                  elementType: "finalState",
+                  name: "[*]",
+                  ...parent,
+                });
+              case "choice":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: uniqueElementName(model, "Choice"),
+                  kind: "choice",
+                  ...parent,
+                });
+              case "fork":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: uniqueElementName(model, "Fork"),
+                  kind: "fork",
+                  ...parent,
+                });
+              case "join":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: uniqueElementName(model, "Join"),
+                  kind: "join",
+                  ...parent,
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                  ...parent,
+                });
+              default:
+                return addElement(model, {
+                  elementType: "state",
+                  name: uniqueElementName(model, "State"),
                   ...parent,
                 });
             }
