@@ -1,7 +1,7 @@
 import { assertNever, err, ok } from "@graphiq/uml-core";
 import type { DiagramKind, Diagnostic, Result } from "@graphiq/uml-core";
 import type { CstNode } from "chevrotain";
-import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst } from "./ast.js";
+import type { ClassDiagramAst, ComponentDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst } from "./ast.js";
 import {
   KIND_MISMATCH_RULE_ID,
   headerParseDiagnostic,
@@ -11,6 +11,7 @@ import {
   unsupportedKindDiagnostic,
 } from "./diagnostics.js";
 import { parseClassCst, parseClassDocument } from "./grammars/class.js";
+import { parseComponentCst, parseComponentDocument } from "./grammars/component.js";
 import { parseObjectCst, parseObjectDocument } from "./grammars/object.js";
 import { parsePackageCst, parsePackageDocument } from "./grammars/package.js";
 
@@ -35,9 +36,9 @@ export function parse(
       return parseObject(kind, text);
     case "package":
       return parsePackage(kind, text);
-    case "compositeStructure":
-    case "compositeStructure":
     case "component":
+      return parseComponent(kind, text);
+    case "compositeStructure":
     case "deployment":
     case "profile":
     case "useCase":
@@ -168,6 +169,40 @@ function parsePackage(
   });
 }
 
+function parseComponent(
+  expectedKind: "component",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseComponentCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseComponentDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
 function detectHeaderKindMismatch(
   text: string,
   expectedKind: DiagramKind,
@@ -193,4 +228,4 @@ function detectHeaderKindMismatch(
   };
 }
 
-export type { ClassDiagramAst, ObjectDiagramAst, PackageDiagramAst, DiagramAst };
+export type { ClassDiagramAst, ComponentDiagramAst, ObjectDiagramAst, PackageDiagramAst, DiagramAst };

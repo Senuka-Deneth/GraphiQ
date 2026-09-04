@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureObjectNode, measurePackageNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureObjectNode, measurePackageNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component";
 
 export type GraphiqDocument = {
   id: string;
@@ -47,10 +47,20 @@ export type PackageRelationshipTool = Extract<
   "packageImport" | "packageMerge" | "dependency"
 >;
 
+export type ComponentRelationshipTool = Extract<
+  RelationshipType,
+  | "interfaceRealization"
+  | "usage"
+  | "assemblyConnector"
+  | "delegationConnector"
+  | "dependency"
+>;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
-  | PackageRelationshipTool;
+  | PackageRelationshipTool
+  | ComponentRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -68,10 +78,18 @@ export type PackageStencilDropKind =
   | "enumeration"
   | "note";
 
+export type ComponentStencilDropKind =
+  | "component"
+  | "interface"
+  | "port"
+  | "artifact"
+  | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
-  | PackageStencilDropKind;
+  | PackageStencilDropKind
+  | ComponentStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -101,18 +119,21 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   class: "diagram class\n",
   object: "diagram object\n",
   package: "diagram package\n",
+  component: "diagram component\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   class: "Untitled class diagram",
   object: "Untitled object diagram",
   package: "Untitled package diagram",
+  component: "Untitled component diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
   class: "generalization",
   object: "link",
   package: "packageImport",
+  component: "assemblyConnector",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -252,6 +273,10 @@ function defaultOverlayNode(
 
   if (model.kind === "package") {
     return { x, y, ...measurePackageNode(element) };
+  }
+
+  if (model.kind === "component") {
+    return { x, y, ...measureComponentNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -482,6 +507,41 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 return addElement(model, {
                   elementType: "package",
                   name: uniqueElementName(model, "Package"),
+                });
+            }
+          }
+
+          if (document.kind === "component") {
+            switch (kind) {
+              case "component":
+                return addElement(model, {
+                  elementType: "component",
+                  name: uniqueElementName(model, "Component"),
+                });
+              case "interface":
+                return addElement(model, {
+                  elementType: "interface",
+                  name: uniqueElementName(model, "Interface"),
+                });
+              case "port":
+                return addElement(model, {
+                  elementType: "port",
+                  name: uniqueElementName(model, "Port"),
+                });
+              case "artifact":
+                return addElement(model, {
+                  elementType: "artifact",
+                  name: uniqueElementName(model, "Artifact"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "component",
+                  name: uniqueElementName(model, "Component"),
                 });
             }
           }

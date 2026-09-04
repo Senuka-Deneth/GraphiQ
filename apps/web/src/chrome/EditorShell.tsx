@@ -1,5 +1,7 @@
-import { useRef, useState } from "react";
+import { assertNever } from "@graphiq/uml-core";
+import { useRef, useState, type ReactElement, type RefObject } from "react";
 import { ClassCanvas } from "../canvas/class/ClassCanvas.js";
+import { ComponentCanvas } from "../canvas/component/ComponentCanvas.js";
 import { ObjectCanvas } from "../canvas/object/ObjectCanvas.js";
 import { PackageCanvas } from "../canvas/package/PackageCanvas.js";
 import {
@@ -11,7 +13,12 @@ import { DslEditor } from "./DslEditor.js";
 import { RelationshipToolbar } from "./RelationshipToolbar.js";
 import { Stencil } from "./Stencil.js";
 
-const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = ["class", "object", "package"];
+const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
+  "class",
+  "object",
+  "package",
+  "component",
+];
 
 export function EditorShell() {
   const title = useDocumentStore((state) => state.document.title);
@@ -90,17 +97,12 @@ export function EditorShell() {
             }
           />
           <div className="min-h-0 flex-1" data-testid="canvas-panel">
-            {kind === "object" ? (
-              <ObjectCanvas onSelectedNodeChange={setSelectedNodeId} />
-            ) : kind === "package" ? (
-              <PackageCanvas onSelectedNodeChange={setSelectedNodeId} />
-            ) : (
-              <ClassCanvas
-                onSelectedNodeChange={setSelectedNodeId}
-                editMemberTriggerRef={editMemberTriggerRef}
-                selectedNodeId={selectedNodeId}
-              />
-            )}
+            <KindCanvas
+              kind={kind}
+              onSelectedNodeChange={setSelectedNodeId}
+              editMemberTriggerRef={editMemberTriggerRef}
+              selectedNodeId={selectedNodeId}
+            />
           </div>
         </div>
         <div className="flex w-80 shrink-0 flex-col border-l border-slate-300">
@@ -121,4 +123,37 @@ export function EditorShell() {
       <DiagnosticsList diagnostics={diagnostics} />
     </div>
   );
+}
+
+type KindCanvasProps = {
+  kind: ImplementedDiagramKind;
+  onSelectedNodeChange: (nodeId: string | null) => void;
+  editMemberTriggerRef: RefObject<HTMLButtonElement | null>;
+  selectedNodeId: string | null;
+};
+
+function KindCanvas({
+  kind,
+  onSelectedNodeChange,
+  editMemberTriggerRef,
+  selectedNodeId,
+}: KindCanvasProps): ReactElement {
+  switch (kind) {
+    case "class":
+      return (
+        <ClassCanvas
+          onSelectedNodeChange={onSelectedNodeChange}
+          editMemberTriggerRef={editMemberTriggerRef}
+          selectedNodeId={selectedNodeId}
+        />
+      );
+    case "object":
+      return <ObjectCanvas onSelectedNodeChange={onSelectedNodeChange} />;
+    case "package":
+      return <PackageCanvas onSelectedNodeChange={onSelectedNodeChange} />;
+    case "component":
+      return <ComponentCanvas onSelectedNodeChange={onSelectedNodeChange} />;
+    default:
+      return assertNever(kind);
+  }
 }

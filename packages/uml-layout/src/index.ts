@@ -7,6 +7,7 @@ export {
 } from "./layoutClass.js";
 export { layoutObject, measureObjectNode } from "./layoutObject.js";
 export { layoutPackage, measurePackageNode } from "./layoutPackage.js";
+export { layoutComponent, measureComponentNode } from "./layoutComponent.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
   LayoutMode,

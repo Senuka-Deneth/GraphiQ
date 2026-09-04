@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import type { DiagramAst } from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
 import { classAstToModel } from "./classAstToModel.js";
+import { componentAstToModel } from "./componentAstToModel.js";
 import { objectAstToModel } from "./objectAstToModel.js";
 import { packageAstToModel } from "./packageAstToModel.js";
 
@@ -13,6 +14,8 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
       return objectAstToModel(ast, previous?.kind === "object" ? previous : undefined);
     case "package":
       return packageAstToModel(ast, previous?.kind === "package" ? previous : undefined);
+    case "component":
+      return componentAstToModel(ast, previous?.kind === "component" ? previous : undefined);
     default:
       return assertNever(ast);
   }

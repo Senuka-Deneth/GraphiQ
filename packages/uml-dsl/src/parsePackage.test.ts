@@ -89,7 +89,7 @@ a ..> b : «merge»
 describe("parse unsupported kinds", () => {
   it("returns dsl.unsupported-kind for kinds without grammars", () => {
     for (const kind of DIAGRAM_KINDS) {
-      if (kind === "class" || kind === "object" || kind === "package") {
+      if (kind === "class" || kind === "object" || kind === "package" || kind === "component") {
         continue;
       }
 

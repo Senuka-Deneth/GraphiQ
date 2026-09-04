@@ -140,4 +140,66 @@ export type PackageDiagramAst = {
   span: DslSpan;
 };
 
-export type DiagramAst = ClassDiagramAst | ObjectDiagramAst | PackageDiagramAst;
+export type AstComponentBodyItem =
+  | {
+      itemKind: "provides";
+      name: string;
+      span: DslSpan;
+    }
+  | {
+      itemKind: "requires";
+      name: string;
+      span: DslSpan;
+    }
+  | {
+      itemKind: "port";
+      name: string;
+      span: DslSpan;
+    }
+  | {
+      itemKind: "artifact";
+      name: string;
+      span: DslSpan;
+    };
+
+export type AstComponentDeclaration = {
+  name: string;
+  items: AstComponentBodyItem[];
+  span: DslSpan;
+};
+
+export type AstComponentRelationship =
+  | {
+      relationshipKind: "assembly";
+      sourceComponentName: string;
+      sourceInterfaceName: string;
+      targetInterfaceName: string;
+      targetComponentName: string;
+      span: DslSpan;
+    }
+  | {
+      relationshipKind: "dependency";
+      sourceName: string;
+      targetName: string;
+      span: DslSpan;
+    }
+  | {
+      relationshipKind: "delegation";
+      sourceName: string;
+      targetName: string;
+      span: DslSpan;
+    };
+
+export type ComponentDiagramAst = {
+  kind: "component";
+  name?: string;
+  components: AstComponentDeclaration[];
+  relationships: AstComponentRelationship[];
+  span: DslSpan;
+};
+
+export type DiagramAst =
+  | ClassDiagramAst
+  | ObjectDiagramAst
+  | PackageDiagramAst
+  | ComponentDiagramAst;

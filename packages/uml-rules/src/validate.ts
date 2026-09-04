@@ -5,6 +5,7 @@ import type { UmlModel } from "@graphiq/uml-model";
 import { isConnectorAllowed } from "./connectors.js";
 import { getRegisteredRules } from "./registry.js";
 import { CLASS_RULES } from "./rules/class/index.js";
+import { COMPONENT_RULES } from "./rules/component/index.js";
 import { OBJECT_RULES } from "./rules/object/index.js";
 import { PACKAGE_RULES } from "./rules/package/index.js";
 import type { UmlRule } from "./types.js";
@@ -20,8 +21,9 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
       return OBJECT_RULES;
     case "package":
       return PACKAGE_RULES;
-    case "compositeStructure":
     case "component":
+      return COMPONENT_RULES;
+    case "compositeStructure":
     case "deployment":
     case "profile":
     case "useCase":

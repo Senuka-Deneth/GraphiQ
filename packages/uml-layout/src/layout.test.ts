@@ -171,6 +171,47 @@ describe("layoutPackage", () => {
   });
 });
 
+describe("layoutComponent", () => {
+  it("lays out nested interfaces inside components with finite coordinates", async () => {
+    let model = emptyModel("component");
+    const payments = addElement(model, {
+      elementType: "component",
+      name: "Payments",
+    });
+    if (!payments.ok) {
+      throw new Error("expected component");
+    }
+    model = payments.value;
+    const paymentsId = model.elements.find((element) => element.name === "Payments")?.id;
+    if (paymentsId === undefined) {
+      throw new Error("expected payments id");
+    }
+
+    const ledger = addElement(model, {
+      elementType: "interface",
+      name: "Ledger",
+      parentId: paymentsId,
+    });
+    if (!ledger.ok) {
+      throw new Error("expected interface");
+    }
+    model = ledger.value;
+
+    const overlay = await layoutDocument("component", model, emptyOverlay(), "first-open-empty-overlay");
+    const paymentsNode = overlay.nodes[paymentsId];
+    const ledgerId = model.elements.find((element) => element.name === "Ledger")?.id;
+    const ledgerNode = ledgerId !== undefined ? overlay.nodes[ledgerId] : undefined;
+
+    for (const node of [paymentsNode, ledgerNode]) {
+      expect(node).toBeDefined();
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+      expect(Number.isFinite(node?.width)).toBe(true);
+      expect(Number.isFinite(node?.height)).toBe(true);
+    }
+  });
+});
+
 describe("layoutDocument", () => {
   it("throws for non-implemented diagram kinds", async () => {
     const model = emptyModel("sequence");

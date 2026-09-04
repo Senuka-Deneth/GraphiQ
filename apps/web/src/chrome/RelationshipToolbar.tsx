@@ -1,5 +1,7 @@
+import { assertNever } from "@graphiq/uml-core";
 import type {
   ClassRelationshipTool,
+  ComponentRelationshipTool,
   ImplementedDiagramKind,
   ObjectRelationshipTool,
   PackageRelationshipTool,
@@ -26,6 +28,29 @@ const PACKAGE_RELATIONSHIP_TOOLS: readonly { id: PackageRelationshipTool; label:
   { id: "dependency", label: "Dependency" },
 ] as const;
 
+const COMPONENT_RELATIONSHIP_TOOLS: readonly { id: ComponentRelationshipTool; label: string }[] = [
+  { id: "interfaceRealization", label: "Provided" },
+  { id: "usage", label: "Required" },
+  { id: "assemblyConnector", label: "Assembly" },
+  { id: "delegationConnector", label: "Delegation" },
+  { id: "dependency", label: "Dependency" },
+] as const;
+
+function toolsForKind(diagramKind: ImplementedDiagramKind) {
+  switch (diagramKind) {
+    case "class":
+      return CLASS_RELATIONSHIP_TOOLS;
+    case "object":
+      return OBJECT_RELATIONSHIP_TOOLS;
+    case "package":
+      return PACKAGE_RELATIONSHIP_TOOLS;
+    case "component":
+      return COMPONENT_RELATIONSHIP_TOOLS;
+    default:
+      return assertNever(diagramKind);
+  }
+}
+
 type RelationshipToolbarProps = {
   diagramKind: ImplementedDiagramKind;
   selectedTool: RelationshipTool;
@@ -41,12 +66,7 @@ export function RelationshipToolbar({
   onEditMember,
   canEditMember = false,
 }: RelationshipToolbarProps) {
-  const tools =
-    diagramKind === "object"
-      ? OBJECT_RELATIONSHIP_TOOLS
-      : diagramKind === "package"
-        ? PACKAGE_RELATIONSHIP_TOOLS
-        : CLASS_RELATIONSHIP_TOOLS;
+  const tools = toolsForKind(diagramKind);
 
   return (
     <div

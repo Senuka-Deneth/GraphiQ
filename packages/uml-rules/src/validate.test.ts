@@ -122,12 +122,12 @@ describe("validate", () => {
 });
 
 describe("connector matrices", () => {
-  it("exports empty matrices for unimplemented kinds and filled class/object matrices", () => {
+  it("exports empty matrices for unimplemented kinds and filled implemented-kind matrices", () => {
     expect(CLASS_CONNECTORS).toHaveLength(164);
     expect(OBJECT_CONNECTORS).toHaveLength(2);
     expect(PACKAGE_CONNECTORS).toHaveLength(9);
     expect(COMPOSITE_STRUCTURE_CONNECTORS).toHaveLength(0);
-    expect(COMPONENT_CONNECTORS).toHaveLength(0);
+    expect(COMPONENT_CONNECTORS).toHaveLength(19);
     expect(DEPLOYMENT_CONNECTORS).toHaveLength(0);
     expect(PROFILE_CONNECTORS).toHaveLength(0);
     expect(USE_CASE_CONNECTORS).toHaveLength(0);
@@ -145,6 +145,8 @@ describe("connector matrices", () => {
         expect(getConnectorMatrix(kind)).toHaveLength(2);
       } else if (kind === "package") {
         expect(getConnectorMatrix(kind)).toHaveLength(9);
+      } else if (kind === "component") {
+        expect(getConnectorMatrix(kind)).toHaveLength(19);
       } else {
         expect(getConnectorMatrix(kind)).toHaveLength(0);
       }

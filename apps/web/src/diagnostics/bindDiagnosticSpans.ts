@@ -1,5 +1,11 @@
 import type { Diagnostic } from "@graphiq/uml-core";
-import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst } from "@graphiq/uml-dsl";
+import type {
+  ClassDiagramAst,
+  ComponentDiagramAst,
+  DiagramAst,
+  ObjectDiagramAst,
+  PackageDiagramAst,
+} from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
 
 function findClassRelationshipSpan(
@@ -69,6 +75,61 @@ function findPackageRelationshipSpan(
   )?.span;
 }
 
+function findComponentElementSpan(ast: ComponentDiagramAst, name: string) {
+  for (const component of ast.components) {
+    if (component.name === name) {
+      return component.span;
+    }
+    for (const item of component.items) {
+      if (item.name === name) {
+        return item.span;
+      }
+    }
+  }
+  return undefined;
+}
+
+function findComponentRelationshipSpan(
+  ast: ComponentDiagramAst,
+  sourceName: string,
+  targetName: string,
+  relationshipType: string,
+) {
+  for (const relationship of ast.relationships) {
+    if (relationship.relationshipKind === "assembly") {
+      if (relationshipType !== "assemblyConnector") {
+        continue;
+      }
+      if (
+        relationship.sourceInterfaceName === sourceName &&
+        relationship.targetInterfaceName === targetName
+      ) {
+        return relationship.span;
+      }
+      continue;
+    }
+
+    if (
+      relationship.relationshipKind === "dependency" &&
+      relationshipType === "dependency" &&
+      relationship.sourceName === sourceName &&
+      relationship.targetName === targetName
+    ) {
+      return relationship.span;
+    }
+
+    if (
+      relationship.relationshipKind === "delegation" &&
+      relationshipType === "delegationConnector" &&
+      relationship.sourceName === sourceName &&
+      relationship.targetName === targetName
+    ) {
+      return relationship.span;
+    }
+  }
+  return undefined;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -108,6 +169,13 @@ function bindOneDiagnostic(
                     targetName,
                     relationship.relationshipType,
                   )
+                : ast.kind === "component"
+                  ? findComponentRelationshipSpan(
+                      ast,
+                      sourceName,
+                      targetName,
+                      relationship.relationshipType,
+                    )
                 : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
@@ -124,6 +192,8 @@ function bindOneDiagnostic(
             ? findObjectInstanceSpan(ast, element.name)
             : ast.kind === "package"
               ? findPackageElementSpan(ast, element.name)
+              : ast.kind === "component"
+                ? findComponentElementSpan(ast, element.name)
               : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };

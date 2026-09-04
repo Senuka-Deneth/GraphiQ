@@ -8,5 +8,6 @@ export {
 export { CLASS_RULES } from "./rules/class/index.js";
 export { OBJECT_RULES } from "./rules/object/index.js";
 export { PACKAGE_RULES } from "./rules/package/index.js";
+export { COMPONENT_RULES } from "./rules/component/index.js";
 export type { ConnectorKey, ConnectorTriple, UmlRule } from "./types.js";
 export { validate } from "./validate.js";

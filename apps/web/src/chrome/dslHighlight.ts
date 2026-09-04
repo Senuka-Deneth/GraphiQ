@@ -37,6 +37,13 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "object",
       "instance",
       "package",
+      "component",
+      "provides",
+      "requires",
+      "provided",
+      "required",
+      "port",
+      "artifact",
     ] as const;
 
     for (const keyword of keywords) {
