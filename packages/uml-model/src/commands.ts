@@ -98,6 +98,24 @@ function createElement(spec: NewUmlElement): UmlElement {
         name: spec.name,
         parentId: spec.parentId,
         operator: spec.operator,
+        operands: spec.operands ?? [],
+      };
+    case "lifeline":
+      return {
+        id,
+        elementType: "lifeline",
+        name: spec.name,
+        parentId: spec.parentId,
+        classifierName: spec.classifierName,
+      };
+    case "executionSpecification":
+      return {
+        id,
+        elementType: "executionSpecification",
+        name: spec.name,
+        parentId: spec.parentId,
+        startMessageId: spec.startMessageId,
+        finishMessageId: spec.finishMessageId,
       };
     case "state":
       return {

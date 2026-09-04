@@ -498,6 +498,49 @@ export type StateMachineDiagramAst = {
   span: DslSpan;
 };
 
+export type AstSequenceLifeline = {
+  name: string;
+  classifierName?: string;
+  span: DslSpan;
+};
+
+export type AstSequenceMessageSort =
+  | "synchCall"
+  | "asynchCall"
+  | "reply"
+  | "createMessage";
+
+export type AstSequenceMessage = {
+  sourceName: string;
+  targetName: string;
+  messageSort: AstSequenceMessageSort;
+  name?: string;
+  span: DslSpan;
+};
+
+export type AstSequenceCombinedFragmentOperator = "alt" | "opt" | "loop";
+
+export type AstSequenceCombinedFragmentOperand = {
+  guard?: string;
+  messages: AstSequenceMessage[];
+  span: DslSpan;
+};
+
+export type AstSequenceCombinedFragment = {
+  operator: AstSequenceCombinedFragmentOperator;
+  operands: AstSequenceCombinedFragmentOperand[];
+  span: DslSpan;
+};
+
+export type SequenceDiagramAst = {
+  kind: "sequence";
+  name?: string;
+  lifelines: AstSequenceLifeline[];
+  combinedFragments: AstSequenceCombinedFragment[];
+  messages: AstSequenceMessage[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
@@ -509,4 +552,5 @@ export type DiagramAst =
   | CompositeStructureDiagramAst
   | CommunicationDiagramAst
   | ActivityDiagramAst
-  | StateMachineDiagramAst;
+  | StateMachineDiagramAst
+  | SequenceDiagramAst;

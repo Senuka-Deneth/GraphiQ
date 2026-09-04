@@ -59,6 +59,11 @@ export type {
   AstStateMachineBodyItem,
   AstPseudostateDeclaration,
   AstPseudostateKind,
+  SequenceDiagramAst,
+  AstSequenceLifeline,
+  AstSequenceMessage,
+  AstSequenceCombinedFragment,
+  AstSequenceCombinedFragmentOperand,
   DslSpan,
 } from "./ast.js";
 export {

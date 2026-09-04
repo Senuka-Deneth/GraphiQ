@@ -5,6 +5,7 @@ import type {
   CommunicationDiagramAst,
   ActivityDiagramAst,
   StateMachineDiagramAst,
+  SequenceDiagramAst,
   AstStateMachineBodyItem,
   CompositeStructureDiagramAst,
   DeploymentDiagramAst,
@@ -361,6 +362,40 @@ function findActivityFlowSpan(
   )?.span;
 }
 
+function findSequenceMessageSpan(
+  ast: SequenceDiagramAst,
+  sourceName: string,
+  targetName: string,
+  messageSort?: string,
+  name?: string,
+) {
+  const match = (message: SequenceDiagramAst["messages"][number]) =>
+    message.sourceName === sourceName &&
+    message.targetName === targetName &&
+    (messageSort === undefined || message.messageSort === messageSort) &&
+    (name === undefined || message.name === name);
+
+  const topLevel = ast.messages.find(match);
+  if (topLevel !== undefined) {
+    return topLevel.span;
+  }
+
+  for (const fragment of ast.combinedFragments) {
+    for (const operand of fragment.operands) {
+      const nested = operand.messages.find(match);
+      if (nested !== undefined) {
+        return nested.span;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function findSequenceLifelineSpan(ast: SequenceDiagramAst, name: string) {
+  return ast.lifelines.find((lifeline) => lifeline.name === name)?.span;
+}
+
 function findStateMachineTransitionSpan(
   ast: StateMachineDiagramAst,
   sourceName: string,
@@ -554,6 +589,15 @@ function bindOneDiagnostic(
                           ? findActivityFlowSpan(ast, sourceName, targetName)
                           : ast.kind === "stateMachine"
                             ? findStateMachineTransitionSpan(ast, sourceName, targetName)
+                            : ast.kind === "sequence" &&
+                                relationship.relationshipType === "message"
+                              ? findSequenceMessageSpan(
+                                  ast,
+                                  sourceName,
+                                  targetName,
+                                  relationship.messageSort,
+                                  relationship.name,
+                                )
                         : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
@@ -586,6 +630,9 @@ function bindOneDiagnostic(
                           ? findActivityElementSpan(ast, element.name)
                           : ast.kind === "stateMachine"
                             ? findStateMachineElementSpan(ast, element.name)
+                            : ast.kind === "sequence" &&
+                                element.elementType === "lifeline"
+                              ? findSequenceLifelineSpan(ast, element.name)
                         : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };

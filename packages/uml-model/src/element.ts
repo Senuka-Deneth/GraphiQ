@@ -56,9 +56,26 @@ export type PseudostateElement = NamedElementBase & {
   kind: PseudostateKind;
 };
 
+export type CombinedFragmentOperand = {
+  guard?: string;
+  messageIds: string[];
+};
+
 export type CombinedFragmentElement = NamedElementBase & {
   elementType: "combinedFragment";
   operator: CombinedFragmentOperator;
+  operands: CombinedFragmentOperand[];
+};
+
+export type LifelineElement = NamedElementBase & {
+  elementType: "lifeline";
+  classifierName?: string;
+};
+
+export type ExecutionSpecificationElement = NamedElementBase & {
+  elementType: "executionSpecification";
+  startMessageId?: string;
+  finishMessageId?: string;
 };
 
 export type StateElement = NamedElementBase & {
@@ -96,6 +113,8 @@ export type NamedElement = NamedElementBase & {
     | "instanceSpecification"
     | "pseudostate"
     | "combinedFragment"
+    | "lifeline"
+    | "executionSpecification"
     | "state"
     | "stereotype"
     | "part"
@@ -113,6 +132,8 @@ export type UmlElement =
   | InstanceSpecificationElement
   | PseudostateElement
   | CombinedFragmentElement
+  | LifelineElement
+  | ExecutionSpecificationElement
   | StateElement
   | StereotypeElement
   | PartElement
@@ -133,7 +154,12 @@ export type NewUmlElement =
   | WithOptional<Omit<EnumerationElement, "id">, "literals">
   | WithOptional<Omit<InstanceSpecificationElement, "id">, "slots">
   | Omit<PseudostateElement, "id">
-  | Omit<CombinedFragmentElement, "id">
+  | WithOptional<Omit<CombinedFragmentElement, "id">, "operands">
+  | WithOptional<Omit<LifelineElement, "id">, "classifierName">
+  | WithOptional<
+      Omit<ExecutionSpecificationElement, "id">,
+      "startMessageId" | "finishMessageId"
+    >
   | WithOptional<Omit<StateElement, "id">, "entry" | "do" | "exit">
   | WithOptional<Omit<StereotypeElement, "id">, "attributes">
   | WithOptional<Omit<PartElement, "id">, "multiplicity">

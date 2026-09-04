@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureStateMachineNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -11,15 +11,15 @@ import {
   type ModelCommandError,
   type UmlModel,
 } from "@graphiq/uml-model";
-import type { RelationshipType } from "@graphiq/uml-model";
+import type { MessageSort, RelationshipType } from "@graphiq/uml-model";
 import { parse } from "@graphiq/uml-dsl";
-import { astToModel, print } from "@graphiq/uml-print";
+import { astToModel, print, synthesizeSequenceExecutionSpecs } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine" | "sequence";
 
 export type GraphiqDocument = {
   id: string;
@@ -79,6 +79,11 @@ export type ActivityRelationshipTool = Extract<RelationshipType, "controlFlow" |
 
 export type StateMachineRelationshipTool = Extract<RelationshipType, "transition">;
 
+export type SequenceRelationshipTool = Extract<
+  MessageSort,
+  "synchCall" | "asynchCall" | "reply" | "createMessage"
+>;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -90,7 +95,8 @@ export type RelationshipTool =
   | CompositeStructureRelationshipTool
   | CommunicationRelationshipTool
   | ActivityRelationshipTool
-  | StateMachineRelationshipTool;
+  | StateMachineRelationshipTool
+  | SequenceRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -157,6 +163,8 @@ export type StateMachineStencilDropKind =
   | "join"
   | "note";
 
+export type SequenceStencilDropKind = "lifeline" | "combined-fragment" | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -168,7 +176,8 @@ export type StencilDropKind =
   | CompositeStructureStencilDropKind
   | CommunicationStencilDropKind
   | ActivityStencilDropKind
-  | StateMachineStencilDropKind;
+  | StateMachineStencilDropKind
+  | SequenceStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -206,6 +215,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   communication: "diagram communication\n",
   activity: "diagram activity\n",
   stateMachine: "diagram stateMachine\n",
+  sequence: "diagram sequence\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -220,6 +230,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   communication: "Untitled communication diagram",
   activity: "Untitled activity diagram",
   stateMachine: "Untitled state machine diagram",
+  sequence: "Untitled sequence diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -234,6 +245,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   communication: "message",
   activity: "controlFlow",
   stateMachine: "transition",
+  sequence: "synchCall",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -436,29 +448,33 @@ async function commitStructuralModelChange(
   overlayPatch?: (overlay: NotationOverlay, model: UmlModel) => NotationOverlay,
 ): Promise<boolean> {
   const { document, lastGoodOverlay } = get();
-  const diagnostics = validate(document.kind, nextModel);
+  const modelForValidation =
+    document.kind === "sequence"
+      ? synthesizeSequenceExecutionSpecs(nextModel, get().lastGoodModel)
+      : nextModel;
+  const diagnostics = validate(document.kind, modelForValidation);
 
   if (hasFatalErrors(diagnostics)) {
     set({ diagnostics });
     return false;
   }
 
-  const overlayBase = overlayPatch ? overlayPatch(lastGoodOverlay, nextModel) : lastGoodOverlay;
+  const overlayBase = overlayPatch ? overlayPatch(lastGoodOverlay, modelForValidation) : lastGoodOverlay;
   const reason =
     Object.keys(overlayBase.nodes).length === 0
       ? "first-open-empty-overlay"
       : "topology-changed";
-  const overlay = await layoutDocument(document.kind, nextModel, overlayBase, reason);
-  const dsl = printDocumentDsl(document, nextModel);
+  const overlay = await layoutDocument(document.kind, modelForValidation, overlayBase, reason);
+  const dsl = printDocumentDsl(document, modelForValidation);
 
   set((state) => ({
     document: {
       ...state.document,
-      model: nextModel,
+      model: modelForValidation,
       overlay,
       dsl,
     },
-    lastGoodModel: nextModel,
+    lastGoodModel: modelForValidation,
     lastGoodOverlay: overlay,
     diagnostics,
     dslRevision: state.dslRevision + 1,
@@ -566,6 +582,10 @@ function defaultOverlayNode(
 
   if (model.kind === "stateMachine") {
     return { x, y, ...measureStateMachineNode(element) };
+  }
+
+  if (model.kind === "sequence") {
+    return { x, y, ...measureSequenceNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -1171,6 +1191,34 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             }
           }
 
+          if (document.kind === "sequence") {
+            switch (kind) {
+              case "lifeline":
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                  classifierName: "Type",
+                });
+              case "combined-fragment":
+                return addElement(model, {
+                  elementType: "combinedFragment",
+                  name: uniqueElementName(model, "alt"),
+                  operator: "alt",
+                  operands: [{ messageIds: [] }],
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                });
+            }
+          }
+
           switch (kind) {
             case "class":
               return addElement(model, {
@@ -1237,10 +1285,14 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         return;
       }
 
+      const connectorRelationship = (
+        document.kind === "sequence" ? "message" : relationshipTool
+      ) as RelationshipType;
+
       if (
         !isConnectorAllowed({
           kind: document.kind,
-          relationship: relationshipTool,
+          relationship: connectorRelationship,
           source: source.elementType,
           target: target.elementType,
         })
@@ -1251,7 +1303,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               id: createId(),
               ruleId: ILLEGAL_CONNECTOR_RULE_ID,
               severity: "error",
-              message: `Relationship "${relationshipTool}" from ${source.elementType} to ${target.elementType} is not allowed on a ${document.kind} diagram`,
+              message: `Relationship "${connectorRelationship}" from ${source.elementType} to ${target.elementType} is not allowed on a ${document.kind} diagram`,
               elementIds: [sourceId, targetId],
             },
           ],
@@ -1270,8 +1322,20 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           });
         }
 
+        if (document.kind === "sequence") {
+          return addRelationship(model, {
+            relationshipType: "message",
+            sourceId,
+            targetId,
+            messageSort: relationshipTool as SequenceRelationshipTool,
+          });
+        }
+
         return addRelationship(model, {
-          relationshipType: relationshipTool as Exclude<RelationshipTool, "message">,
+          relationshipType: relationshipTool as Exclude<
+            RelationshipTool,
+            "message" | SequenceRelationshipTool
+          >,
           sourceId,
           targetId,
         });

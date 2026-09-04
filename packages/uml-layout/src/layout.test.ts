@@ -5,6 +5,10 @@ import { layoutObject } from "./layoutObject.js";
 import { createClassFixtureModel, layoutClass, measureClassNode } from "./layoutClass.js";
 import { createActivityFixtureModel, layoutActivity } from "./layoutActivity.js";
 import {
+  createSequenceFixtureModel,
+  layoutSequence,
+} from "./layoutSequence.js";
+import {
   createStateMachineFixtureModel,
   layoutStateMachine,
 } from "./layoutStateMachine.js";
@@ -582,11 +586,72 @@ describe("layoutStateMachine", () => {
   });
 });
 
+describe("layoutSequence", () => {
+  it("lays out lifelines and messages with strictly increasing y coordinates", async () => {
+    const model = createSequenceFixtureModel();
+    const overlay = await layoutSequence(model, emptyOverlay(), "full");
+
+    for (const lifeline of model.elements.filter((element) => element.elementType === "lifeline")) {
+      const node = overlay.nodes[lifeline.id];
+      expect(node).toBeDefined();
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+    }
+
+    const messageYs = model.relationships.map((relationship) => {
+      const edge = overlay.edges[relationship.id];
+      expect(edge?.waypoints).toBeDefined();
+      return edge?.waypoints?.[0]?.y;
+    });
+    expect(messageYs.every((value) => Number.isFinite(value))).toBe(true);
+    for (let index = 1; index < messageYs.length; index += 1) {
+      const previous = messageYs[index - 1];
+      const current = messageYs[index];
+      if (previous !== undefined && current !== undefined) {
+        expect(current).toBeGreaterThan(previous);
+      }
+    }
+
+    const execution = overlay.nodes["exec-charge"];
+    expect(execution).toBeDefined();
+    expect(Number.isFinite(execution?.height)).toBe(true);
+    expect((execution?.height ?? 0)).toBeGreaterThan(0);
+  });
+
+  it("preserves pinned lifeline x in incremental mode", async () => {
+    const model = createSequenceFixtureModel();
+    const firstPass = await layoutSequence(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["lifeline-customer"];
+    if (pinned === undefined) {
+      throw new Error("expected customer lifeline");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "lifeline-customer": { ...pinned, x: 24, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutSequence(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["lifeline-customer"]?.x).toBe(24);
+  });
+});
+
 describe("layoutDocument", () => {
   it("throws for non-implemented diagram kinds", async () => {
-    const model = emptyModel("sequence");
+    const model = emptyModel("timing");
     await expect(
-      layoutDocument("sequence", model, emptyOverlay(), "first-open-empty-overlay"),
-    ).rejects.toThrow("layout not implemented for sequence");
+      layoutDocument("timing", model, emptyOverlay(), "first-open-empty-overlay"),
+    ).rejects.toThrow("layout not implemented for timing");
   });
 });

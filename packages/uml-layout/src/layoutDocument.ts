@@ -12,6 +12,7 @@ import { layoutCompositeStructure } from "./layoutCompositeStructure.js";
 import { layoutCommunication } from "./layoutCommunication.js";
 import { layoutActivity } from "./layoutActivity.js";
 import { layoutStateMachine } from "./layoutStateMachine.js";
+import { layoutSequence } from "./layoutSequence.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
 import { reasonToLayoutMode } from "./overlay.js";
 
@@ -47,6 +48,7 @@ export async function layoutDocument(
     case "stateMachine":
       return layoutStateMachine(model, overlay, mode);
     case "sequence":
+      return layoutSequence(model, overlay, mode);
     case "timing":
     case "interactionOverview":
       throw new Error(`layout not implemented for ${kind}`);

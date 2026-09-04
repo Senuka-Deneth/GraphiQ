@@ -185,7 +185,8 @@ describe("print class diagram", () => {
         kind === "compositeStructure" ||
         kind === "communication" ||
         kind === "activity" ||
-        kind === "stateMachine"
+        kind === "stateMachine" ||
+        kind === "sequence"
       ) {
         continue;
       }

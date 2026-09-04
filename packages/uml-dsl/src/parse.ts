@@ -27,6 +27,7 @@ import {
 } from "./grammars/communication.js";
 import { parseActivityCst, parseActivityDocument } from "./grammars/activity.js";
 import { parseStateMachineCst, parseStateMachineDocument } from "./grammars/stateMachine.js";
+import { parseSequenceCst, parseSequenceDocument } from "./grammars/sequence.js";
 
 export type ParseSuccess = {
   ast: DiagramAst;
@@ -66,6 +67,7 @@ export function parse(
     case "stateMachine":
       return parseStateMachine(kind, text);
     case "sequence":
+      return parseSequence(kind, text);
     case "timing":
     case "interactionOverview":
       return err({
@@ -453,6 +455,40 @@ function parseStateMachine(
   }
 
   const ast = parseStateMachineDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseSequence(
+  expectedKind: "sequence",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseSequenceCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseSequenceDocument(cst);
 
   return ok({
     ast,

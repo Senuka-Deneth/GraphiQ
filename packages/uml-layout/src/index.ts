@@ -22,6 +22,11 @@ export {
   layoutStateMachine,
   measureStateMachineNode,
 } from "./layoutStateMachine.js";
+export {
+  createSequenceFixtureModel,
+  layoutSequence,
+  measureSequenceNode,
+} from "./layoutSequence.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
   LayoutMode,

@@ -12,6 +12,7 @@ import type {
   CommunicationRelationshipTool,
   ActivityRelationshipTool,
   StateMachineRelationshipTool,
+  SequenceRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -91,6 +92,16 @@ const STATE_MACHINE_RELATIONSHIP_TOOLS: readonly {
   label: string;
 }[] = [{ id: "transition", label: "Transition" }] as const;
 
+const SEQUENCE_RELATIONSHIP_TOOLS: readonly {
+  id: SequenceRelationshipTool;
+  label: string;
+}[] = [
+  { id: "synchCall", label: "Sync call" },
+  { id: "asynchCall", label: "Async call" },
+  { id: "reply", label: "Reply" },
+  { id: "createMessage", label: "Create" },
+] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -115,6 +126,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return ACTIVITY_RELATIONSHIP_TOOLS;
     case "stateMachine":
       return STATE_MACHINE_RELATIONSHIP_TOOLS;
+    case "sequence":
+      return SEQUENCE_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }
