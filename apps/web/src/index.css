@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Editor chrome tokens only. UML notation colors are Step 5 (uml-notation). */
+:root {
+  --color-canvas: #f8fafc;
+  --color-ink: #0f172a;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+}
