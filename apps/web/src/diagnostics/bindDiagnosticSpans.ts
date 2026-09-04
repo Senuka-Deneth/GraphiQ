@@ -6,6 +6,7 @@ import type {
   DiagramAst,
   ObjectDiagramAst,
   PackageDiagramAst,
+  ProfileDiagramAst,
 } from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
 
@@ -159,6 +160,47 @@ function findDeploymentRelationshipSpan(
   )?.span;
 }
 
+function findProfileElementSpan(ast: ProfileDiagramAst, name: string) {
+  const stereotype = ast.stereotypes.find((item) => item.name === name);
+  if (stereotype !== undefined) {
+    return stereotype.span;
+  }
+  const metaclass = ast.metaclasses.find((item) => item.name === name);
+  if (metaclass !== undefined) {
+    return metaclass.span;
+  }
+  const profile = ast.profiles.find((item) => item.name === name);
+  if (profile !== undefined) {
+    return profile.span;
+  }
+  const enumeration = ast.enumerations.find((item) => item.name === name);
+  if (enumeration !== undefined) {
+    return enumeration.span;
+  }
+  for (const item of ast.stereotypes) {
+    for (const attribute of item.attributes) {
+      if (attribute.name === name) {
+        return attribute.span;
+      }
+    }
+  }
+  return undefined;
+}
+
+function findProfileRelationshipSpan(
+  ast: ProfileDiagramAst,
+  sourceName: string,
+  targetName: string,
+  relationshipType: string,
+) {
+  return ast.relationships.find(
+    (relationship) =>
+      relationship.relationshipKind === relationshipType &&
+      relationship.sourceName === sourceName &&
+      relationship.targetName === targetName,
+  )?.span;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -212,6 +254,13 @@ function bindOneDiagnostic(
                       targetName,
                       relationship.relationshipType,
                     )
+                : ast.kind === "profile"
+                  ? findProfileRelationshipSpan(
+                      ast,
+                      sourceName,
+                      targetName,
+                      relationship.relationshipType,
+                    )
                 : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
@@ -232,6 +281,8 @@ function bindOneDiagnostic(
                 ? findComponentElementSpan(ast, element.name)
                 : ast.kind === "deployment"
                   ? findDeploymentElementSpan(ast, element.name)
+                : ast.kind === "profile"
+                  ? findProfileElementSpan(ast, element.name)
                   : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };

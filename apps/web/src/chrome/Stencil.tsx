@@ -6,6 +6,7 @@ import type {
   ImplementedDiagramKind,
   ObjectStencilDropKind,
   PackageStencilDropKind,
+  ProfileStencilDropKind,
   StencilDropKind,
 } from "../store/documentStore.js";
 
@@ -51,6 +52,14 @@ export const DEPLOYMENT_STENCIL_ITEMS: readonly StencilItem[] = [
   { id: "note", label: "Note" },
 ] as const;
 
+export const PROFILE_STENCIL_ITEMS: readonly StencilItem[] = [
+  { id: "stereotype", label: "Stereotype" },
+  { id: "metaclass", label: "Metaclass" },
+  { id: "enumeration", label: "Enumeration" },
+  { id: "profile", label: "Profile" },
+  { id: "note", label: "Note" },
+] as const;
+
 export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly StencilItem[] {
   switch (kind) {
     case "class":
@@ -63,6 +72,8 @@ export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly Sten
       return COMPONENT_STENCIL_ITEMS;
     case "deployment":
       return DEPLOYMENT_STENCIL_ITEMS;
+    case "profile":
+      return PROFILE_STENCIL_ITEMS;
     default:
       return assertNever(kind);
   }
@@ -74,6 +85,7 @@ export type {
   DeploymentStencilDropKind,
   ObjectStencilDropKind,
   PackageStencilDropKind,
+  ProfileStencilDropKind,
   StencilDropKind,
 };
 

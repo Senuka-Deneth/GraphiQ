@@ -109,6 +109,14 @@ function createElement(spec: NewUmlElement): UmlElement {
         do: spec.do,
         exit: spec.exit,
       };
+    case "stereotype":
+      return {
+        id,
+        elementType: "stereotype",
+        name: spec.name,
+        parentId: spec.parentId,
+        attributes: spec.attributes ?? [],
+      };
     default:
       return {
         id,

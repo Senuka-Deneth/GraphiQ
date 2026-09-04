@@ -12,6 +12,7 @@ export type {
   AstDeploymentRelationship,
   AstInstance,
   AstInterfaceClassifier,
+  AstMetaclassDeclaration,
   AstObjectRelationship,
   AstOperation,
   AstOperationParameter,
@@ -23,9 +24,15 @@ export type {
   DiagramAst,
   ObjectDiagramAst,
   PackageDiagramAst,
+  ProfileDiagramAst,
   AstPackageDeclaration,
   AstPackageBodyItem,
   AstPackageRelationship,
+  AstProfileEnumeration,
+  AstProfileFrameDeclaration,
+  AstProfileRelationship,
+  AstStereotypeDeclaration,
+  AstTaggedValue,
   DslSpan,
 } from "./ast.js";
 export {

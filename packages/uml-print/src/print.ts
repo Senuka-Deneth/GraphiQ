@@ -6,6 +6,7 @@ import { printComponent } from "./printComponent.js";
 import { printDeployment } from "./printDeployment.js";
 import { printObject } from "./printObject.js";
 import { printPackage } from "./printPackage.js";
+import { printProfile } from "./printProfile.js";
 
 export type PrintOptions = {
   cst?: unknown;
@@ -24,8 +25,9 @@ export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions
       return printComponent(model, { name: options?.name });
     case "deployment":
       return printDeployment(model, { name: options?.name });
-    case "compositeStructure":
     case "profile":
+      return printProfile(model, { name: options?.name });
+    case "compositeStructure":
     case "useCase":
     case "activity":
     case "stateMachine":

@@ -41,6 +41,14 @@ describe("getRelationshipNotation", () => {
     });
   });
 
+  it("maps extension to a solid line with a filled triangle at the target", () => {
+    expect(getRelationshipNotation("extension")).toEqual({
+      lineStyle: "solid",
+      sourceMarkerId: null,
+      targetMarkerId: "ext-filled-triangle",
+    });
+  });
+
   it("maps composition to a filled diamond on the source end", () => {
     expect(getRelationshipNotation("composition")).toEqual({
       lineStyle: "solid",

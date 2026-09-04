@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureDeploymentNode, measureObjectNode, measurePackageNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile";
 
 export type GraphiqDocument = {
   id: string;
@@ -61,12 +61,15 @@ export type DeploymentRelationshipTool = Extract<
   "communicationPath" | "deployment" | "generalization"
 >;
 
+export type ProfileRelationshipTool = Extract<RelationshipType, "extension" | "generalization">;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
   | PackageRelationshipTool
   | ComponentRelationshipTool
-  | DeploymentRelationshipTool;
+  | DeploymentRelationshipTool
+  | ProfileRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -98,12 +101,20 @@ export type DeploymentStencilDropKind =
   | "artifact"
   | "note";
 
+export type ProfileStencilDropKind =
+  | "stereotype"
+  | "metaclass"
+  | "enumeration"
+  | "profile"
+  | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
   | PackageStencilDropKind
   | ComponentStencilDropKind
-  | DeploymentStencilDropKind;
+  | DeploymentStencilDropKind
+  | ProfileStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -135,6 +146,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   package: "diagram package\n",
   component: "diagram component\n",
   deployment: "diagram deployment\n",
+  profile: "diagram profile\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -143,6 +155,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   package: "Untitled package diagram",
   component: "Untitled component diagram",
   deployment: "Untitled deployment diagram",
+  profile: "Untitled profile diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -151,6 +164,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   package: "packageImport",
   component: "assemblyConnector",
   deployment: "communicationPath",
+  profile: "extension",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -298,6 +312,10 @@ function defaultOverlayNode(
 
   if (model.kind === "deployment") {
     return { x, y, ...measureDeploymentNode(element) };
+  }
+
+  if (model.kind === "profile") {
+    return { x, y, ...measureProfileNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -598,6 +616,42 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 return addElement(model, {
                   elementType: "node",
                   name: uniqueElementName(model, "Node"),
+                });
+            }
+          }
+
+          if (document.kind === "profile") {
+            switch (kind) {
+              case "stereotype":
+                return addElement(model, {
+                  elementType: "stereotype",
+                  name: uniqueElementName(model, "Stereotype"),
+                });
+              case "metaclass":
+                return addElement(model, {
+                  elementType: "metaclass",
+                  name: uniqueElementName(model, "Metaclass"),
+                });
+              case "enumeration":
+                return addElement(model, {
+                  elementType: "enumeration",
+                  name: uniqueElementName(model, "Enumeration"),
+                  literals: [],
+                });
+              case "profile":
+                return addElement(model, {
+                  elementType: "profile",
+                  name: uniqueElementName(model, "Profile"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "stereotype",
+                  name: uniqueElementName(model, "Stereotype"),
                 });
             }
           }

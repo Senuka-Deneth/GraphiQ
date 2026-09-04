@@ -255,6 +255,41 @@ describe("layoutDeployment", () => {
   });
 });
 
+describe("layoutProfile", () => {
+  it("lays out a stereotype and metaclass with finite coordinates", async () => {
+    let model = emptyModel("profile");
+    const entity = addElement(model, { elementType: "stereotype", name: "Entity" });
+    if (!entity.ok) {
+      throw new Error("expected stereotype");
+    }
+    model = entity.value;
+    const metaclass = addElement(model, { elementType: "metaclass", name: "Class" });
+    if (!metaclass.ok) {
+      throw new Error("expected metaclass");
+    }
+    model = metaclass.value;
+
+    const overlay = await layoutDocument(
+      "profile",
+      model,
+      emptyOverlay(),
+      "first-open-empty-overlay",
+    );
+    const entityId = model.elements.find((element) => element.name === "Entity")?.id;
+    const classId = model.elements.find((element) => element.name === "Class")?.id;
+    const entityNode = entityId !== undefined ? overlay.nodes[entityId] : undefined;
+    const classNode = classId !== undefined ? overlay.nodes[classId] : undefined;
+
+    for (const node of [entityNode, classNode]) {
+      expect(node).toBeDefined();
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+      expect(Number.isFinite(node?.width)).toBe(true);
+      expect(Number.isFinite(node?.height)).toBe(true);
+    }
+  });
+});
+
 describe("layoutDocument", () => {
   it("throws for non-implemented diagram kinds", async () => {
     const model = emptyModel("sequence");

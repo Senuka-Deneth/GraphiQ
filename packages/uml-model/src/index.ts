@@ -29,6 +29,7 @@ export type {
   PrimitiveTypeElement,
   PseudostateElement,
   StateElement,
+  StereotypeElement,
   UmlElement,
 } from "./element.js";
 export { isClassifierElement } from "./element.js";

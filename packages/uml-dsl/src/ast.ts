@@ -242,9 +242,63 @@ export type DeploymentDiagramAst = {
   span: DslSpan;
 };
 
+export type AstTaggedValue = {
+  name: string;
+  typeName: string;
+  span: DslSpan;
+};
+
+export type AstStereotypeDeclaration = {
+  name: string;
+  attributes: AstTaggedValue[];
+  span: DslSpan;
+};
+
+export type AstMetaclassDeclaration = {
+  name: string;
+  span: DslSpan;
+};
+
+export type AstProfileFrameDeclaration = {
+  name: string;
+  span: DslSpan;
+};
+
+export type AstProfileEnumeration = {
+  name: string;
+  literals: string[];
+  span: DslSpan;
+};
+
+export type AstProfileRelationship =
+  | {
+      relationshipKind: "extension";
+      sourceName: string;
+      targetName: string;
+      span: DslSpan;
+    }
+  | {
+      relationshipKind: "generalization";
+      sourceName: string;
+      targetName: string;
+      span: DslSpan;
+    };
+
+export type ProfileDiagramAst = {
+  kind: "profile";
+  name?: string;
+  stereotypes: AstStereotypeDeclaration[];
+  metaclasses: AstMetaclassDeclaration[];
+  profiles: AstProfileFrameDeclaration[];
+  enumerations: AstProfileEnumeration[];
+  relationships: AstProfileRelationship[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
   | PackageDiagramAst
   | ComponentDiagramAst
-  | DeploymentDiagramAst;
+  | DeploymentDiagramAst
+  | ProfileDiagramAst;

@@ -68,6 +68,11 @@ export type StateElement = NamedElementBase & {
   exit?: string;
 };
 
+export type StereotypeElement = NamedElementBase & {
+  elementType: "stereotype";
+  attributes: Attribute[];
+};
+
 export type NamedElement = NamedElementBase & {
   elementType: Exclude<
     ElementType,
@@ -81,6 +86,7 @@ export type NamedElement = NamedElementBase & {
     | "pseudostate"
     | "combinedFragment"
     | "state"
+    | "stereotype"
   >;
 };
 
@@ -95,6 +101,7 @@ export type UmlElement =
   | PseudostateElement
   | CombinedFragmentElement
   | StateElement
+  | StereotypeElement
   | NamedElement;
 
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -113,6 +120,7 @@ export type NewUmlElement =
   | Omit<PseudostateElement, "id">
   | Omit<CombinedFragmentElement, "id">
   | WithOptional<Omit<StateElement, "id">, "entry" | "do" | "exit">
+  | WithOptional<Omit<StereotypeElement, "id">, "attributes">
   | Omit<NamedElement, "id">;
 
 export type ClassifierElement =

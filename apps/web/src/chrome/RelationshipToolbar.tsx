@@ -6,6 +6,7 @@ import type {
   ImplementedDiagramKind,
   ObjectRelationshipTool,
   PackageRelationshipTool,
+  ProfileRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -43,6 +44,11 @@ const DEPLOYMENT_RELATIONSHIP_TOOLS: readonly { id: DeploymentRelationshipTool; 
   { id: "generalization", label: "Generalization" },
 ] as const;
 
+const PROFILE_RELATIONSHIP_TOOLS: readonly { id: ProfileRelationshipTool; label: string }[] = [
+  { id: "extension", label: "Extension" },
+  { id: "generalization", label: "Generalization" },
+] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -55,6 +61,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return COMPONENT_RELATIONSHIP_TOOLS;
     case "deployment":
       return DEPLOYMENT_RELATIONSHIP_TOOLS;
+    case "profile":
+      return PROFILE_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }

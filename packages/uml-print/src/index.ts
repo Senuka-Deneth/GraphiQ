@@ -11,3 +11,5 @@ export { printDeployment, structuralDeploymentModel } from "./printDeployment.js
 export { printObject, structuralObjectModel } from "./printObject.js";
 export { packageAstToModel } from "./packageAstToModel.js";
 export { printPackage, structuralPackageModel } from "./printPackage.js";
+export { profileAstToModel } from "./profileAstToModel.js";
+export { printProfile, structuralProfileModel } from "./printProfile.js";

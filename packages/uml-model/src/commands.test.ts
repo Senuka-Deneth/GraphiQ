@@ -39,6 +39,23 @@ describe("addElement", () => {
     );
   });
 
+  it("adds a stereotype with an empty tagged-value list", () => {
+    const model = emptyModel("profile");
+    const result = addElement(model, { elementType: "stereotype", name: "Entity" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const element = result.value.elements[0];
+    expect(element?.elementType).toBe("stereotype");
+    if (element?.elementType !== "stereotype") {
+      throw new Error("expected stereotype element");
+    }
+    expect(element.attributes).toEqual([]);
+  });
+
   it("rejects a lifeline on a class model without mutating the input", () => {
     const model = emptyModel("class");
     const result = addElement(model, { elementType: "lifeline", name: "shop" });
