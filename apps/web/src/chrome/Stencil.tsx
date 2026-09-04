@@ -10,6 +10,7 @@ import type {
   UseCaseStencilDropKind,
   CompositeStructureStencilDropKind,
   CommunicationStencilDropKind,
+  ActivityStencilDropKind,
   StencilDropKind,
 } from "../store/documentStore.js";
 
@@ -82,6 +83,20 @@ export const COMMUNICATION_STENCIL_ITEMS: readonly StencilItem[] = [
   { id: "note", label: "Note" },
 ] as const;
 
+export const ACTIVITY_STENCIL_ITEMS: readonly StencilItem[] = [
+  { id: "action", label: "Action" },
+  { id: "objectNode", label: "Object node" },
+  { id: "initialNode", label: "Initial" },
+  { id: "activityFinalNode", label: "Activity final" },
+  { id: "flowFinalNode", label: "Flow final" },
+  { id: "decisionNode", label: "Decision" },
+  { id: "mergeNode", label: "Merge" },
+  { id: "forkNode", label: "Fork" },
+  { id: "joinNode", label: "Join" },
+  { id: "activityPartition", label: "Partition" },
+  { id: "note", label: "Note" },
+] as const;
+
 export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly StencilItem[] {
   switch (kind) {
     case "class":
@@ -102,6 +117,8 @@ export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly Sten
       return COMPOSITE_STRUCTURE_STENCIL_ITEMS;
     case "communication":
       return COMMUNICATION_STENCIL_ITEMS;
+    case "activity":
+      return ACTIVITY_STENCIL_ITEMS;
     default:
       return assertNever(kind);
   }
@@ -112,6 +129,7 @@ export type {
   ComponentStencilDropKind,
   CompositeStructureStencilDropKind,
   CommunicationStencilDropKind,
+  ActivityStencilDropKind,
   DeploymentStencilDropKind,
   ObjectStencilDropKind,
   PackageStencilDropKind,

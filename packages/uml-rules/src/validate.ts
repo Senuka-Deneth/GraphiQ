@@ -12,8 +12,10 @@ import { PACKAGE_RULES } from "./rules/package/index.js";
 import { PROFILE_RULES } from "./rules/profile/index.js";
 import { USE_CASE_RULES } from "./rules/useCase/index.js";
 import { COMPOSITE_STRUCTURE_RULES } from "./rules/compositeStructure/index.js";
+import { ACTIVITY_RULES } from "./rules/activity/index.js";
 import { COMMUNICATION_RULES } from "./rules/communication/index.js";
 import type { UmlRule } from "./types.js";
+
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
 const ILLEGAL_ELEMENT_RULE_ID = "rules.illegal-element-on-diagram";
@@ -39,6 +41,7 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
     case "communication":
       return COMMUNICATION_RULES;
     case "activity":
+      return ACTIVITY_RULES;
     case "stateMachine":
     case "sequence":
     case "timing":

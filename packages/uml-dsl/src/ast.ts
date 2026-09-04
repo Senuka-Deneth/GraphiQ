@@ -392,6 +392,57 @@ export type CommunicationDiagramAst = {
   span: DslSpan;
 };
 
+export type AstActivityNodeKind =
+  | "action"
+  | "objectNode"
+  | "initialNode"
+  | "activityFinalNode"
+  | "flowFinalNode"
+  | "decisionNode"
+  | "mergeNode"
+  | "forkNode"
+  | "joinNode";
+
+export type AstActivityNode = {
+  nodeKind: AstActivityNodeKind;
+  name: string;
+  span: DslSpan;
+};
+
+export type AstActivityPartition = {
+  name: string;
+  items: AstActivityBodyItem[];
+  span: DslSpan;
+};
+
+export type AstActivityInterruptible = {
+  name: string;
+  items: AstActivityBodyItem[];
+  span: DslSpan;
+};
+
+export type AstActivityBodyItem =
+  | { itemKind: "node"; node: AstActivityNode }
+  | { itemKind: "partition"; partition: AstActivityPartition }
+  | { itemKind: "interruptible"; region: AstActivityInterruptible };
+
+export type AstActivityFlow = {
+  sourceName: string;
+  targetName: string;
+  guard?: string;
+  span: DslSpan;
+};
+
+export type ActivityDiagramAst = {
+  kind: "activity";
+  name?: string;
+  partitions: AstActivityPartition[];
+  interruptibles: AstActivityInterruptible[];
+  nodes: AstActivityNode[];
+  flows: AstActivityFlow[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
@@ -401,4 +452,5 @@ export type DiagramAst =
   | ProfileDiagramAst
   | UseCaseDiagramAst
   | CompositeStructureDiagramAst
-  | CommunicationDiagramAst;
+  | CommunicationDiagramAst
+  | ActivityDiagramAst;

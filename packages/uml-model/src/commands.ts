@@ -210,6 +210,24 @@ function createRelationship(spec: NewUmlRelationship): UmlRelationship {
         guard: spec.guard,
         effect: spec.effect,
       };
+    case "controlFlow":
+      return {
+        id,
+        relationshipType: "controlFlow",
+        sourceId,
+        targetId,
+        name,
+        guard: spec.guard,
+      };
+    case "objectFlow":
+      return {
+        id,
+        relationshipType: "objectFlow",
+        sourceId,
+        targetId,
+        name,
+        guard: spec.guard,
+      };
     default:
       return {
         id,

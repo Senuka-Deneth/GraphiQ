@@ -198,7 +198,8 @@ class Good {
         kind === "profile" ||
         kind === "useCase" ||
         kind === "compositeStructure" ||
-        kind === "communication"
+        kind === "communication" ||
+        kind === "activity"
       ) {
         continue;
       }

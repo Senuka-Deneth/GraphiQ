@@ -41,13 +41,15 @@ export type {
   AssociationRelationship,
   BinaryRelationship,
   CompositionRelationship,
+  ControlFlowRelationship,
   MessageRelationship,
   NavigableAssociationRelationship,
   NewUmlRelationship,
+  ObjectFlowRelationship,
   TransitionRelationship,
   UmlRelationship,
 } from "./relationship.js";
-export { isAssociationFamilyRelationship } from "./relationship.js";
+export { isActivityFlowRelationship, isAssociationFamilyRelationship } from "./relationship.js";
 
 export type { UmlModel } from "./model.js";
 export { emptyModel } from "./model.js";

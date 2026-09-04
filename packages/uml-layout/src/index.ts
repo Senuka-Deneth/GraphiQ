@@ -16,6 +16,7 @@ export {
   measureCompositeStructureNode,
 } from "./layoutCompositeStructure.js";
 export { layoutCommunication, measureCommunicationNode } from "./layoutCommunication.js";
+export { layoutActivity, measureActivityNode } from "./layoutActivity.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
   LayoutMode,

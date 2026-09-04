@@ -3,6 +3,7 @@ import type {
   ClassDiagramAst,
   ComponentDiagramAst,
   CommunicationDiagramAst,
+  ActivityDiagramAst,
   CompositeStructureDiagramAst,
   DeploymentDiagramAst,
   DiagramAst,
@@ -280,6 +281,84 @@ function findCommunicationMessageSpan(
   )?.span;
 }
 
+function findActivityElementSpan(ast: ActivityDiagramAst, name: string) {
+  const topLevel = ast.nodes.find((node) => node.name === name);
+  if (topLevel !== undefined) {
+    return topLevel.span;
+  }
+  for (const partition of ast.partitions) {
+    const found = findActivityBodySpan(partition.items, name);
+    if (found !== undefined) {
+      return found;
+    }
+    if (partition.name === name) {
+      return partition.span;
+    }
+  }
+  for (const region of ast.interruptibles) {
+    const found = findActivityBodySpan(region.items, name);
+    if (found !== undefined) {
+      return found;
+    }
+    if (region.name === name) {
+      return region.span;
+    }
+  }
+  return undefined;
+}
+
+function findActivityBodySpan(
+  items: ActivityDiagramAst["partitions"][number]["items"],
+  name: string,
+): { start: number; end: number } | undefined {
+  for (const item of items) {
+    switch (item.itemKind) {
+      case "node":
+        if (item.node.name === name) {
+          return item.node.span;
+        }
+        break;
+      case "partition":
+        if (item.partition.name === name) {
+          return item.partition.span;
+        }
+        {
+          const nested = findActivityBodySpan(item.partition.items, name);
+          if (nested !== undefined) {
+            return nested;
+          }
+        }
+        break;
+      case "interruptible":
+        if (item.region.name === name) {
+          return item.region.span;
+        }
+        {
+          const nested = findActivityBodySpan(item.region.items, name);
+          if (nested !== undefined) {
+            return nested;
+          }
+        }
+        break;
+      default: {
+        const unreachable: never = item;
+        throw new Error(`Unhandled activity body item: ${String(unreachable)}`);
+      }
+    }
+  }
+  return undefined;
+}
+
+function findActivityFlowSpan(
+  ast: ActivityDiagramAst,
+  sourceName: string,
+  targetName: string,
+) {
+  return ast.flows.find(
+    (flow) => flow.sourceName === sourceName && flow.targetName === targetName,
+  )?.span;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -358,6 +437,8 @@ function bindOneDiagnostic(
                             targetName,
                             relationship.sequenceNumber,
                           )
+                        : ast.kind === "activity"
+                          ? findActivityFlowSpan(ast, sourceName, targetName)
                         : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
@@ -386,6 +467,8 @@ function bindOneDiagnostic(
                       ? findCompositeStructureElementSpan(ast, element.name)
                       : ast.kind === "communication"
                         ? findCommunicationInstanceSpan(ast, element.name)
+                        : ast.kind === "activity"
+                          ? findActivityElementSpan(ast, element.name)
                         : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };

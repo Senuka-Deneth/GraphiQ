@@ -10,6 +10,7 @@ import type {
   UseCaseRelationshipTool,
   CompositeStructureRelationshipTool,
   CommunicationRelationshipTool,
+  ActivityRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -76,6 +77,14 @@ const COMMUNICATION_RELATIONSHIP_TOOLS: readonly {
   { id: "link", label: "Link" },
 ] as const;
 
+const ACTIVITY_RELATIONSHIP_TOOLS: readonly {
+  id: ActivityRelationshipTool;
+  label: string;
+}[] = [
+  { id: "controlFlow", label: "Control flow" },
+  { id: "objectFlow", label: "Object flow" },
+] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -96,6 +105,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return COMPOSITE_STRUCTURE_RELATIONSHIP_TOOLS;
     case "communication":
       return COMMUNICATION_RELATIONSHIP_TOOLS;
+    case "activity":
+      return ACTIVITY_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }

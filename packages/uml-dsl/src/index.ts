@@ -45,6 +45,13 @@ export type {
   AstCommunicationMessage,
   AstCommunicationLink,
   CommunicationDiagramAst,
+  AstActivityNodeKind,
+  AstActivityNode,
+  AstActivityPartition,
+  AstActivityInterruptible,
+  AstActivityBodyItem,
+  AstActivityFlow,
+  ActivityDiagramAst,
   DslSpan,
 } from "./ast.js";
 export {

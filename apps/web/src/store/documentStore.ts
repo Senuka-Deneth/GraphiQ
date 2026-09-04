@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity";
 
 export type GraphiqDocument = {
   id: string;
@@ -75,6 +75,8 @@ export type CompositeStructureRelationshipTool = Extract<
 
 export type CommunicationRelationshipTool = Extract<RelationshipType, "message" | "link">;
 
+export type ActivityRelationshipTool = Extract<RelationshipType, "controlFlow" | "objectFlow">;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -84,7 +86,8 @@ export type RelationshipTool =
   | ProfileRelationshipTool
   | UseCaseRelationshipTool
   | CompositeStructureRelationshipTool
-  | CommunicationRelationshipTool;
+  | CommunicationRelationshipTool
+  | ActivityRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -129,6 +132,19 @@ export type CompositeStructureStencilDropKind = "class" | "part" | "port" | "not
 
 export type CommunicationStencilDropKind = "instance" | "note";
 
+export type ActivityStencilDropKind =
+  | "action"
+  | "objectNode"
+  | "initialNode"
+  | "activityFinalNode"
+  | "flowFinalNode"
+  | "decisionNode"
+  | "mergeNode"
+  | "forkNode"
+  | "joinNode"
+  | "activityPartition"
+  | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -138,7 +154,8 @@ export type StencilDropKind =
   | ProfileStencilDropKind
   | UseCaseStencilDropKind
   | CompositeStructureStencilDropKind
-  | CommunicationStencilDropKind;
+  | CommunicationStencilDropKind
+  | ActivityStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -174,6 +191,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   useCase: "diagram useCase\n",
   compositeStructure: "diagram compositeStructure\n",
   communication: "diagram communication\n",
+  activity: "diagram activity\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -186,6 +204,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   useCase: "Untitled use case diagram",
   compositeStructure: "Untitled composite structure diagram",
   communication: "Untitled communication diagram",
+  activity: "Untitled activity diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -198,6 +217,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   useCase: "association",
   compositeStructure: "connector",
   communication: "message",
+  activity: "controlFlow",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -232,6 +252,41 @@ function uniqueElementName(model: UmlModel, base: string): string {
     counter += 1;
   }
   return `${base}${counter}`;
+}
+
+function findActivityPartitionAtPoint(
+  model: UmlModel,
+  overlay: NotationOverlay,
+  x: number,
+  y: number,
+): { parentId: string; x: number; y: number } | undefined {
+  let match: { parentId: string; x: number; y: number; area: number } | undefined;
+
+  for (const element of model.elements) {
+    if (element.elementType !== "activityPartition") {
+      continue;
+    }
+    const box = overlay.nodes[element.id];
+    if (box === undefined) {
+      continue;
+    }
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      const area = box.width * box.height;
+      if (match === undefined || area < match.area) {
+        match = {
+          parentId: element.id,
+          x: x - box.x,
+          y: y - box.y,
+          area,
+        };
+      }
+    }
+  }
+
+  if (match === undefined) {
+    return undefined;
+  }
+  return { parentId: match.parentId, x: match.x, y: match.y };
 }
 
 function printDocumentDsl(document: GraphiqDocument, model: UmlModel): string {
@@ -376,6 +431,10 @@ function defaultOverlayNode(
 
   if (model.kind === "communication") {
     return { x, y, ...measureCommunicationNode(element) };
+  }
+
+  if (model.kind === "activity") {
+    return { x, y, ...measureActivityNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -547,6 +606,18 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
     dropStencilElement: async (kind, x, y) => {
       const { document } = get();
+      let dropX = x;
+      let dropY = y;
+      let activityParentId: string | undefined;
+
+      if (document.kind === "activity" && kind !== "activityPartition") {
+        const hit = findActivityPartitionAtPoint(document.model, document.overlay, x, y);
+        if (hit !== undefined) {
+          activityParentId = hit.parentId;
+          dropX = hit.x;
+          dropY = hit.y;
+        }
+      }
 
       await applyModelCommand(
         get,
@@ -822,6 +893,84 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             }
           }
 
+          if (document.kind === "activity") {
+            const parent =
+              activityParentId !== undefined ? { parentId: activityParentId } : {};
+            switch (kind) {
+              case "action":
+                return addElement(model, {
+                  elementType: "action",
+                  name: uniqueElementName(model, "Action"),
+                  ...parent,
+                });
+              case "objectNode":
+                return addElement(model, {
+                  elementType: "objectNode",
+                  name: uniqueElementName(model, "Object"),
+                  ...parent,
+                });
+              case "initialNode":
+                return addElement(model, {
+                  elementType: "initialNode",
+                  name: uniqueElementName(model, "initial"),
+                  ...parent,
+                });
+              case "activityFinalNode":
+                return addElement(model, {
+                  elementType: "activityFinalNode",
+                  name: uniqueElementName(model, "final"),
+                  ...parent,
+                });
+              case "flowFinalNode":
+                return addElement(model, {
+                  elementType: "flowFinalNode",
+                  name: uniqueElementName(model, "flowFinal"),
+                  ...parent,
+                });
+              case "decisionNode":
+                return addElement(model, {
+                  elementType: "decisionNode",
+                  name: uniqueElementName(model, "decision"),
+                  ...parent,
+                });
+              case "mergeNode":
+                return addElement(model, {
+                  elementType: "mergeNode",
+                  name: uniqueElementName(model, "merge"),
+                  ...parent,
+                });
+              case "forkNode":
+                return addElement(model, {
+                  elementType: "forkNode",
+                  name: uniqueElementName(model, "fork"),
+                  ...parent,
+                });
+              case "joinNode":
+                return addElement(model, {
+                  elementType: "joinNode",
+                  name: uniqueElementName(model, "join"),
+                  ...parent,
+                });
+              case "activityPartition":
+                return addElement(model, {
+                  elementType: "activityPartition",
+                  name: uniqueElementName(model, "Partition"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                  ...parent,
+                });
+              default:
+                return addElement(model, {
+                  elementType: "action",
+                  name: uniqueElementName(model, "Action"),
+                  ...parent,
+                });
+            }
+          }
+
           switch (kind) {
             case "class":
               return addElement(model, {
@@ -860,7 +1009,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             return overlay;
           }
 
-          const measured = defaultOverlayNode(model, elementId, x, y);
+          const measured = defaultOverlayNode(model, elementId, dropX, dropY);
           return {
             ...overlay,
             nodes: {

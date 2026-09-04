@@ -33,6 +33,19 @@ describe("getRelationshipNotation", () => {
     });
   });
 
+  it("maps control flow and object flow to a solid open arrow", () => {
+    expect(getRelationshipNotation("controlFlow")).toEqual({
+      lineStyle: "solid",
+      sourceMarkerId: null,
+      targetMarkerId: "assoc-open",
+    });
+    expect(getRelationshipNotation("objectFlow")).toEqual({
+      lineStyle: "solid",
+      sourceMarkerId: null,
+      targetMarkerId: "assoc-open",
+    });
+  });
+
   it("maps communicationPath to a solid line with no diamond markers", () => {
     expect(getRelationshipNotation("communicationPath")).toEqual({
       lineStyle: "solid",

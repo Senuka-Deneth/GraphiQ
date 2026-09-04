@@ -3,6 +3,7 @@ import { addElement, emptyModel } from "@graphiq/uml-model";
 import { layoutDocument } from "./layoutDocument.js";
 import { layoutObject } from "./layoutObject.js";
 import { createClassFixtureModel, layoutClass, measureClassNode } from "./layoutClass.js";
+import { createActivityFixtureModel, layoutActivity } from "./layoutActivity.js";
 import { emptyOverlay } from "./overlay.js";
 
 describe("measureClassNode", () => {
@@ -393,6 +394,74 @@ describe("layoutCompositeStructure", () => {
       const onBorder =
         portNode.x <= 0 || portNode.x + portNode.width >= carNode.width - 1;
       expect(onBorder).toBe(true);
+    }
+  });
+});
+
+describe("layoutActivity", () => {
+  function overlaps(
+    a: { x: number; y: number; width: number; height: number },
+    b: { x: number; y: number; width: number; height: number },
+  ): boolean {
+    return (
+      a.x < b.x + b.width &&
+      b.x < a.x + a.width &&
+      a.y < b.y + b.height &&
+      b.y < a.y + a.height
+    );
+  }
+
+  it("lays out the section 5.9 fixture with swimlanes and no overlapping actions in a lane", async () => {
+    const model = createActivityFixtureModel();
+    const overlay = await layoutActivity(model, emptyOverlay(), "full");
+
+    const sales = overlay.nodes["part-sales"];
+    const warehouse = overlay.nodes["part-warehouse"];
+    const pack = overlay.nodes["action-pack"];
+    const ship = overlay.nodes["action-ship"];
+
+    expect(sales).toBeDefined();
+    expect(warehouse).toBeDefined();
+    expect(Number.isFinite(sales?.x)).toBe(true);
+    expect(Number.isFinite(warehouse?.x)).toBe(true);
+    expect(pack).toBeDefined();
+    expect(ship).toBeDefined();
+    if (pack === undefined || ship === undefined) {
+      throw new Error("expected Pack and Ship overlay nodes");
+    }
+    expect(overlaps(pack, ship)).toBe(false);
+  });
+
+  it("preserves a positioned action in incremental mode", async () => {
+    const model = createActivityFixtureModel();
+    const firstPass = await layoutActivity(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["action-receive"];
+    if (pinned === undefined) {
+      throw new Error("expected ReceiveOrder node");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "action-receive": { ...pinned, x: 12, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutActivity(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["action-receive"]).toEqual(pinnedOverlay.nodes["action-receive"]);
+    const noteId = withNote.value.elements.find((element) => element.name === "Reminder")?.id;
+    expect(noteId).toBeDefined();
+    if (noteId !== undefined) {
+      expect(Number.isFinite(incremental.nodes[noteId]?.x)).toBe(true);
     }
   });
 });
