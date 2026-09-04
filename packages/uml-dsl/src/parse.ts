@@ -17,6 +17,10 @@ import { parseObjectCst, parseObjectDocument } from "./grammars/object.js";
 import { parsePackageCst, parsePackageDocument } from "./grammars/package.js";
 import { parseProfileCst, parseProfileDocument } from "./grammars/profile.js";
 import { parseUseCaseCst, parseUseCaseDocument } from "./grammars/useCase.js";
+import {
+  parseCompositeStructureCst,
+  parseCompositeStructureDocument,
+} from "./grammars/compositeStructure.js";
 
 export type ParseSuccess = {
   ast: DiagramAst;
@@ -48,6 +52,7 @@ export function parse(
     case "useCase":
       return parseUseCase(kind, text);
     case "compositeStructure":
+      return parseCompositeStructure(kind, text);
     case "activity":
     case "stateMachine":
     case "sequence":
@@ -303,6 +308,40 @@ function parseUseCase(
   }
 
   const ast = parseUseCaseDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseCompositeStructure(
+  expectedKind: "compositeStructure",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseCompositeStructureCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseCompositeStructureDocument(cst);
 
   return ok({
     ast,

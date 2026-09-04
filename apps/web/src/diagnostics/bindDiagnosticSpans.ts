@@ -2,6 +2,7 @@ import type { Diagnostic } from "@graphiq/uml-core";
 import type {
   ClassDiagramAst,
   ComponentDiagramAst,
+  CompositeStructureDiagramAst,
   DeploymentDiagramAst,
   DiagramAst,
   ObjectDiagramAst,
@@ -241,6 +242,25 @@ function findUseCaseRelationshipSpan(
   )?.span;
 }
 
+function findCompositeStructureElementSpan(ast: CompositeStructureDiagramAst, name: string) {
+  for (const frame of ast.frames) {
+    if (frame.name === name) {
+      return frame.span;
+    }
+    for (const item of frame.items) {
+      if (item.name === name) {
+        return item.span;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function findCompositeStructureConnectorSpan(ast: CompositeStructureDiagramAst, name: string) {
+  return ast.connectors.find((connector) => connector.name === name)?.span;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -308,7 +328,10 @@ function bindOneDiagnostic(
                         targetName,
                         relationship.relationshipType,
                       )
-                    : undefined;
+                    : ast.kind === "compositeStructure" &&
+                        relationship.name !== undefined
+                      ? findCompositeStructureConnectorSpan(ast, relationship.name)
+                      : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
         }
@@ -332,7 +355,9 @@ function bindOneDiagnostic(
                   ? findProfileElementSpan(ast, element.name)
                   : ast.kind === "useCase"
                     ? findUseCaseElementSpan(ast, element.name)
-                    : undefined;
+                    : ast.kind === "compositeStructure"
+                      ? findCompositeStructureElementSpan(ast, element.name)
+                      : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };
       }

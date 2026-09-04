@@ -30,6 +30,8 @@ export type {
   PseudostateElement,
   StateElement,
   StereotypeElement,
+  PartElement,
+  PortElement,
   UmlElement,
 } from "./element.js";
 export { isClassifierElement } from "./element.js";

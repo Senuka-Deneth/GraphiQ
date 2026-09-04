@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure";
 
 export type GraphiqDocument = {
   id: string;
@@ -68,6 +68,11 @@ export type UseCaseRelationshipTool = Extract<
   "association" | "include" | "extend" | "generalization"
 >;
 
+export type CompositeStructureRelationshipTool = Extract<
+  RelationshipType,
+  "connector" | "assemblyConnector" | "dependency"
+>;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -75,7 +80,8 @@ export type RelationshipTool =
   | ComponentRelationshipTool
   | DeploymentRelationshipTool
   | ProfileRelationshipTool
-  | UseCaseRelationshipTool;
+  | UseCaseRelationshipTool
+  | CompositeStructureRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -116,6 +122,8 @@ export type ProfileStencilDropKind =
 
 export type UseCaseStencilDropKind = "actor" | "useCase" | "subject" | "note";
 
+export type CompositeStructureStencilDropKind = "class" | "part" | "port" | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -123,7 +131,8 @@ export type StencilDropKind =
   | ComponentStencilDropKind
   | DeploymentStencilDropKind
   | ProfileStencilDropKind
-  | UseCaseStencilDropKind;
+  | UseCaseStencilDropKind
+  | CompositeStructureStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -157,6 +166,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   deployment: "diagram deployment\n",
   profile: "diagram profile\n",
   useCase: "diagram useCase\n",
+  compositeStructure: "diagram compositeStructure\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -167,6 +177,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   deployment: "Untitled deployment diagram",
   profile: "Untitled profile diagram",
   useCase: "Untitled use case diagram",
+  compositeStructure: "Untitled composite structure diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -177,6 +188,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   deployment: "communicationPath",
   profile: "extension",
   useCase: "association",
+  compositeStructure: "connector",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -332,6 +344,10 @@ function defaultOverlayNode(
 
   if (model.kind === "useCase") {
     return { x, y, ...measureUseCaseNode(element) };
+  }
+
+  if (model.kind === "compositeStructure") {
+    return { x, y, ...measureCompositeStructureNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -703,6 +719,55 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 return addElement(model, {
                   elementType: "actor",
                   name: uniqueElementName(model, "Actor"),
+                });
+            }
+          }
+
+          if (document.kind === "compositeStructure") {
+            const encapsulatingFrame = model.elements.find(
+              (element) =>
+                (element.elementType === "class" || element.elementType === "component") &&
+                element.parentId === undefined,
+            );
+
+            switch (kind) {
+              case "class":
+                return addElement(model, {
+                  elementType: "class",
+                  name: uniqueElementName(model, "Class"),
+                  isAbstract: false,
+                  attributes: [],
+                  operations: [],
+                });
+              case "part":
+                return addElement(model, {
+                  elementType: "part",
+                  name: uniqueElementName(model, "Part"),
+                  typeName: "Type",
+                  ...(encapsulatingFrame !== undefined
+                    ? { parentId: encapsulatingFrame.id }
+                    : {}),
+                });
+              case "port":
+                return addElement(model, {
+                  elementType: "port",
+                  name: uniqueElementName(model, "Port"),
+                  ...(encapsulatingFrame !== undefined
+                    ? { parentId: encapsulatingFrame.id }
+                    : {}),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "class",
+                  name: uniqueElementName(model, "Class"),
+                  isAbstract: false,
+                  attributes: [],
+                  operations: [],
                 });
             }
           }

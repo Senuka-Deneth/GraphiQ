@@ -331,6 +331,43 @@ export type UseCaseDiagramAst = {
   span: DslSpan;
 };
 
+export type AstCompositeStructureBodyItem =
+  | {
+      itemKind: "part";
+      name: string;
+      typeName: string;
+      multiplicity?: string;
+      span: DslSpan;
+    }
+  | {
+      itemKind: "port";
+      name: string;
+      typeName?: string;
+      span: DslSpan;
+    };
+
+export type AstCompositeStructureFrame = {
+  frameKind: "class" | "component";
+  name: string;
+  items: AstCompositeStructureBodyItem[];
+  span: DslSpan;
+};
+
+export type AstCompositeStructureConnector = {
+  name: string;
+  sourceEnd: { rootName: string; portName?: string };
+  targetEnd: { rootName: string; portName?: string };
+  span: DslSpan;
+};
+
+export type CompositeStructureDiagramAst = {
+  kind: "compositeStructure";
+  name?: string;
+  frames: AstCompositeStructureFrame[];
+  connectors: AstCompositeStructureConnector[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
@@ -338,4 +375,5 @@ export type DiagramAst =
   | ComponentDiagramAst
   | DeploymentDiagramAst
   | ProfileDiagramAst
-  | UseCaseDiagramAst;
+  | UseCaseDiagramAst
+  | CompositeStructureDiagramAst;

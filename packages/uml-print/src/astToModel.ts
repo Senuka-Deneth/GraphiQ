@@ -7,6 +7,7 @@ import { deploymentAstToModel } from "./deploymentAstToModel.js";
 import { objectAstToModel } from "./objectAstToModel.js";
 import { packageAstToModel } from "./packageAstToModel.js";
 import { profileAstToModel } from "./profileAstToModel.js";
+import { compositeStructureAstToModel } from "./compositeStructureAstToModel.js";
 import { useCaseAstToModel } from "./useCaseAstToModel.js";
 
 export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
@@ -25,6 +26,11 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
       return profileAstToModel(ast, previous?.kind === "profile" ? previous : undefined);
     case "useCase":
       return useCaseAstToModel(ast, previous?.kind === "useCase" ? previous : undefined);
+    case "compositeStructure":
+      return compositeStructureAstToModel(
+        ast,
+        previous?.kind === "compositeStructure" ? previous : undefined,
+      );
     default:
       return assertNever(ast);
   }

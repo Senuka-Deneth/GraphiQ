@@ -96,7 +96,8 @@ describe("parse unsupported kinds", () => {
         kind === "component" ||
         kind === "deployment" ||
         kind === "profile" ||
-        kind === "useCase"
+        kind === "useCase" ||
+        kind === "compositeStructure"
       ) {
         continue;
       }

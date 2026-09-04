@@ -8,6 +8,7 @@ import { printObject } from "./printObject.js";
 import { printPackage } from "./printPackage.js";
 import { printProfile } from "./printProfile.js";
 import { printUseCase } from "./printUseCase.js";
+import { printCompositeStructure } from "./printCompositeStructure.js";
 
 export type PrintOptions = {
   cst?: unknown;
@@ -31,6 +32,7 @@ export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions
     case "useCase":
       return printUseCase(model, { name: options?.name });
     case "compositeStructure":
+      return printCompositeStructure(model, { name: options?.name });
     case "activity":
     case "stateMachine":
     case "sequence":

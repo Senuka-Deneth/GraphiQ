@@ -38,6 +38,10 @@ export type {
   AstSubjectDeclaration,
   AstUseCaseRelationship,
   UseCaseDiagramAst,
+  AstCompositeStructureBodyItem,
+  AstCompositeStructureConnector,
+  AstCompositeStructureFrame,
+  CompositeStructureDiagramAst,
   DslSpan,
 } from "./ast.js";
 export {

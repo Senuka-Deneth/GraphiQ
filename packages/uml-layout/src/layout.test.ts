@@ -336,15 +336,72 @@ describe("layoutUseCase", () => {
   });
 });
 
+describe("layoutCompositeStructure", () => {
+  it("places frame, parts, and border ports with finite coordinates", async () => {
+    let model = emptyModel("compositeStructure");
+    const car = addElement(model, {
+      elementType: "class",
+      name: "Car",
+      isAbstract: false,
+      attributes: [],
+      operations: [],
+    });
+    if (!car.ok) {
+      throw new Error("failed to add car");
+    }
+    model = car.value;
+
+    const engine = addElement(model, {
+      elementType: "part",
+      name: "engine",
+      typeName: "Engine",
+      parentId: model.elements[0]!.id,
+    });
+    if (!engine.ok) {
+      throw new Error("failed to add engine");
+    }
+    model = engine.value;
+
+    const power = addElement(model, {
+      elementType: "port",
+      name: "power",
+      parentId: model.elements[0]!.id,
+    });
+    if (!power.ok) {
+      throw new Error("failed to add power port");
+    }
+    model = power.value;
+
+    const overlay = await layoutDocument(
+      "compositeStructure",
+      model,
+      emptyOverlay(),
+      "first-open-empty-overlay",
+    );
+
+    const frameId = model.elements.find((element) => element.name === "Car")?.id;
+    const portId = model.elements.find((element) => element.name === "power")?.id;
+    expect(frameId).toBeDefined();
+    expect(portId).toBeDefined();
+
+    const carNode = frameId ? overlay.nodes[frameId] : undefined;
+    const portNode = portId ? overlay.nodes[portId] : undefined;
+    expect(carNode).toBeDefined();
+    expect(portNode).toBeDefined();
+    if (carNode && portNode) {
+      expect(Number.isFinite(carNode.x)).toBe(true);
+      const onBorder =
+        portNode.x <= 0 || portNode.x + portNode.width >= carNode.width - 1;
+      expect(onBorder).toBe(true);
+    }
+  });
+});
+
 describe("layoutDocument", () => {
   it("throws for non-implemented diagram kinds", async () => {
     const model = emptyModel("sequence");
     await expect(
       layoutDocument("sequence", model, emptyOverlay(), "first-open-empty-overlay"),
     ).rejects.toThrow("layout not implemented for sequence");
-
-    await expect(
-      layoutDocument("compositeStructure", emptyModel("compositeStructure"), emptyOverlay(), "topology-changed"),
-    ).rejects.toThrow("layout not implemented for compositeStructure");
   });
 });

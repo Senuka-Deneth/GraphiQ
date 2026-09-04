@@ -117,6 +117,23 @@ function createElement(spec: NewUmlElement): UmlElement {
         parentId: spec.parentId,
         attributes: spec.attributes ?? [],
       };
+    case "part":
+      return {
+        id,
+        elementType: "part",
+        name: spec.name,
+        parentId: spec.parentId,
+        typeName: spec.typeName,
+        multiplicity: spec.multiplicity,
+      };
+    case "port":
+      return {
+        id,
+        elementType: "port",
+        name: spec.name,
+        parentId: spec.parentId,
+        typeName: spec.typeName,
+      };
     default:
       return {
         id,

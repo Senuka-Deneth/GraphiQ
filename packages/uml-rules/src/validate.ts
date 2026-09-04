@@ -11,6 +11,7 @@ import { OBJECT_RULES } from "./rules/object/index.js";
 import { PACKAGE_RULES } from "./rules/package/index.js";
 import { PROFILE_RULES } from "./rules/profile/index.js";
 import { USE_CASE_RULES } from "./rules/useCase/index.js";
+import { COMPOSITE_STRUCTURE_RULES } from "./rules/compositeStructure/index.js";
 import type { UmlRule } from "./types.js";
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -33,6 +34,7 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
     case "useCase":
       return USE_CASE_RULES;
     case "compositeStructure":
+      return COMPOSITE_STRUCTURE_RULES;
     case "activity":
     case "stateMachine":
     case "sequence":

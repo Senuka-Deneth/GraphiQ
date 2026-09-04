@@ -196,7 +196,8 @@ class Good {
         kind === "component" ||
         kind === "deployment" ||
         kind === "profile" ||
-        kind === "useCase"
+        kind === "useCase" ||
+        kind === "compositeStructure"
       ) {
         continue;
       }

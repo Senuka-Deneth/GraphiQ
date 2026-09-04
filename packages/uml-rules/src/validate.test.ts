@@ -126,7 +126,7 @@ describe("connector matrices", () => {
     expect(CLASS_CONNECTORS).toHaveLength(164);
     expect(OBJECT_CONNECTORS).toHaveLength(2);
     expect(PACKAGE_CONNECTORS).toHaveLength(9);
-    expect(COMPOSITE_STRUCTURE_CONNECTORS).toHaveLength(0);
+    expect(COMPOSITE_STRUCTURE_CONNECTORS).toHaveLength(33);
     expect(COMPONENT_CONNECTORS).toHaveLength(19);
     expect(DEPLOYMENT_CONNECTORS).toHaveLength(21);
     expect(PROFILE_CONNECTORS).toHaveLength(2);
@@ -153,6 +153,8 @@ describe("connector matrices", () => {
         expect(getConnectorMatrix(kind)).toHaveLength(2);
       } else if (kind === "useCase") {
         expect(getConnectorMatrix(kind)).toHaveLength(6);
+      } else if (kind === "compositeStructure") {
+        expect(getConnectorMatrix(kind)).toHaveLength(33);
       } else {
         expect(getConnectorMatrix(kind)).toHaveLength(0);
       }

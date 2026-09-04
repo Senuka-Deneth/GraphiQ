@@ -11,6 +11,10 @@ export { layoutComponent, measureComponentNode } from "./layoutComponent.js";
 export { layoutDeployment, measureDeploymentNode } from "./layoutDeployment.js";
 export { layoutProfile, measureProfileNode } from "./layoutProfile.js";
 export { layoutUseCase, measureUseCaseNode } from "./layoutUseCase.js";
+export {
+  layoutCompositeStructure,
+  measureCompositeStructureNode,
+} from "./layoutCompositeStructure.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
   LayoutMode,

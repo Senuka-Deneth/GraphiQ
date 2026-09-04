@@ -8,6 +8,7 @@ import type {
   PackageRelationshipTool,
   ProfileRelationshipTool,
   UseCaseRelationshipTool,
+  CompositeStructureRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -57,6 +58,15 @@ const USE_CASE_RELATIONSHIP_TOOLS: readonly { id: UseCaseRelationshipTool; label
   { id: "generalization", label: "Generalization" },
 ] as const;
 
+const COMPOSITE_STRUCTURE_RELATIONSHIP_TOOLS: readonly {
+  id: CompositeStructureRelationshipTool;
+  label: string;
+}[] = [
+  { id: "connector", label: "Connector" },
+  { id: "assemblyConnector", label: "Assembly" },
+  { id: "dependency", label: "Dependency" },
+] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -73,6 +83,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return PROFILE_RELATIONSHIP_TOOLS;
     case "useCase":
       return USE_CASE_RELATIONSHIP_TOOLS;
+    case "compositeStructure":
+      return COMPOSITE_STRUCTURE_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }

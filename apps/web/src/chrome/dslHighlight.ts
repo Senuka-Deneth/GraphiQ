@@ -55,6 +55,9 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "actor",
       "usecase",
       "subject",
+      "compositeStructure",
+      "connector",
+      "part",
       "enum",
     ] as const;
 

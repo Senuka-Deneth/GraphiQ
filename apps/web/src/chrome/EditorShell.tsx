@@ -6,6 +6,7 @@ import { DeploymentCanvas } from "../canvas/deployment/DeploymentCanvas.js";
 import { ObjectCanvas } from "../canvas/object/ObjectCanvas.js";
 import { PackageCanvas } from "../canvas/package/PackageCanvas.js";
 import { ProfileCanvas } from "../canvas/profile/ProfileCanvas.js";
+import { CompositeStructureCanvas } from "../canvas/compositeStructure/CompositeStructureCanvas.js";
 import { UseCaseCanvas } from "../canvas/useCase/UseCaseCanvas.js";
 import {
   useDocumentStore,
@@ -24,6 +25,7 @@ const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
   "deployment",
   "profile",
   "useCase",
+  "compositeStructure",
 ];
 
 export function EditorShell() {
@@ -165,6 +167,8 @@ function KindCanvas({
       return <ProfileCanvas onSelectedNodeChange={onSelectedNodeChange} />;
     case "useCase":
       return <UseCaseCanvas onSelectedNodeChange={onSelectedNodeChange} />;
+    case "compositeStructure":
+      return <CompositeStructureCanvas onSelectedNodeChange={onSelectedNodeChange} />;
     default:
       return assertNever(kind);
   }

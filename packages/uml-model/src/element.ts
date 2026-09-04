@@ -73,6 +73,17 @@ export type StereotypeElement = NamedElementBase & {
   attributes: Attribute[];
 };
 
+export type PartElement = NamedElementBase & {
+  elementType: "part";
+  typeName: string;
+  multiplicity?: string;
+};
+
+export type PortElement = NamedElementBase & {
+  elementType: "port";
+  typeName?: string;
+};
+
 export type NamedElement = NamedElementBase & {
   elementType: Exclude<
     ElementType,
@@ -87,6 +98,8 @@ export type NamedElement = NamedElementBase & {
     | "combinedFragment"
     | "state"
     | "stereotype"
+    | "part"
+    | "port"
   >;
 };
 
@@ -102,6 +115,8 @@ export type UmlElement =
   | CombinedFragmentElement
   | StateElement
   | StereotypeElement
+  | PartElement
+  | PortElement
   | NamedElement;
 
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -121,6 +136,8 @@ export type NewUmlElement =
   | Omit<CombinedFragmentElement, "id">
   | WithOptional<Omit<StateElement, "id">, "entry" | "do" | "exit">
   | WithOptional<Omit<StereotypeElement, "id">, "attributes">
+  | WithOptional<Omit<PartElement, "id">, "multiplicity">
+  | Omit<PortElement, "id">
   | Omit<NamedElement, "id">;
 
 export type ClassifierElement =
