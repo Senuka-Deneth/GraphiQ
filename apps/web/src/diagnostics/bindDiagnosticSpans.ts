@@ -1,5 +1,5 @@
 import type { Diagnostic } from "@graphiq/uml-core";
-import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst } from "@graphiq/uml-dsl";
+import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst } from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
 
 function findClassRelationshipSpan(
@@ -38,6 +38,37 @@ function findObjectInstanceSpan(ast: ObjectDiagramAst, name: string) {
   return ast.instances.find((instance) => instance.name === name)?.span;
 }
 
+function findPackageElementSpan(ast: PackageDiagramAst, name: string) {
+  for (const pkg of ast.packages) {
+    if (pkg.name === name) {
+      return pkg.span;
+    }
+    for (const item of pkg.items) {
+      if (item.itemKind === "nestedPackage" && item.name === name) {
+        return item.span;
+      }
+      if (item.itemKind === "classifier" && item.classifier.name === name) {
+        return item.span;
+      }
+    }
+  }
+  return undefined;
+}
+
+function findPackageRelationshipSpan(
+  ast: PackageDiagramAst,
+  sourceName: string,
+  targetName: string,
+  relationshipType: string,
+) {
+  return ast.relationships.find(
+    (relationship) =>
+      relationship.sourceName === sourceName &&
+      relationship.targetName === targetName &&
+      relationship.relationshipType === relationshipType,
+  )?.span;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -70,7 +101,14 @@ function bindOneDiagnostic(
                   targetName,
                   relationship.relationshipType,
                 )
-              : undefined;
+              : ast.kind === "package"
+                ? findPackageRelationshipSpan(
+                    ast,
+                    sourceName,
+                    targetName,
+                    relationship.relationshipType,
+                  )
+                : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
         }
@@ -84,7 +122,9 @@ function bindOneDiagnostic(
           ? findClassClassifierSpan(ast, element.name)
           : ast.kind === "object"
             ? findObjectInstanceSpan(ast, element.name)
-            : undefined;
+            : ast.kind === "package"
+              ? findPackageElementSpan(ast, element.name)
+              : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };
       }

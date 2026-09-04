@@ -130,8 +130,49 @@ describe("layoutObject", () => {
   });
 });
 
+describe("layoutPackage", () => {
+  it("lays out nested package children with finite coordinates", async () => {
+    let model = emptyModel("package");
+    const billing = addElement(model, {
+      elementType: "package",
+      name: "billing",
+    });
+    if (!billing.ok) {
+      throw new Error("expected package");
+    }
+    model = billing.value;
+    const billingId = model.elements.find((element) => element.name === "billing")?.id;
+    if (billingId === undefined) {
+      throw new Error("expected billing id");
+    }
+
+    const invoice = addElement(model, {
+      elementType: "class",
+      name: "Invoice",
+      parentId: billingId,
+    });
+    if (!invoice.ok) {
+      throw new Error("expected class");
+    }
+    model = invoice.value;
+
+    const overlay = await layoutDocument("package", model, emptyOverlay(), "first-open-empty-overlay");
+    const billingNode = overlay.nodes[billingId];
+    const invoiceId = model.elements.find((element) => element.name === "Invoice")?.id;
+    const invoiceNode = invoiceId !== undefined ? overlay.nodes[invoiceId] : undefined;
+
+    for (const node of [billingNode, invoiceNode]) {
+      expect(node).toBeDefined();
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+      expect(Number.isFinite(node?.width)).toBe(true);
+      expect(Number.isFinite(node?.height)).toBe(true);
+    }
+  });
+});
+
 describe("layoutDocument", () => {
-  it("throws for non-class diagram kinds", async () => {
+  it("throws for non-implemented diagram kinds", async () => {
     const model = emptyModel("sequence");
     await expect(
       layoutDocument("sequence", model, emptyOverlay(), "first-open-empty-overlay"),

@@ -13,6 +13,10 @@ export type {
   ClassDiagramAst,
   DiagramAst,
   ObjectDiagramAst,
+  PackageDiagramAst,
+  AstPackageDeclaration,
+  AstPackageBodyItem,
+  AstPackageRelationship,
   DslSpan,
 } from "./ast.js";
 export {

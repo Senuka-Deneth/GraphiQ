@@ -1,7 +1,7 @@
 import { assertNever, err, ok } from "@graphiq/uml-core";
 import type { DiagramKind, Diagnostic, Result } from "@graphiq/uml-core";
 import type { CstNode } from "chevrotain";
-import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst } from "./ast.js";
+import type { ClassDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst } from "./ast.js";
 import {
   KIND_MISMATCH_RULE_ID,
   headerParseDiagnostic,
@@ -12,6 +12,7 @@ import {
 } from "./diagnostics.js";
 import { parseClassCst, parseClassDocument } from "./grammars/class.js";
 import { parseObjectCst, parseObjectDocument } from "./grammars/object.js";
+import { parsePackageCst, parsePackageDocument } from "./grammars/package.js";
 
 export type ParseSuccess = {
   ast: DiagramAst;
@@ -33,6 +34,8 @@ export function parse(
     case "object":
       return parseObject(kind, text);
     case "package":
+      return parsePackage(kind, text);
+    case "compositeStructure":
     case "compositeStructure":
     case "component":
     case "deployment":
@@ -131,6 +134,40 @@ function instanceDeclarationHasColon(text: string, instance: ObjectDiagramAst["i
   return /:\s*[A-Za-z_]/.test(snippet);
 }
 
+function parsePackage(
+  expectedKind: "package",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parsePackageCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parsePackageDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
 function detectHeaderKindMismatch(
   text: string,
   expectedKind: DiagramKind,
@@ -156,4 +193,4 @@ function detectHeaderKindMismatch(
   };
 }
 
-export type { ClassDiagramAst, ObjectDiagramAst, DiagramAst };
+export type { ClassDiagramAst, ObjectDiagramAst, PackageDiagramAst, DiagramAst };

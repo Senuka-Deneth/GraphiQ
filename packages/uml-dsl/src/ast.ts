@@ -103,4 +103,41 @@ export type ObjectDiagramAst = {
   span: DslSpan;
 };
 
-export type DiagramAst = ClassDiagramAst | ObjectDiagramAst;
+export type AstPackageBodyItem =
+  | {
+      itemKind: "nestedPackage";
+      name: string;
+      items: AstPackageBodyItem[];
+      span: DslSpan;
+    }
+  | {
+      itemKind: "classifier";
+      classifier: AstClassifier;
+      span: DslSpan;
+    };
+
+export type AstPackageDeclaration = {
+  name: string;
+  items: AstPackageBodyItem[];
+  span: DslSpan;
+};
+
+export type AstPackageRelationship = {
+  sourceName: string;
+  targetName: string;
+  relationshipType: Extract<
+    RelationshipType,
+    "packageImport" | "packageMerge" | "dependency"
+  >;
+  span: DslSpan;
+};
+
+export type PackageDiagramAst = {
+  kind: "package";
+  name?: string;
+  packages: AstPackageDeclaration[];
+  relationships: AstPackageRelationship[];
+  span: DslSpan;
+};
+
+export type DiagramAst = ClassDiagramAst | ObjectDiagramAst | PackageDiagramAst;

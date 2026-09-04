@@ -3,6 +3,7 @@ import type { DiagramKind } from "@graphiq/uml-core";
 import type { UmlModel } from "@graphiq/uml-model";
 import { printClass } from "./printClass.js";
 import { printObject } from "./printObject.js";
+import { printPackage } from "./printPackage.js";
 
 export type PrintOptions = {
   cst?: unknown;
@@ -16,6 +17,8 @@ export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions
     case "object":
       return printObject(model, { name: options?.name });
     case "package":
+      return printPackage(model, { name: options?.name });
+    case "compositeStructure":
     case "compositeStructure":
     case "component":
     case "deployment":

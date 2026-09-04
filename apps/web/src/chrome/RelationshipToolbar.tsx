@@ -2,6 +2,7 @@ import type {
   ClassRelationshipTool,
   ImplementedDiagramKind,
   ObjectRelationshipTool,
+  PackageRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -16,6 +17,12 @@ const CLASS_RELATIONSHIP_TOOLS: readonly { id: ClassRelationshipTool; label: str
 
 const OBJECT_RELATIONSHIP_TOOLS: readonly { id: ObjectRelationshipTool; label: string }[] = [
   { id: "link", label: "Link" },
+  { id: "dependency", label: "Dependency" },
+] as const;
+
+const PACKAGE_RELATIONSHIP_TOOLS: readonly { id: PackageRelationshipTool; label: string }[] = [
+  { id: "packageImport", label: "Import" },
+  { id: "packageMerge", label: "Merge" },
   { id: "dependency", label: "Dependency" },
 ] as const;
 
@@ -35,7 +42,11 @@ export function RelationshipToolbar({
   canEditMember = false,
 }: RelationshipToolbarProps) {
   const tools =
-    diagramKind === "object" ? OBJECT_RELATIONSHIP_TOOLS : CLASS_RELATIONSHIP_TOOLS;
+    diagramKind === "object"
+      ? OBJECT_RELATIONSHIP_TOOLS
+      : diagramKind === "package"
+        ? PACKAGE_RELATIONSHIP_TOOLS
+        : CLASS_RELATIONSHIP_TOOLS;
 
   return (
     <div

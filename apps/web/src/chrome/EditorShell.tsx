@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ClassCanvas } from "../canvas/class/ClassCanvas.js";
 import { ObjectCanvas } from "../canvas/object/ObjectCanvas.js";
+import { PackageCanvas } from "../canvas/package/PackageCanvas.js";
 import {
   useDocumentStore,
   type ImplementedDiagramKind,
@@ -10,7 +11,7 @@ import { DslEditor } from "./DslEditor.js";
 import { RelationshipToolbar } from "./RelationshipToolbar.js";
 import { Stencil } from "./Stencil.js";
 
-const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = ["class", "object"];
+const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = ["class", "object", "package"];
 
 export function EditorShell() {
   const title = useDocumentStore((state) => state.document.title);
@@ -91,6 +92,8 @@ export function EditorShell() {
           <div className="min-h-0 flex-1" data-testid="canvas-panel">
             {kind === "object" ? (
               <ObjectCanvas onSelectedNodeChange={setSelectedNodeId} />
+            ) : kind === "package" ? (
+              <PackageCanvas onSelectedNodeChange={setSelectedNodeId} />
             ) : (
               <ClassCanvas
                 onSelectedNodeChange={setSelectedNodeId}

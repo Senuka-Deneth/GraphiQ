@@ -2,6 +2,7 @@ import type {
   ClassStencilDropKind,
   ImplementedDiagramKind,
   ObjectStencilDropKind,
+  PackageStencilDropKind,
   StencilDropKind,
 } from "../store/documentStore.js";
 
@@ -23,18 +24,28 @@ export const OBJECT_STENCIL_ITEMS: readonly StencilItem[] = [
   { id: "note", label: "Note" },
 ] as const;
 
+export const PACKAGE_STENCIL_ITEMS: readonly StencilItem[] = [
+  { id: "package", label: "Package" },
+  { id: "class", label: "Class" },
+  { id: "interface", label: "Interface" },
+  { id: "enumeration", label: "Enumeration" },
+  { id: "note", label: "Note" },
+] as const;
+
 export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly StencilItem[] {
   switch (kind) {
     case "class":
       return CLASS_STENCIL_ITEMS;
     case "object":
       return OBJECT_STENCIL_ITEMS;
+    case "package":
+      return PACKAGE_STENCIL_ITEMS;
     default:
       return CLASS_STENCIL_ITEMS;
   }
 }
 
-export type { ClassStencilDropKind, ObjectStencilDropKind, StencilDropKind };
+export type { ClassStencilDropKind, ObjectStencilDropKind, PackageStencilDropKind, StencilDropKind };
 
 type StencilProps = {
   kind: ImplementedDiagramKind;
