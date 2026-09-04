@@ -9,6 +9,7 @@ import { layoutPackage } from "./layoutPackage.js";
 import { layoutProfile } from "./layoutProfile.js";
 import { layoutUseCase } from "./layoutUseCase.js";
 import { layoutCompositeStructure } from "./layoutCompositeStructure.js";
+import { layoutCommunication } from "./layoutCommunication.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
 import { reasonToLayoutMode } from "./overlay.js";
 
@@ -37,10 +38,11 @@ export async function layoutDocument(
       return layoutUseCase(model, overlay, mode);
     case "compositeStructure":
       return layoutCompositeStructure(model, overlay, mode);
+    case "communication":
+      return layoutCommunication(model, overlay, mode);
     case "activity":
     case "stateMachine":
     case "sequence":
-    case "communication":
     case "timing":
     case "interactionOverview":
       throw new Error(`layout not implemented for ${kind}`);

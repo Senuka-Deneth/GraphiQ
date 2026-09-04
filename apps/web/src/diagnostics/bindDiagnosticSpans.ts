@@ -2,6 +2,7 @@ import type { Diagnostic } from "@graphiq/uml-core";
 import type {
   ClassDiagramAst,
   ComponentDiagramAst,
+  CommunicationDiagramAst,
   CompositeStructureDiagramAst,
   DeploymentDiagramAst,
   DiagramAst,
@@ -261,6 +262,24 @@ function findCompositeStructureConnectorSpan(ast: CompositeStructureDiagramAst, 
   return ast.connectors.find((connector) => connector.name === name)?.span;
 }
 
+function findCommunicationInstanceSpan(ast: CommunicationDiagramAst, name: string) {
+  return ast.instances.find((instance) => instance.name === name)?.span;
+}
+
+function findCommunicationMessageSpan(
+  ast: CommunicationDiagramAst,
+  sourceName: string,
+  targetName: string,
+  sequenceNumber?: string,
+) {
+  return ast.messages.find(
+    (message) =>
+      message.sourceName === sourceName &&
+      message.targetName === targetName &&
+      (sequenceNumber === undefined || message.sequenceNumber === sequenceNumber),
+  )?.span;
+}
+
 function bindOneDiagnostic(
   ast: DiagramAst,
   model: UmlModel,
@@ -331,7 +350,15 @@ function bindOneDiagnostic(
                     : ast.kind === "compositeStructure" &&
                         relationship.name !== undefined
                       ? findCompositeStructureConnectorSpan(ast, relationship.name)
-                      : undefined;
+                      : ast.kind === "communication" &&
+                          relationship.relationshipType === "message"
+                        ? findCommunicationMessageSpan(
+                            ast,
+                            sourceName,
+                            targetName,
+                            relationship.sequenceNumber,
+                          )
+                        : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
         }
@@ -357,7 +384,9 @@ function bindOneDiagnostic(
                     ? findUseCaseElementSpan(ast, element.name)
                     : ast.kind === "compositeStructure"
                       ? findCompositeStructureElementSpan(ast, element.name)
-                      : undefined;
+                      : ast.kind === "communication"
+                        ? findCommunicationInstanceSpan(ast, element.name)
+                        : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };
       }

@@ -134,7 +134,7 @@ describe("connector matrices", () => {
     expect(ACTIVITY_CONNECTORS).toHaveLength(0);
     expect(STATE_MACHINE_CONNECTORS).toHaveLength(0);
     expect(SEQUENCE_CONNECTORS).toHaveLength(0);
-    expect(COMMUNICATION_CONNECTORS).toHaveLength(0);
+    expect(COMMUNICATION_CONNECTORS).toHaveLength(8);
     expect(TIMING_CONNECTORS).toHaveLength(0);
     expect(INTERACTION_OVERVIEW_CONNECTORS).toHaveLength(0);
 
@@ -155,6 +155,8 @@ describe("connector matrices", () => {
         expect(getConnectorMatrix(kind)).toHaveLength(6);
       } else if (kind === "compositeStructure") {
         expect(getConnectorMatrix(kind)).toHaveLength(33);
+      } else if (kind === "communication") {
+        expect(getConnectorMatrix(kind)).toHaveLength(8);
       } else {
         expect(getConnectorMatrix(kind)).toHaveLength(0);
       }

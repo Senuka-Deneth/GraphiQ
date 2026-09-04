@@ -9,6 +9,7 @@ import type {
   ProfileRelationshipTool,
   UseCaseRelationshipTool,
   CompositeStructureRelationshipTool,
+  CommunicationRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -67,6 +68,14 @@ const COMPOSITE_STRUCTURE_RELATIONSHIP_TOOLS: readonly {
   { id: "dependency", label: "Dependency" },
 ] as const;
 
+const COMMUNICATION_RELATIONSHIP_TOOLS: readonly {
+  id: CommunicationRelationshipTool;
+  label: string;
+}[] = [
+  { id: "message", label: "Message" },
+  { id: "link", label: "Link" },
+] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -85,6 +94,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return USE_CASE_RELATIONSHIP_TOOLS;
     case "compositeStructure":
       return COMPOSITE_STRUCTURE_RELATIONSHIP_TOOLS;
+    case "communication":
+      return COMMUNICATION_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }

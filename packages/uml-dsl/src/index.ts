@@ -42,6 +42,9 @@ export type {
   AstCompositeStructureConnector,
   AstCompositeStructureFrame,
   CompositeStructureDiagramAst,
+  AstCommunicationMessage,
+  AstCommunicationLink,
+  CommunicationDiagramAst,
   DslSpan,
 } from "./ast.js";
 export {

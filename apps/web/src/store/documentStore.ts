@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication";
 
 export type GraphiqDocument = {
   id: string;
@@ -73,6 +73,8 @@ export type CompositeStructureRelationshipTool = Extract<
   "connector" | "assemblyConnector" | "dependency"
 >;
 
+export type CommunicationRelationshipTool = Extract<RelationshipType, "message" | "link">;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -81,7 +83,8 @@ export type RelationshipTool =
   | DeploymentRelationshipTool
   | ProfileRelationshipTool
   | UseCaseRelationshipTool
-  | CompositeStructureRelationshipTool;
+  | CompositeStructureRelationshipTool
+  | CommunicationRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -124,6 +127,8 @@ export type UseCaseStencilDropKind = "actor" | "useCase" | "subject" | "note";
 
 export type CompositeStructureStencilDropKind = "class" | "part" | "port" | "note";
 
+export type CommunicationStencilDropKind = "instance" | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -132,7 +137,8 @@ export type StencilDropKind =
   | DeploymentStencilDropKind
   | ProfileStencilDropKind
   | UseCaseStencilDropKind
-  | CompositeStructureStencilDropKind;
+  | CompositeStructureStencilDropKind
+  | CommunicationStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -167,6 +173,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   profile: "diagram profile\n",
   useCase: "diagram useCase\n",
   compositeStructure: "diagram compositeStructure\n",
+  communication: "diagram communication\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -178,6 +185,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   profile: "Untitled profile diagram",
   useCase: "Untitled use case diagram",
   compositeStructure: "Untitled composite structure diagram",
+  communication: "Untitled communication diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -189,6 +197,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   profile: "extension",
   useCase: "association",
   compositeStructure: "connector",
+  communication: "message",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -306,6 +315,21 @@ function applyModelCommand(
   return commitStructuralModelChange(get, set, result.value, overlayPatch);
 }
 
+function nextCommunicationSequenceNumber(model: UmlModel): string {
+  const used = new Set(
+    model.relationships
+      .filter((relationship) => relationship.relationshipType === "message")
+      .map((relationship) => relationship.sequenceNumber)
+      .filter((value): value is string => value !== undefined),
+  );
+
+  let candidate = 1;
+  while (used.has(String(candidate))) {
+    candidate += 1;
+  }
+  return String(candidate);
+}
+
 function defaultOverlayNode(
   model: UmlModel,
   elementId: string,
@@ -348,6 +372,10 @@ function defaultOverlayNode(
 
   if (model.kind === "compositeStructure") {
     return { x, y, ...measureCompositeStructureNode(element) };
+  }
+
+  if (model.kind === "communication") {
+    return { x, y, ...measureCommunicationNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -772,6 +800,28 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             }
           }
 
+          if (document.kind === "communication") {
+            switch (kind) {
+              case "instance":
+                return addElement(model, {
+                  elementType: "instanceSpecification",
+                  name: uniqueElementName(model, "Instance"),
+                  classifierName: "Type",
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "instanceSpecification",
+                  name: uniqueElementName(model, "Instance"),
+                  classifierName: "Type",
+                });
+            }
+          }
+
           switch (kind) {
             case "class":
               return addElement(model, {
@@ -860,13 +910,23 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         return;
       }
 
-      await applyModelCommand(get, set, (model) =>
-        addRelationship(model, {
-          relationshipType: relationshipTool,
+      await applyModelCommand(get, set, (model) => {
+        if (document.kind === "communication" && relationshipTool === "message") {
+          return addRelationship(model, {
+            relationshipType: "message",
+            sourceId,
+            targetId,
+            messageSort: "synchCall",
+            sequenceNumber: nextCommunicationSequenceNumber(model),
+          });
+        }
+
+        return addRelationship(model, {
+          relationshipType: relationshipTool as Exclude<RelationshipTool, "message">,
           sourceId,
           targetId,
-        }),
-      );
+        });
+      });
     },
 
     deleteElements: async (elementIds) => {

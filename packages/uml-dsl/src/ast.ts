@@ -368,6 +368,30 @@ export type CompositeStructureDiagramAst = {
   span: DslSpan;
 };
 
+export type AstCommunicationMessage = {
+  sourceName: string;
+  targetName: string;
+  sequenceNumber: string;
+  messageName?: string;
+  span: DslSpan;
+};
+
+export type AstCommunicationLink = {
+  sourceName: string;
+  targetName: string;
+  name?: string;
+  span: DslSpan;
+};
+
+export type CommunicationDiagramAst = {
+  kind: "communication";
+  name?: string;
+  instances: AstInstance[];
+  messages: AstCommunicationMessage[];
+  links: AstCommunicationLink[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
@@ -376,4 +400,5 @@ export type DiagramAst =
   | DeploymentDiagramAst
   | ProfileDiagramAst
   | UseCaseDiagramAst
-  | CompositeStructureDiagramAst;
+  | CompositeStructureDiagramAst
+  | CommunicationDiagramAst;

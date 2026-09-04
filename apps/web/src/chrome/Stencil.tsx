@@ -9,6 +9,7 @@ import type {
   ProfileStencilDropKind,
   UseCaseStencilDropKind,
   CompositeStructureStencilDropKind,
+  CommunicationStencilDropKind,
   StencilDropKind,
 } from "../store/documentStore.js";
 
@@ -76,6 +77,11 @@ export const COMPOSITE_STRUCTURE_STENCIL_ITEMS: readonly StencilItem[] = [
   { id: "note", label: "Note" },
 ] as const;
 
+export const COMMUNICATION_STENCIL_ITEMS: readonly StencilItem[] = [
+  { id: "instance", label: "Instance" },
+  { id: "note", label: "Note" },
+] as const;
+
 export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly StencilItem[] {
   switch (kind) {
     case "class":
@@ -94,6 +100,8 @@ export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly Sten
       return USE_CASE_STENCIL_ITEMS;
     case "compositeStructure":
       return COMPOSITE_STRUCTURE_STENCIL_ITEMS;
+    case "communication":
+      return COMMUNICATION_STENCIL_ITEMS;
     default:
       return assertNever(kind);
   }
@@ -103,6 +111,7 @@ export type {
   ClassStencilDropKind,
   ComponentStencilDropKind,
   CompositeStructureStencilDropKind,
+  CommunicationStencilDropKind,
   DeploymentStencilDropKind,
   ObjectStencilDropKind,
   PackageStencilDropKind,
