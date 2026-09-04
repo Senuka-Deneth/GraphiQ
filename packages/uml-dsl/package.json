@@ -7,9 +7,15 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node -e \"process.exit(0)\""
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@graphiq/uml-core": "workspace:*",
+    "@graphiq/uml-model": "workspace:*",
+    "chevrotain": "^13.2.0"
   },
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   }
 }

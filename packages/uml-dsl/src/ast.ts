@@ -1,0 +1,75 @@
+import type { RelationshipType, Visibility } from "@graphiq/uml-model";
+
+export type DslSpan = {
+  start: number;
+  end: number;
+};
+
+export type AstAttribute = {
+  visibility: Visibility;
+  name: string;
+  typeName: string;
+  multiplicity?: string;
+  defaultValue?: string;
+  span: DslSpan;
+};
+
+export type AstOperationParameter = {
+  name: string;
+  typeName: string;
+};
+
+export type AstOperation = {
+  visibility: Visibility;
+  name: string;
+  parameters: AstOperationParameter[];
+  returnType?: string;
+  span: DslSpan;
+};
+
+export type AstClassClassifier = {
+  classifierKind: "class";
+  name: string;
+  isAbstract: boolean;
+  attributes: AstAttribute[];
+  operations: AstOperation[];
+  span: DslSpan;
+};
+
+export type AstInterfaceClassifier = {
+  classifierKind: "interface";
+  name: string;
+  attributes: AstAttribute[];
+  operations: AstOperation[];
+  span: DslSpan;
+};
+
+export type AstEnumerationClassifier = {
+  classifierKind: "enumeration";
+  name: string;
+  literals: string[];
+  span: DslSpan;
+};
+
+export type AstClassifier =
+  | AstClassClassifier
+  | AstInterfaceClassifier
+  | AstEnumerationClassifier;
+
+export type AstRelationship = {
+  sourceName: string;
+  targetName: string;
+  relationshipType: RelationshipType;
+  sourceMultiplicity?: string;
+  targetMultiplicity?: string;
+  name?: string;
+  span: DslSpan;
+};
+
+export type ClassDiagramAst = {
+  kind: "class";
+  name?: string;
+  classifiers: AstClassifier[];
+  relationships: AstRelationship[];
+  span: DslSpan;
+};
