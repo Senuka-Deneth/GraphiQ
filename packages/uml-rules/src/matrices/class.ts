@@ -18,23 +18,20 @@ const GENERALIZATION_ELEMENT_TYPES: readonly ElementType[] = [
   "primitiveType",
 ];
 
-const REALIZATION_SOURCE_TYPES: readonly ElementType[] = [
+const WHOLE_PART_ELEMENT_TYPES: readonly ElementType[] = [
   "class",
   "associationClass",
 ];
 
-function triplesForPairs(
+function cartesian(
   relationship: ConnectorTriple["relationship"],
-  elementTypes: readonly ElementType[],
-  sameTypeOnly = false,
+  sources: readonly ElementType[],
+  targets: readonly ElementType[],
 ): ConnectorTriple[] {
   const triples: ConnectorTriple[] = [];
 
-  for (const source of elementTypes) {
-    for (const target of elementTypes) {
-      if (sameTypeOnly && source !== target) {
-        continue;
-      }
+  for (const source of sources) {
+    for (const target of targets) {
       triples.push({ relationship, source, target });
     }
   }
@@ -42,29 +39,40 @@ function triplesForPairs(
   return triples;
 }
 
-function triplesFromSource(
+function sameTypePairs(
   relationship: ConnectorTriple["relationship"],
-  source: ElementType,
-  targets: readonly ElementType[],
+  elementTypes: readonly ElementType[],
 ): ConnectorTriple[] {
-  return targets.map((target) => ({ relationship, source, target }));
+  return elementTypes.map((elementType) => ({
+    relationship,
+    source: elementType,
+    target: elementType,
+  }));
 }
 
 export const CLASS_CONNECTORS: readonly ConnectorTriple[] = [
-  ...triplesForPairs("generalization", GENERALIZATION_ELEMENT_TYPES, true),
-  ...REALIZATION_SOURCE_TYPES.flatMap((source) =>
-    triplesFromSource("realization", source, ["interface"]),
+  ...sameTypePairs("generalization", GENERALIZATION_ELEMENT_TYPES),
+  ...cartesian("realization", ["class"], ["interface"]),
+  ...cartesian("interfaceRealization", ["class"], ["interface"]),
+  ...cartesian("association", CLASSIFIER_ELEMENT_TYPES, CLASSIFIER_ELEMENT_TYPES),
+  ...cartesian(
+    "navigableAssociation",
+    CLASSIFIER_ELEMENT_TYPES,
+    CLASSIFIER_ELEMENT_TYPES,
   ),
-  ...REALIZATION_SOURCE_TYPES.flatMap((source) =>
-    triplesFromSource("interfaceRealization", source, ["interface"]),
+  ...cartesian(
+    "aggregation",
+    WHOLE_PART_ELEMENT_TYPES,
+    WHOLE_PART_ELEMENT_TYPES,
   ),
-  ...triplesForPairs("association", CLASSIFIER_ELEMENT_TYPES),
-  ...triplesForPairs("navigableAssociation", CLASSIFIER_ELEMENT_TYPES),
-  ...triplesForPairs("aggregation", ["class"]),
-  ...triplesForPairs("composition", ["class"]),
-  ...triplesForPairs("dependency", CLASSIFIER_ELEMENT_TYPES),
-  ...triplesForPairs("usage", CLASSIFIER_ELEMENT_TYPES),
-  ...triplesFromSource("nestedClassifier", "class", [
+  ...cartesian(
+    "composition",
+    WHOLE_PART_ELEMENT_TYPES,
+    WHOLE_PART_ELEMENT_TYPES,
+  ),
+  ...cartesian("dependency", CLASSIFIER_ELEMENT_TYPES, CLASSIFIER_ELEMENT_TYPES),
+  ...cartesian("usage", CLASSIFIER_ELEMENT_TYPES, CLASSIFIER_ELEMENT_TYPES),
+  ...cartesian("nestedClassifier", ["class"], [
     "class",
     "interface",
     "enumeration",

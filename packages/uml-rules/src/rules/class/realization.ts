@@ -33,17 +33,15 @@ export const classRealizationRule: UmlRule = {
         continue;
       }
 
-      const sourceIsBehavioredClassifier =
-        source.elementType === "class" ||
-        source.elementType === "associationClass";
+      const sourceIsClass = source.elementType === "class";
       const targetIsInterface = target.elementType === "interface";
 
-      if (!sourceIsBehavioredClassifier || !targetIsInterface) {
+      if (!sourceIsClass || !targetIsInterface) {
         diagnostics.push({
           id: createId(),
           ruleId: RULE_ID,
           severity: "error",
-          message: `Realization requires a class or association class source and an interface target; got ${source.elementType} to ${target.elementType}`,
+          message: `Realization requires a class source and an interface target; got ${source.elementType} to ${target.elementType}`,
           elementIds: [relationship.id, source.id, target.id],
         });
       }

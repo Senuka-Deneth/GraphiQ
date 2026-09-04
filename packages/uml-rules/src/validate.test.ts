@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { createId, DIAGRAM_KINDS } from "@graphiq/uml-core";
 import type { Diagnostic } from "@graphiq/uml-core";
 import { addElement, addRelationship, emptyModel } from "@graphiq/uml-model";
@@ -21,24 +21,14 @@ import {
   TIMING_CONNECTORS,
   USE_CASE_CONNECTORS,
 } from "./matrices/index.js";
-import {
-  clearRegisteredRules,
-  registerRule,
-} from "./registry.js";
-import { registerClassRules } from "./rules/class/index.js";
+import { clearRegisteredRules, registerRule } from "./registry.js";
 import { validate } from "./validate.js";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-beforeEach(() => {
-  clearRegisteredRules();
-  registerClassRules();
-});
-
 afterEach(() => {
   clearRegisteredRules();
-  registerClassRules();
 });
 
 describe("validate", () => {
@@ -81,28 +71,26 @@ describe("validate", () => {
     expect(validate("class", model)).toEqual([]);
   });
 
-  it("reports illegal-element-on-diagram for a forged lifeline on a class model", () => {
+  it("reports illegal-element-on-diagram for a forged activity element on a class model", () => {
     const model: UmlModel = {
       ...emptyModel("class"),
       elements: [
         {
           id: createId(),
-          elementType: "lifeline",
-          name: "shop",
+          elementType: "action",
+          name: "ReceiveOrder",
         },
       ],
     };
 
     const diagnostics = validate("class", model);
-    expect(diagnostics.length).toBeGreaterThanOrEqual(1);
-    expect(diagnostics).toContainEqual(
-      expect.objectContaining({
-        ruleId: "rules.illegal-element-on-diagram",
-        severity: "error",
-        elementIds: [model.elements[0]?.id],
-        message: 'Element type "lifeline" is not allowed on a class diagram',
-      }),
-    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      ruleId: "rules.illegal-element-on-diagram",
+      severity: "error",
+      elementIds: [model.elements[0]?.id],
+      message: 'Element type "action" is not allowed on a class diagram',
+    });
     expect(diagnostics[0]?.id).toMatch(UUID_PATTERN);
   });
 
@@ -135,7 +123,7 @@ describe("validate", () => {
 
 describe("connector matrices", () => {
   it("exports empty matrices for non-class kinds and a filled class matrix", () => {
-    expect(CLASS_CONNECTORS.length).toBeGreaterThan(0);
+    expect(CLASS_CONNECTORS).toHaveLength(164);
     expect(OBJECT_CONNECTORS).toHaveLength(0);
     expect(PACKAGE_CONNECTORS).toHaveLength(0);
     expect(COMPOSITE_STRUCTURE_CONNECTORS).toHaveLength(0);
@@ -152,7 +140,7 @@ describe("connector matrices", () => {
 
     for (const kind of DIAGRAM_KINDS) {
       if (kind === "class") {
-        expect(getConnectorMatrix(kind).length).toBeGreaterThan(0);
+        expect(getConnectorMatrix(kind)).toHaveLength(164);
       } else {
         expect(getConnectorMatrix(kind)).toHaveLength(0);
       }
@@ -183,7 +171,7 @@ describe("connector matrices", () => {
 });
 
 describe("rule registry", () => {
-  it("runs registered rules for matching diagram kinds", () => {
+  it("runs registered rules alongside built-in class rules", () => {
     const classDiagnostic: Diagnostic = {
       id: "diag-class",
       ruleId: "class.test-rule",
@@ -206,7 +194,7 @@ describe("rule registry", () => {
     expect(sequenceResult).toEqual([]);
   });
 
-  it("clears registered rules between tests", () => {
+  it("keeps built-in class rules when the registry is cleared", () => {
     registerRule({
       id: "class.persistent",
       diagramKinds: ["class"],

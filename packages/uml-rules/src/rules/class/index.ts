@@ -1,24 +1,16 @@
-import { getRegisteredRules, registerRule } from "../../registry.js";
+import type { UmlRule } from "../../types.js";
 import { classCompositionRule } from "./composition.js";
+import { classDiamondOnlyOnAssocRule } from "./diamond-only-on-assoc.js";
 import { classForbiddenElementsRule } from "./forbidden-elements.js";
 import { classGeneralizationSameMetaclassRule } from "./generalization.js";
 import { classMultiplicitySyntaxRule } from "./multiplicity.js";
 import { classRealizationRule } from "./realization.js";
 
-const CLASS_RULES = [
+export const CLASS_RULES: readonly UmlRule[] = [
   classGeneralizationSameMetaclassRule,
   classRealizationRule,
   classCompositionRule,
   classMultiplicitySyntaxRule,
+  classDiamondOnlyOnAssocRule,
   classForbiddenElementsRule,
 ];
-
-export function registerClassRules(): void {
-  const registeredIds = new Set(getRegisteredRules().map((rule) => rule.id));
-
-  for (const rule of CLASS_RULES) {
-    if (!registeredIds.has(rule.id)) {
-      registerRule(rule);
-    }
-  }
-}

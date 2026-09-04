@@ -1,13 +1,37 @@
-import { createId } from "@graphiq/uml-core";
+import { assertNever, createId } from "@graphiq/uml-core";
 import type { DiagramKind, Diagnostic } from "@graphiq/uml-core";
 import { isElementAllowedOn } from "@graphiq/uml-model";
 import type { UmlModel } from "@graphiq/uml-model";
 import { isConnectorAllowed } from "./connectors.js";
-import "./rules/index.js";
 import { getRegisteredRules } from "./registry.js";
+import { CLASS_RULES } from "./rules/class/index.js";
+import type { UmlRule } from "./types.js";
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
 const ILLEGAL_ELEMENT_RULE_ID = "rules.illegal-element-on-diagram";
+
+function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
+  switch (kind) {
+    case "class":
+      return CLASS_RULES;
+    case "object":
+    case "package":
+    case "compositeStructure":
+    case "component":
+    case "deployment":
+    case "profile":
+    case "useCase":
+    case "activity":
+    case "stateMachine":
+    case "sequence":
+    case "communication":
+    case "timing":
+    case "interactionOverview":
+      return [];
+    default:
+      return assertNever(kind);
+  }
+}
 
 function validateConnectors(kind: DiagramKind, model: UmlModel): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -82,10 +106,11 @@ function validateElementMembership(
   return diagnostics;
 }
 
-function validateRegisteredRules(kind: DiagramKind, model: UmlModel): Diagnostic[] {
+function validateRules(kind: DiagramKind, model: UmlModel): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
+  const rules = [...builtinRulesFor(kind), ...getRegisteredRules()];
 
-  for (const rule of getRegisteredRules()) {
+  for (const rule of rules) {
     if (!rule.diagramKinds.includes(kind)) {
       continue;
     }
@@ -99,6 +124,6 @@ export function validate(kind: DiagramKind, model: UmlModel): Diagnostic[] {
   return [
     ...validateConnectors(kind, model),
     ...validateElementMembership(kind, model),
-    ...validateRegisteredRules(kind, model),
+    ...validateRules(kind, model),
   ];
 }
