@@ -7,9 +7,16 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node -e \"process.exit(0)\""
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@graphiq/uml-core": "workspace:*",
+    "@graphiq/uml-dsl": "workspace:*",
+    "@graphiq/uml-model": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "@types/node": "^22.19.21",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   }
 }

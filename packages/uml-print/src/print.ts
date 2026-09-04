@@ -1,0 +1,32 @@
+import { assertNever } from "@graphiq/uml-core";
+import type { DiagramKind } from "@graphiq/uml-core";
+import type { UmlModel } from "@graphiq/uml-model";
+import { printClass } from "./printClass.js";
+
+export type PrintOptions = {
+  cst?: unknown;
+  name?: string;
+};
+
+export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions): string {
+  switch (kind) {
+    case "class":
+      return printClass(model, { name: options?.name });
+    case "object":
+    case "package":
+    case "compositeStructure":
+    case "component":
+    case "deployment":
+    case "profile":
+    case "useCase":
+    case "activity":
+    case "stateMachine":
+    case "sequence":
+    case "communication":
+    case "timing":
+    case "interactionOverview":
+      throw new Error(`not implemented`);
+    default:
+      return assertNever(kind);
+  }
+}

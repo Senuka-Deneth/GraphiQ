@@ -1,2 +1,4 @@
-/** Stub only. UML types are later checklist steps — see docs/GRAPHIQ_BUILD_GUIDE.md. */
-export const packageName = "@graphiq/uml-print";
+export { classAstToModel } from "./classAstToModel.js";
+export { print } from "./print.js";
+export type { PrintOptions } from "./print.js";
+export { printClass } from "./printClass.js";

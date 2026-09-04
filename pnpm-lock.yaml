@@ -115,10 +115,26 @@ importers:
         version: 5.0.0(@types/node@22.20.1)(jsdom@26.1.0)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0))
 
   packages/uml-print:
+    dependencies:
+      '@graphiq/uml-core':
+        specifier: workspace:*
+        version: link:../uml-core
+      '@graphiq/uml-dsl':
+        specifier: workspace:*
+        version: link:../uml-dsl
+      '@graphiq/uml-model':
+        specifier: workspace:*
+        version: link:../uml-model
     devDependencies:
+      '@types/node':
+        specifier: ^22.19.21
+        version: 22.20.1
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@22.20.1)(jsdom@26.1.0)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0))
 
   packages/uml-rules:
     dependencies:
