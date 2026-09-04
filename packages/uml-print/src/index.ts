@@ -20,4 +20,6 @@ export { printActivity, structuralActivityModel } from "./printActivity.js";
 export { stateMachineAstToModel } from "./stateMachineAstToModel.js";
 export { printStateMachine, structuralStateMachineModel } from "./printStateMachine.js";
 export { sequenceAstToModel, synthesizeSequenceExecutionSpecs } from "./sequenceAstToModel.js";
+export { timingAstToModel } from "./timingAstToModel.js";
 export { printSequence, structuralSequenceModel } from "./printSequence.js";
+export { printTiming, structuralTimingModel } from "./printTiming.js";

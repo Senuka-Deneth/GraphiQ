@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureTimingNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine" | "sequence";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine" | "sequence" | "timing";
 
 export type GraphiqDocument = {
   id: string;
@@ -84,6 +84,8 @@ export type SequenceRelationshipTool = Extract<
   "synchCall" | "asynchCall" | "reply" | "createMessage"
 >;
 
+export type TimingRelationshipTool = SequenceRelationshipTool;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -96,7 +98,8 @@ export type RelationshipTool =
   | CommunicationRelationshipTool
   | ActivityRelationshipTool
   | StateMachineRelationshipTool
-  | SequenceRelationshipTool;
+  | SequenceRelationshipTool
+  | TimingRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -165,6 +168,8 @@ export type StateMachineStencilDropKind =
 
 export type SequenceStencilDropKind = "lifeline" | "combined-fragment" | "note";
 
+export type TimingStencilDropKind = "lifeline" | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -177,7 +182,8 @@ export type StencilDropKind =
   | CommunicationStencilDropKind
   | ActivityStencilDropKind
   | StateMachineStencilDropKind
-  | SequenceStencilDropKind;
+  | SequenceStencilDropKind
+  | TimingStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -196,7 +202,11 @@ type DocumentStoreState = {
   runParse: () => Promise<void>;
   updateNodePosition: (nodeId: string, x: number, y: number) => void;
   dropStencilElement: (kind: StencilDropKind, x: number, y: number) => Promise<void>;
-  connectElements: (sourceId: string, targetId: string) => Promise<void>;
+  connectElements: (
+    sourceId: string,
+    targetId: string,
+    options?: { time?: number },
+  ) => Promise<void>;
   deleteElements: (elementIds: readonly string[]) => Promise<void>;
   deleteRelationships: (relationshipIds: readonly string[]) => Promise<void>;
   renameSelectedElement: (elementId: string, name: string) => Promise<void>;
@@ -216,6 +226,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   activity: "diagram activity\n",
   stateMachine: "diagram stateMachine\n",
   sequence: "diagram sequence\n",
+  timing: "diagram timing\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -231,6 +242,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   activity: "Untitled activity diagram",
   stateMachine: "Untitled state machine diagram",
   sequence: "Untitled sequence diagram",
+  timing: "Untitled timing diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -246,6 +258,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   activity: "controlFlow",
   stateMachine: "transition",
   sequence: "synchCall",
+  timing: "synchCall",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -586,6 +599,10 @@ function defaultOverlayNode(
 
   if (model.kind === "sequence") {
     return { x, y, ...measureSequenceNode(element) };
+  }
+
+  if (model.kind === "timing") {
+    return { x, y, ...measureTimingNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -1219,6 +1236,27 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             }
           }
 
+          if (document.kind === "timing") {
+            switch (kind) {
+              case "lifeline":
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                  classifierName: "Type",
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                });
+            }
+          }
+
           switch (kind) {
             case "class":
               return addElement(model, {
@@ -1272,7 +1310,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       );
     },
 
-    connectElements: async (sourceId, targetId) => {
+    connectElements: async (sourceId, targetId, options) => {
       if (!canApplyStructuralCommand(get())) {
         return;
       }
@@ -1286,7 +1324,9 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       }
 
       const connectorRelationship = (
-        document.kind === "sequence" ? "message" : relationshipTool
+        document.kind === "sequence" || document.kind === "timing"
+          ? "message"
+          : relationshipTool
       ) as RelationshipType;
 
       if (
@@ -1328,6 +1368,16 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             sourceId,
             targetId,
             messageSort: relationshipTool as SequenceRelationshipTool,
+          });
+        }
+
+        if (document.kind === "timing") {
+          return addRelationship(model, {
+            relationshipType: "message",
+            sourceId,
+            targetId,
+            messageSort: relationshipTool as TimingRelationshipTool,
+            time: options?.time ?? 0,
           });
         }
 

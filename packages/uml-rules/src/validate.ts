@@ -16,6 +16,7 @@ import { ACTIVITY_RULES } from "./rules/activity/index.js";
 import { STATE_MACHINE_RULES } from "./rules/stateMachine/index.js";
 import { COMMUNICATION_RULES } from "./rules/communication/index.js";
 import { SEQUENCE_RULES } from "./rules/sequence/index.js";
+import { TIMING_RULES } from "./rules/timing/index.js";
 import type { UmlRule } from "./types.js";
 
 
@@ -49,6 +50,7 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
     case "sequence":
       return SEQUENCE_RULES;
     case "timing":
+      return TIMING_RULES;
     case "interactionOverview":
       return [];
     default:

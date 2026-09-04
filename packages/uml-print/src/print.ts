@@ -13,6 +13,7 @@ import { printCommunication } from "./printCommunication.js";
 import { printActivity } from "./printActivity.js";
 import { printStateMachine } from "./printStateMachine.js";
 import { printSequence } from "./printSequence.js";
+import { printTiming } from "./printTiming.js";
 
 export type PrintOptions = {
   cst?: unknown;
@@ -46,6 +47,7 @@ export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions
     case "sequence":
       return printSequence(model, { name: options?.name });
     case "timing":
+      return printTiming(model, { name: options?.name });
     case "interactionOverview":
       throw new Error(`not implemented`);
     default:

@@ -60,6 +60,7 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "activity",
       "stateMachine",
       "sequence",
+      "timing",
       "lifeline",
       "alt",
       "opt",

@@ -1,0 +1,279 @@
+import { useCallback, useMemo, useRef, useState } from "react";
+import { MarkerDefs } from "../class/MarkerDefs.js";
+import { useDocumentStore } from "../../store/documentStore.js";
+import {
+  dashStrokeStyle,
+  lifelineDisplayName,
+  strokeForDiagnostic,
+  svgXToTime,
+  timingModelToSvg,
+} from "./modelToSvg.js";
+
+export function TimingCanvas() {
+  const model = useDocumentStore((state) => state.document.model);
+  const overlay = useDocumentStore((state) => state.document.overlay);
+  const diagnostics = useDocumentStore((state) => state.diagnostics);
+  const updateNodePosition = useDocumentStore((state) => state.updateNodePosition);
+  const connectElements = useDocumentStore((state) => state.connectElements);
+  const dropStencilElement = useDocumentStore((state) => state.dropStencilElement);
+  const deleteElements = useDocumentStore((state) => state.deleteElements);
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [selectedLifelineId, setSelectedLifelineId] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<number>(0);
+  const [dragState, setDragState] = useState<{
+    lifelineId: string;
+    offsetY: number;
+  } | null>(null);
+
+  const renderable = useMemo(
+    () => timingModelToSvg(model, overlay, diagnostics),
+    [model, overlay, diagnostics],
+  );
+
+  const clientToSvg = useCallback((clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) {
+      return { x: clientX, y: clientY };
+    }
+    const point = svg.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    const matrix = svg.getScreenCTM()?.inverse();
+    if (!matrix) {
+      return { x: clientX, y: clientY };
+    }
+    const transformed = point.matrixTransform(matrix);
+    return { x: transformed.x, y: transformed.y };
+  }, []);
+
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      const kind = event.dataTransfer.getData("application/graphiq-stencil");
+      if (!kind) {
+        return;
+      }
+      const point = clientToSvg(event.clientX, event.clientY);
+      void dropStencilElement(kind as "lifeline" | "note", point.x, point.y);
+    },
+    [clientToSvg, dropStencilElement],
+  );
+
+  const onLifelinePointerDown = useCallback(
+    (lifelineId: string, event: React.PointerEvent<SVGGElement>) => {
+      event.stopPropagation();
+      const lifeline = renderable.lifelines.find((item) => item.id === lifelineId);
+      if (!lifeline) {
+        return;
+      }
+      const point = clientToSvg(event.clientX, event.clientY);
+      setDragState({
+        lifelineId,
+        offsetY: point.y - lifeline.y,
+      });
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [clientToSvg, renderable.lifelines],
+  );
+
+  const onCanvasPointerMove = useCallback(
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      if (dragState === null) {
+        return;
+      }
+      const point = clientToSvg(event.clientX, event.clientY);
+      const existing = overlay.nodes[dragState.lifelineId];
+      updateNodePosition(
+        dragState.lifelineId,
+        existing?.x ?? 0,
+        Math.max(0, point.y - dragState.offsetY),
+      );
+    },
+    [clientToSvg, dragState, overlay.nodes, updateNodePosition],
+  );
+
+  const onCanvasPointerUp = useCallback(() => {
+    setDragState(null);
+  }, []);
+
+  const onLifelineClick = useCallback(
+    (lifelineId: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      const point = clientToSvg(event.clientX, event.clientY);
+      const time = svgXToTime(point.x);
+
+      if (selectedLifelineId !== null && selectedLifelineId !== lifelineId) {
+        void connectElements(selectedLifelineId, lifelineId, { time: selectedTime });
+        setSelectedLifelineId(null);
+        return;
+      }
+
+      setSelectedLifelineId(lifelineId);
+      setSelectedTime(time);
+    },
+    [clientToSvg, connectElements, selectedLifelineId, selectedTime],
+  );
+
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key !== "Backspace" && event.key !== "Delete") {
+        return;
+      }
+      if (selectedLifelineId === null) {
+        return;
+      }
+      void deleteElements([selectedLifelineId]);
+      setSelectedLifelineId(null);
+    },
+    [deleteElements, selectedLifelineId],
+  );
+
+  return (
+    <div
+      className="relative h-full w-full overflow-auto bg-slate-50"
+      data-testid="timing-canvas"
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+    >
+      <MarkerDefs />
+      <svg
+        ref={svgRef}
+        className="min-h-full min-w-full"
+        width={renderable.width}
+        height={renderable.height}
+        onPointerMove={onCanvasPointerMove}
+        onPointerUp={onCanvasPointerUp}
+        onPointerLeave={onCanvasPointerUp}
+        onClick={() => setSelectedLifelineId(null)}
+      >
+        <line
+          x1={160}
+          y1={renderable.axisY}
+          x2={renderable.width - 40}
+          y2={renderable.axisY}
+          stroke="#64748b"
+          strokeWidth={1}
+          data-testid="timing-axis"
+        />
+
+        {renderable.ticks.map((tick) => (
+          <g key={tick.time} data-testid="timing-axis-tick">
+            <line
+              x1={tick.x}
+              y1={renderable.axisY - 4}
+              x2={tick.x}
+              y2={renderable.axisY + 4}
+              stroke="#64748b"
+              strokeWidth={1}
+            />
+            <text
+              x={tick.x}
+              y={renderable.axisY - 8}
+              textAnchor="middle"
+              className="fill-slate-600 text-[10px]"
+            >
+              {tick.time}
+            </text>
+          </g>
+        ))}
+
+        {renderable.lifelines.map((lifeline) => (
+          <g
+            key={lifeline.id}
+            data-testid="timing-lifeline"
+            onPointerDown={(event) => onLifelinePointerDown(lifeline.id, event)}
+            onClick={(event) => onLifelineClick(lifeline.id, event)}
+          >
+            <line
+              x1={160}
+              y1={lifeline.rowCenterY}
+              x2={renderable.width - 40}
+              y2={lifeline.rowCenterY}
+              stroke={strokeForDiagnostic(lifeline.diagnosticSeverity) ?? "#cbd5e1"}
+              strokeWidth={1}
+            />
+            <text
+              x={8}
+              y={lifeline.rowCenterY + 4}
+              data-testid="lifeline-name"
+              className="fill-slate-900 text-xs font-medium"
+            >
+              {lifelineDisplayName(lifeline)}
+            </text>
+            <rect
+              x={lifeline.x}
+              y={lifeline.y}
+              width={lifeline.width}
+              height={lifeline.height}
+              fill="transparent"
+              stroke={
+                selectedLifelineId === lifeline.id
+                  ? "#0f172a"
+                  : strokeForDiagnostic(lifeline.diagnosticSeverity) ?? "transparent"
+              }
+              strokeWidth={selectedLifelineId === lifeline.id ? 2 : 0}
+            />
+          </g>
+        ))}
+
+        {renderable.states.map((state) => (
+          <g key={state.id} data-testid="timing-state">
+            <rect
+              x={state.x}
+              y={state.y}
+              width={state.width}
+              height={state.height}
+              fill="#dbeafe"
+              stroke={strokeForDiagnostic(state.diagnosticSeverity) ?? "#2563eb"}
+              strokeWidth={1}
+              rx={2}
+            />
+            <text
+              x={state.x + 6}
+              y={state.y + state.height / 2 + 4}
+              className="fill-slate-900 text-xs"
+            >
+              {state.name}
+            </text>
+          </g>
+        ))}
+
+        {renderable.messages.map((message) => {
+          const stroke = strokeForDiagnostic(message.diagnosticSeverity) ?? "#0f172a";
+          const dashProps = message.lineStyle === "dash" ? dashStrokeStyle : {};
+          return (
+            <g key={message.id} data-testid="timing-message" data-marker-id={message.markerId}>
+              <line
+                x1={message.x}
+                y1={message.y1}
+                x2={message.x}
+                y2={message.y2}
+                stroke={stroke}
+                strokeWidth={1.5}
+                markerEnd={`url(#${message.markerId})`}
+                {...dashProps}
+              />
+              {message.label !== undefined ? (
+                <text
+                  x={message.x + 6}
+                  y={(message.y1 + message.y2) / 2}
+                  className="fill-slate-700 text-xs"
+                >
+                  {message.label}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}

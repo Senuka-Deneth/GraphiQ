@@ -13,6 +13,7 @@ import type {
   ActivityStencilDropKind,
   StateMachineStencilDropKind,
   SequenceStencilDropKind,
+  TimingStencilDropKind,
   StencilDropKind,
 } from "../store/documentStore.js";
 
@@ -115,6 +116,11 @@ export const SEQUENCE_STENCIL_ITEMS: readonly StencilItem[] = [
   { id: "note", label: "Note" },
 ] as const;
 
+export const TIMING_STENCIL_ITEMS: readonly StencilItem[] = [
+  { id: "lifeline", label: "Lifeline" },
+  { id: "note", label: "Note" },
+] as const;
+
 export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly StencilItem[] {
   switch (kind) {
     case "class":
@@ -141,6 +147,8 @@ export function stencilItemsForKind(kind: ImplementedDiagramKind): readonly Sten
       return STATE_MACHINE_STENCIL_ITEMS;
     case "sequence":
       return SEQUENCE_STENCIL_ITEMS;
+    case "timing":
+      return TIMING_STENCIL_ITEMS;
     default:
       return assertNever(kind);
   }
@@ -154,6 +162,7 @@ export type {
   ActivityStencilDropKind,
   StateMachineStencilDropKind,
   SequenceStencilDropKind,
+  TimingStencilDropKind,
   DeploymentStencilDropKind,
   ObjectStencilDropKind,
   PackageStencilDropKind,

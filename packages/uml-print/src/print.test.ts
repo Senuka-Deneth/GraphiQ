@@ -186,7 +186,8 @@ describe("print class diagram", () => {
         kind === "communication" ||
         kind === "activity" ||
         kind === "stateMachine" ||
-        kind === "sequence"
+        kind === "sequence" ||
+        kind === "timing"
       ) {
         continue;
       }

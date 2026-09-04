@@ -35,6 +35,9 @@ export type {
   StereotypeElement,
   PartElement,
   PortElement,
+  TimingStateElement,
+  DurationConstraintElement,
+  TimeConstraintElement,
   UmlElement,
 } from "./element.js";
 export { isClassifierElement } from "./element.js";
@@ -78,3 +81,11 @@ export {
   setClassAttribute,
   setClassOperation,
 } from "./commands.js";
+
+export {
+  intervalCoversTime,
+  isTimingStateElement,
+  timingIntervals,
+  timingIntervalsForLifeline,
+} from "./timingIntervals.js";
+export type { TimingInterval } from "./timingIntervals.js";

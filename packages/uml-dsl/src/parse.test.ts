@@ -201,7 +201,8 @@ class Good {
         kind === "communication" ||
         kind === "activity" ||
         kind === "stateMachine" ||
-        kind === "sequence"
+        kind === "sequence" ||
+        kind === "timing"
       ) {
         continue;
       }

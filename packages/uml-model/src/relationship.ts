@@ -36,6 +36,7 @@ export type MessageRelationship = RelationshipBase & {
   relationshipType: "message";
   messageSort: MessageSort;
   sequenceNumber?: string;
+  time?: number;
 };
 
 export type TransitionRelationship = RelationshipBase & {
@@ -99,7 +100,7 @@ export type NewUmlRelationship =
       Omit<CompositionRelationship, "id">,
       "sourceMultiplicity" | "targetMultiplicity"
     >
-  | WithOptional<Omit<MessageRelationship, "id">, "sequenceNumber">
+  | WithOptional<Omit<MessageRelationship, "id">, "sequenceNumber" | "time">
   | WithOptional<Omit<TransitionRelationship, "id">, "trigger" | "guard" | "effect">
   | WithOptional<Omit<ControlFlowRelationship, "id">, "guard">
   | WithOptional<Omit<ObjectFlowRelationship, "id">, "guard">

@@ -9,6 +9,10 @@ import {
   layoutSequence,
 } from "./layoutSequence.js";
 import {
+  createTimingFixtureModel,
+  layoutTiming,
+} from "./layoutTiming.js";
+import {
   createStateMachineFixtureModel,
   layoutStateMachine,
 } from "./layoutStateMachine.js";
@@ -647,11 +651,62 @@ describe("layoutSequence", () => {
   });
 });
 
+describe("layoutTiming", () => {
+  it("lays out state bands with increasing x for the lamp fixture", async () => {
+    const model = createTimingFixtureModel();
+    const overlay = await layoutTiming(model, emptyOverlay(), "full");
+
+    const stateXs = ["state-off-0", "state-on-10", "state-off-40"].map((id) => overlay.nodes[id]?.x);
+    expect(stateXs.every((value) => Number.isFinite(value))).toBe(true);
+    for (let index = 1; index < stateXs.length; index += 1) {
+      const previous = stateXs[index - 1];
+      const current = stateXs[index];
+      if (previous !== undefined && current !== undefined) {
+        expect(current).toBeGreaterThan(previous);
+      }
+    }
+
+    const firstBand = overlay.nodes["state-off-0"];
+    const secondBand = overlay.nodes["state-on-10"];
+    if (firstBand !== undefined && secondBand !== undefined) {
+      expect(firstBand.x + firstBand.width).toBeLessThanOrEqual(secondBand.x + 1);
+    }
+  });
+
+  it("preserves pinned lifeline y in incremental mode", async () => {
+    const model = createTimingFixtureModel();
+    const firstPass = await layoutTiming(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["lifeline-lamp"];
+    if (pinned === undefined) {
+      throw new Error("expected lamp lifeline");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "lifeline-lamp": { ...pinned, x: 0, y: 120 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutTiming(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["lifeline-lamp"]?.y).toBe(120);
+  });
+});
+
 describe("layoutDocument", () => {
   it("throws for non-implemented diagram kinds", async () => {
-    const model = emptyModel("timing");
+    const model = emptyModel("interactionOverview");
     await expect(
-      layoutDocument("timing", model, emptyOverlay(), "first-open-empty-overlay"),
-    ).rejects.toThrow("layout not implemented for timing");
+      layoutDocument("interactionOverview", model, emptyOverlay(), "first-open-empty-overlay"),
+    ).rejects.toThrow("layout not implemented for interactionOverview");
   });
 });

@@ -12,6 +12,7 @@ import { communicationAstToModel } from "./communicationAstToModel.js";
 import { activityAstToModel } from "./activityAstToModel.js";
 import { stateMachineAstToModel } from "./stateMachineAstToModel.js";
 import { sequenceAstToModel } from "./sequenceAstToModel.js";
+import { timingAstToModel } from "./timingAstToModel.js";
 import { useCaseAstToModel } from "./useCaseAstToModel.js";
 
 export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
@@ -49,6 +50,8 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
       );
     case "sequence":
       return sequenceAstToModel(ast, previous?.kind === "sequence" ? previous : undefined);
+    case "timing":
+      return timingAstToModel(ast, previous?.kind === "timing" ? previous : undefined);
     default:
       return assertNever(ast);
   }

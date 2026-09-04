@@ -135,7 +135,7 @@ describe("connector matrices", () => {
     expect(STATE_MACHINE_CONNECTORS).toHaveLength(9);
     expect(SEQUENCE_CONNECTORS).toHaveLength(5);
     expect(COMMUNICATION_CONNECTORS).toHaveLength(8);
-    expect(TIMING_CONNECTORS).toHaveLength(0);
+    expect(TIMING_CONNECTORS).toHaveLength(1);
     expect(INTERACTION_OVERVIEW_CONNECTORS).toHaveLength(0);
 
     for (const kind of DIAGRAM_KINDS) {
@@ -163,6 +163,8 @@ describe("connector matrices", () => {
         expect(getConnectorMatrix(kind)).toHaveLength(9);
       } else if (kind === "sequence") {
         expect(getConnectorMatrix(kind)).toHaveLength(5);
+      } else if (kind === "timing") {
+        expect(getConnectorMatrix(kind)).toHaveLength(1);
       } else {
         expect(getConnectorMatrix(kind)).toHaveLength(0);
       }

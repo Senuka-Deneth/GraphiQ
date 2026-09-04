@@ -27,6 +27,16 @@ export {
   layoutSequence,
   measureSequenceNode,
 } from "./layoutSequence.js";
+export {
+  createTimingFixtureModel,
+  layoutTiming,
+  measureTimingNode,
+  timingAxisTicks,
+  timingCanvasHeight,
+  timingCanvasWidth,
+  TIMING_TIME_AXIS_Y,
+  timeToX,
+} from "./layoutTiming.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
   LayoutMode,

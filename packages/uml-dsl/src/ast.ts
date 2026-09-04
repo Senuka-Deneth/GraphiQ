@@ -541,6 +541,47 @@ export type SequenceDiagramAst = {
   span: DslSpan;
 };
 
+export type AstTimingStateConstraint =
+  | { constraintKind: "duration"; min: number; max: number; span: DslSpan }
+  | { constraintKind: "time"; time: number; span: DslSpan };
+
+export type AstTimingState = {
+  name: string;
+  at: number;
+  constraint?: AstTimingStateConstraint;
+  span: DslSpan;
+};
+
+export type AstTimingStateBlock = {
+  lifelineName: string;
+  states: AstTimingState[];
+  span: DslSpan;
+};
+
+export type AstTimingMessageSort =
+  | "synchCall"
+  | "asynchCall"
+  | "reply"
+  | "createMessage";
+
+export type AstTimingMessage = {
+  sourceName: string;
+  targetName: string;
+  at: number;
+  messageSort: AstTimingMessageSort;
+  name?: string;
+  span: DslSpan;
+};
+
+export type TimingDiagramAst = {
+  kind: "timing";
+  name?: string;
+  lifelines: AstSequenceLifeline[];
+  stateBlocks: AstTimingStateBlock[];
+  messages: AstTimingMessage[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
@@ -553,4 +594,5 @@ export type DiagramAst =
   | CommunicationDiagramAst
   | ActivityDiagramAst
   | StateMachineDiagramAst
-  | SequenceDiagramAst;
+  | SequenceDiagramAst
+  | TimingDiagramAst;

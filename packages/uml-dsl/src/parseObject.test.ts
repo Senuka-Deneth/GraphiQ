@@ -104,7 +104,8 @@ describe("parse unsupported kinds", () => {
         kind === "communication" ||
         kind === "activity" ||
         kind === "stateMachine" ||
-        kind === "sequence"
+        kind === "sequence" ||
+        kind === "timing"
       ) {
         continue;
       }

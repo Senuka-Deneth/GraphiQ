@@ -64,6 +64,10 @@ export type {
   AstSequenceMessage,
   AstSequenceCombinedFragment,
   AstSequenceCombinedFragmentOperand,
+  TimingDiagramAst,
+  AstTimingState,
+  AstTimingStateBlock,
+  AstTimingMessage,
   DslSpan,
 } from "./ast.js";
 export {

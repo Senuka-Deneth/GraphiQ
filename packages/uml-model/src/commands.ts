@@ -152,6 +152,32 @@ function createElement(spec: NewUmlElement): UmlElement {
         parentId: spec.parentId,
         typeName: spec.typeName,
       };
+    case "timingState":
+      return {
+        id,
+        elementType: "timingState",
+        name: spec.name,
+        parentId: spec.parentId,
+        at: spec.at,
+        until: spec.until,
+      };
+    case "durationConstraint":
+      return {
+        id,
+        elementType: "durationConstraint",
+        name: spec.name,
+        parentId: spec.parentId,
+        min: spec.min,
+        max: spec.max,
+      };
+    case "timeConstraint":
+      return {
+        id,
+        elementType: "timeConstraint",
+        name: spec.name,
+        parentId: spec.parentId,
+        time: spec.time,
+      };
     default:
       return {
         id,
@@ -216,6 +242,7 @@ function createRelationship(spec: NewUmlRelationship): UmlRelationship {
         name,
         messageSort: spec.messageSort,
         sequenceNumber: spec.sequenceNumber,
+        time: spec.time,
       };
     case "transition":
       return {

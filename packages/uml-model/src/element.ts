@@ -101,6 +101,23 @@ export type PortElement = NamedElementBase & {
   typeName?: string;
 };
 
+export type TimingStateElement = NamedElementBase & {
+  elementType: "timingState";
+  at: number;
+  until?: number;
+};
+
+export type DurationConstraintElement = NamedElementBase & {
+  elementType: "durationConstraint";
+  min: number;
+  max: number;
+};
+
+export type TimeConstraintElement = NamedElementBase & {
+  elementType: "timeConstraint";
+  time: number;
+};
+
 export type NamedElement = NamedElementBase & {
   elementType: Exclude<
     ElementType,
@@ -119,6 +136,9 @@ export type NamedElement = NamedElementBase & {
     | "stereotype"
     | "part"
     | "port"
+    | "timingState"
+    | "durationConstraint"
+    | "timeConstraint"
   >;
 };
 
@@ -138,6 +158,9 @@ export type UmlElement =
   | StereotypeElement
   | PartElement
   | PortElement
+  | TimingStateElement
+  | DurationConstraintElement
+  | TimeConstraintElement
   | NamedElement;
 
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -164,6 +187,9 @@ export type NewUmlElement =
   | WithOptional<Omit<StereotypeElement, "id">, "attributes">
   | WithOptional<Omit<PartElement, "id">, "multiplicity">
   | Omit<PortElement, "id">
+  | WithOptional<Omit<TimingStateElement, "id">, "until">
+  | Omit<DurationConstraintElement, "id">
+  | Omit<TimeConstraintElement, "id">
   | Omit<NamedElement, "id">;
 
 export type ClassifierElement =
