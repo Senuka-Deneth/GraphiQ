@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 function IconFrame({ children }: { children: ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="shrink-0" width={22} height={22} aria-hidden="true">
       {children}
     </svg>
   );

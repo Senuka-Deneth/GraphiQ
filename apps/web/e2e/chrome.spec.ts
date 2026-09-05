@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { openDslPanel, waitForPersistReady } from "./helpers.js";
+import { connectFlowNodesByHandles, openDslPanel, waitForPersistReady } from "./helpers.js";
 
 test("diagnostics stay hidden until an error appears", async ({ page }) => {
   await page.goto("/");
@@ -56,12 +56,7 @@ test("selected edge toolbar can change generalization notation", async ({ page }
   await expect(page.locator(".react-flow__node")).toHaveCount(2, { timeout: 10_000 });
 
   await page.locator('[data-relationship-tool="association"]').click();
-  const nodes = page.locator(".react-flow__node");
-  await nodes
-    .nth(0)
-    .locator(".react-flow__handle.source")
-    .first()
-    .dragTo(nodes.nth(1).locator(".react-flow__handle.target").first(), { force: true });
+  await connectFlowNodesByHandles(page);
   await expect(page.locator(".react-flow__edge")).toHaveCount(1, { timeout: 10_000 });
 
   await page.locator(".react-flow__edge-interaction").first().click({ force: true });
@@ -90,12 +85,7 @@ test("illegal head change keeps the previous relationship", async ({ page }) => 
   await expect(page.locator(".react-flow__node")).toHaveCount(2, { timeout: 10_000 });
 
   await page.locator('[data-relationship-tool="association"]').click();
-  const nodes = page.locator(".react-flow__node");
-  await nodes
-    .nth(0)
-    .locator(".react-flow__handle.source")
-    .first()
-    .dragTo(nodes.nth(1).locator(".react-flow__handle.target").first(), { force: true });
+  await connectFlowNodesByHandles(page);
   await expect(page.locator(".react-flow__edge")).toHaveCount(1, { timeout: 10_000 });
 
   const editor = page.locator('[data-testid="dsl-editor"]');

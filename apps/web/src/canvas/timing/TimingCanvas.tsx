@@ -3,6 +3,7 @@ import { MarkerDefs } from "../class/MarkerDefs.js";
 import { SvgSquareGrid, SvgZoomViewport } from "../SvgZoomViewport.js";
 import { DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
 import { useDocumentStore, type StencilDropKind } from "../../store/documentStore.js";
+import { DeleteIcon } from "../../chrome/icons.js";
 import {
   dashStrokeStyle,
   lifelineDisplayName,
@@ -25,6 +26,7 @@ export function TimingCanvas({
   const connectElements = useDocumentStore((state) => state.connectElements);
   const dropStencilElement = useDocumentStore((state) => state.dropStencilElement);
   const deleteElements = useDocumentStore((state) => state.deleteElements);
+  const deleteRelationships = useDocumentStore((state) => state.deleteRelationships);
   const renameSelectedElement = useDocumentStore((state) => state.renameSelectedElement);
 
   const svgRef = useRef<SVGSVGElement>(null);
@@ -34,6 +36,7 @@ export function TimingCanvas({
   const [dragState, setDragState] = useState<{
     lifelineId: string;
     offsetY: number;
+    y: number;
   } | null>(null);
 
   const renderable = useMemo(
@@ -90,6 +93,7 @@ export function TimingCanvas({
       setDragState({
         lifelineId,
         offsetY: point.y - lifeline.y,
+        y: lifeline.y,
       });
       event.currentTarget.setPointerCapture(event.pointerId);
     },
@@ -102,19 +106,21 @@ export function TimingCanvas({
         return;
       }
       const point = clientToSvg(event.clientX, event.clientY);
-      const existing = overlay.nodes[dragState.lifelineId];
-      updateNodePosition(
-        dragState.lifelineId,
-        existing?.x ?? 0,
-        Math.max(0, point.y - dragState.offsetY),
-      );
+      setDragState({
+        ...dragState,
+        y: Math.max(0, point.y - dragState.offsetY),
+      });
     },
-    [clientToSvg, dragState, overlay.nodes, updateNodePosition],
+    [clientToSvg, dragState],
   );
 
   const onCanvasPointerUp = useCallback(() => {
+    if (dragState !== null) {
+      const existing = overlay.nodes[dragState.lifelineId];
+      updateNodePosition(dragState.lifelineId, existing?.x ?? 0, dragState.y);
+    }
     setDragState(null);
-  }, []);
+  }, [dragState, overlay.nodes, updateNodePosition]);
 
   const onElementClick = useCallback(
     (elementId: string, event: React.MouseEvent) => {
@@ -159,13 +165,29 @@ export function TimingCanvas({
       if (event.key !== "Backspace" && event.key !== "Delete") {
         return;
       }
+      if (selectedMessageId !== null) {
+        event.preventDefault();
+        void deleteRelationships([selectedMessageId]);
+        setSelectedMessageId(null);
+        onSelectedEdgeChange?.(null);
+        return;
+      }
       if (selectedLifelineId === null) {
         return;
       }
+      event.preventDefault();
       void deleteElements([selectedLifelineId]);
       setSelectedLifelineId(null);
+      onSelectedNodeChange?.(null);
     },
-    [deleteElements, selectedLifelineId],
+    [
+      deleteElements,
+      deleteRelationships,
+      onSelectedEdgeChange,
+      onSelectedNodeChange,
+      selectedLifelineId,
+      selectedMessageId,
+    ],
   );
 
   const onPaneDoubleClick = useCallback(
@@ -207,6 +229,29 @@ export function TimingCanvas({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
+      {selectedLifelineId !== null || selectedMessageId !== null ? (
+        <button
+          type="button"
+          className="graphiq-island-controls graphiq-icon-button absolute left-3 top-3 z-20"
+          aria-label="Delete element"
+          data-testid="delete-element"
+          onClick={() => {
+            if (selectedMessageId !== null) {
+              void deleteRelationships([selectedMessageId]);
+              setSelectedMessageId(null);
+              onSelectedEdgeChange?.(null);
+              return;
+            }
+            if (selectedLifelineId !== null) {
+              void deleteElements([selectedLifelineId]);
+              setSelectedLifelineId(null);
+              onSelectedNodeChange?.(null);
+            }
+          }}
+        >
+          <DeleteIcon />
+        </button>
+      ) : null}
       <SvgZoomViewport width={renderable.width} height={renderable.height}>
       <MarkerDefs />
       <svg
@@ -261,11 +306,17 @@ export function TimingCanvas({
           </g>
         ))}
 
-        {renderable.lifelines.map((lifeline) => (
+        {renderable.lifelines.map((lifeline) => {
+          const previewY =
+            dragState !== null && dragState.lifelineId === lifeline.id
+              ? dragState.y - lifeline.y
+              : 0;
+          return (
           <g
             key={lifeline.id}
             data-testid="timing-lifeline"
             data-element-id={lifeline.id}
+            transform={`translate(0 ${previewY})`}
             onPointerDown={(event) => onLifelinePointerDown(lifeline.id, event)}
             onClick={(event) => onElementClick(lifeline.id, event)}
           >
@@ -299,7 +350,8 @@ export function TimingCanvas({
               strokeWidth={selectedLifelineId === lifeline.id ? 2 : 0}
             />
           </g>
-        ))}
+          );
+        })}
 
         {noteElements.map(({ element, node }) => (
           <g

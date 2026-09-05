@@ -9,8 +9,14 @@ import { getRelationshipNotation } from "@graphiq/uml-notation";
 describe("ClassCanvas", () => {
   it("renders UML marker defs including generalization and composition markers", () => {
     render(<ClassCanvas />);
-    expect(document.getElementById("gen-hollow-triangle")).not.toBeNull();
-    expect(document.getElementById("comp-filled-diamond")).not.toBeNull();
+    const generalization = document.getElementById("gen-hollow-triangle");
+    const composition = document.getElementById("comp-filled-diamond");
+    expect(generalization).not.toBeNull();
+    expect(composition).not.toBeNull();
+    expect(generalization?.querySelector("path")?.getAttribute("stroke")).toBe("#0f172a");
+    expect(generalization?.querySelector("path")?.getAttribute("fill")).toBe("none");
+    expect(composition?.querySelector("path")?.getAttribute("fill")).toBe("#0f172a");
+    expect(composition?.querySelector("path")?.getAttribute("stroke")).not.toBe("currentColor");
   });
 
   it("maps generalization to gen-hollow-triangle and composition to comp-filled-diamond", () => {

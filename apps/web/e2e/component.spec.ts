@@ -31,7 +31,7 @@ test("component document renders assembly between provided and required interfac
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("component");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("component");
-  await expect(page.locator('[data-testid="stencil"]')).not.toContainText("Actor");
+  await expect(page.locator('[data-stencil-item="actor"]')).toHaveCount(0);
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();

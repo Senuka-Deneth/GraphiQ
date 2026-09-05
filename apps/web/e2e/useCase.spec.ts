@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { openDslPanel } from "./helpers.js";
+import { expectStencilItem, openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const storefrontFixture = readFileSync(
@@ -24,8 +24,8 @@ test("use case document renders actors, ellipses, and include label", async ({ p
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("useCase");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("useCase");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Actor");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Subject");
+  await expectStencilItem(page, "actor", "Actor");
+  await expectStencilItem(page, "subject", "Subject");
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();

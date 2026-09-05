@@ -6,8 +6,15 @@ import {
   MARKER_IDS,
   SVG_MARKERS,
 } from "@graphiq/uml-notation";
-import type { NotationOverlay } from "@graphiq/uml-layout";
+import type { NotationOverlay, OverlayEdge } from "@graphiq/uml-layout";
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
+import { DEFAULT_EDGE_COLOR } from "../canvas/canvasDefaults.js";
+import {
+  extraStrokeColors,
+  markerDomId,
+  resolveMarkerFill,
+  resolveMarkerStroke,
+} from "../canvas/class/markerPaint.js";
 import {
   lifelineDisplayName,
   lifelineHeadHeight,
@@ -36,11 +43,21 @@ function escapeXml(value: string): string {
     .replaceAll("'", "&apos;");
 }
 
-function renderMarkerDefs(): string {
-  return MARKER_IDS.map((id) => {
-    const marker = SVG_MARKERS[id];
-    return `<marker id="${marker.id}" viewBox="${marker.viewBox}" markerWidth="${marker.markerWidth}" markerHeight="${marker.markerHeight}" refX="${marker.refX}" refY="${marker.refY}" orient="${marker.orient}" markerUnits="strokeWidth"><path d="${marker.pathD}" fill="${marker.fill}" stroke="${marker.stroke}" stroke-width="1"/></marker>`;
-  }).join("");
+function renderMarkerDefs(overlay: NotationOverlay): string {
+  const colors = [DEFAULT_EDGE_COLOR, ...extraStrokeColors(
+    Object.values(overlay.edges).map((edge) => edge.strokeColor),
+  )];
+  return colors
+    .flatMap((color) =>
+      MARKER_IDS.map((id) => {
+        const marker = SVG_MARKERS[id];
+        const domId = markerDomId(id, color);
+        const fill = resolveMarkerFill(marker.fill, color);
+        const stroke = resolveMarkerStroke(marker.stroke, color);
+        return `<marker id="${domId}" viewBox="${marker.viewBox}" markerWidth="${marker.markerWidth}" markerHeight="${marker.markerHeight}" refX="${marker.refX}" refY="${marker.refY}" orient="${marker.orient}" markerUnits="strokeWidth"><path d="${marker.pathD}" fill="${fill}" stroke="${stroke}" stroke-width="1"/></marker>`;
+      }),
+    )
+    .join("");
 }
 
 function absoluteOverlayBox(
@@ -96,21 +113,23 @@ function computeBounds(
   return { minX, minY, maxX, maxY };
 }
 
-function wrapSvg(width: number, height: number, body: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs>${renderMarkerDefs()}</defs>${body}</svg>`;
+function wrapSvg(width: number, height: number, overlay: NotationOverlay, body: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs>${renderMarkerDefs(overlay)}</defs>${body}</svg>`;
 }
 
-function markerAttr(id: string | null, end: "start" | "end"): string {
+function markerAttr(id: string | null, end: "start" | "end", color: string): string {
   if (id === null) {
     return "";
   }
-  return end === "start" ? ` marker-start="url(#${id})"` : ` marker-end="url(#${id})"`;
+  const domId = markerDomId(id, color);
+  return end === "start" ? ` marker-start="url(#${domId})"` : ` marker-end="url(#${domId})"`;
 }
 
 function renderRelationshipLine(
   relationship: UmlRelationship,
   sourceCenter: { x: number; y: number },
   targetCenter: { x: number; y: number },
+  overlayEdge: OverlayEdge | undefined,
   waypoints?: readonly { x: number; y: number }[],
 ): string {
   const notation =
@@ -125,11 +144,13 @@ function renderRelationshipLine(
   const pathData = points
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
     .join(" ");
+  const paint = overlayEdge?.strokeColor ?? DEFAULT_EDGE_COLOR;
+  const strokeWidth = overlayEdge?.strokeWidth ?? 1.5;
   const label =
     relationship.name !== undefined
       ? `<text x="${(sourceCenter.x + targetCenter.x) / 2}" y="${(sourceCenter.y + targetCenter.y) / 2 - 6}" text-anchor="middle" font-size="12" fill="#334155">${escapeXml(relationship.name)}</text>`
       : "";
-  return `<path d="${pathData}" fill="none" stroke="#0f172a" stroke-width="1.5"${dash}${markerAttr(notation.sourceMarkerId, "start")}${markerAttr(notation.targetMarkerId, "end")}/>${label}`;
+  return `<path d="${pathData}" fill="none" stroke="${paint}" stroke-width="${strokeWidth}"${dash}${markerAttr(notation.sourceMarkerId, "start", paint)}${markerAttr(notation.targetMarkerId, "end", paint)}/>${label}`;
 }
 
 function renderFlowDiagramSvg(model: UmlModel, overlay: NotationOverlay): string {
@@ -183,10 +204,10 @@ function renderFlowDiagramSvg(model: UmlModel, overlay: NotationOverlay): string
       x: point.x + offsetX,
       y: point.y + offsetY,
     }));
-    return [renderRelationshipLine(relationship, sourceCenter, targetCenter, waypoints)];
+    return [renderRelationshipLine(relationship, sourceCenter, targetCenter, overlay.edges[relationship.id], waypoints)];
   });
 
-  return wrapSvg(width, height, `${nodeMarkup.join("")}${edgeMarkup.join("")}`);
+  return wrapSvg(width, height, overlay, `${nodeMarkup.join("")}${edgeMarkup.join("")}`);
 }
 
 function renderSequenceDiagramSvg(model: UmlModel, overlay: NotationOverlay): string {
@@ -218,7 +239,7 @@ function renderSequenceDiagramSvg(model: UmlModel, overlay: NotationOverlay): st
       return `<line x1="${message.x1}" y1="${message.y}" x2="${message.x2}" y2="${message.y}" stroke="#0f172a" stroke-width="1.5" marker-end="url(#${message.markerId})"${dash}/>${label}`;
     }),
   ].join("");
-  return wrapSvg(renderable.width, renderable.height, body);
+  return wrapSvg(renderable.width, renderable.height, overlay, body);
 }
 
 function renderTimingDiagramSvg(model: UmlModel, overlay: NotationOverlay): string {
@@ -242,7 +263,7 @@ function renderTimingDiagramSvg(model: UmlModel, overlay: NotationOverlay): stri
       return `<line x1="${message.x}" y1="${message.y1}" x2="${message.x}" y2="${message.y2}" stroke="#0f172a" stroke-width="1.5" marker-end="url(#${message.markerId})"${dash}/>`;
     }),
   ].join("");
-  return wrapSvg(renderable.width, renderable.height, body);
+  return wrapSvg(renderable.width, renderable.height, overlay, body);
 }
 
 export function serializeDiagramSvg(document: GraphiqDocument): string {

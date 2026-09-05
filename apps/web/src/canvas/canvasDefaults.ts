@@ -1,5 +1,5 @@
 export const GRID_GAP = 20;
-export const SNAP_GRID: [number, number] = [GRID_GAP, GRID_GAP];
+export const SNAP_GRID: [number, number] = [8, 8];
 export const DEFAULT_ZOOM = 1;
 export const MIN_ZOOM = 0.15;
 export const MAX_ZOOM = 4;

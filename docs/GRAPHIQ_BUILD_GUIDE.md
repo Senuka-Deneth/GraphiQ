@@ -974,11 +974,10 @@ Actors: 24×40 stick figure plus name below. Use cases: ellipse min 140×70.
 
 Lucidchart-like density, not a marketing landing page.
 
-- Left: stencil of **legal** elements for the active `DiagramKind` only.
+- Left: glass sidebar with diagram title, kind, legal stencil for the active `DiagramKind` only, export, **Download DSL guide** (`.md`), and **Import DSL** (`.md` / `.dsl` / `.txt`).
 - Center: canvas (kind renderer), grid, snap, zoom, mini-map optional after class slice.
 - Right or bottom split: CodeMirror DSL.
-- Top bar: diagram kind (locked to document kind in v1; changing kind is a later conversion step — do not silently convert), title, auto-layout, export (when that step exists), **Download DSL guide** (`.md`), **Import DSL** (`.md` / `.dsl` / `.txt`).
-- Bottom: diagnostics list.
+- Bottom / corner: diagnostics list.
 
 Stencil drag must call model commands, not insert raw XYFlow nodes.
 

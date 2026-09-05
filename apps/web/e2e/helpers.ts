@@ -24,6 +24,21 @@ export async function selectDiagramKind(page: Page, kind: string): Promise<void>
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText(kind);
 }
 
+export async function expectStencilItem(page: Page, id: string, label: string): Promise<void> {
+  await expect(page.locator(`[data-stencil-item="${id}"]`)).toHaveAttribute("aria-label", label);
+}
+
+export async function connectFlowNodesByHandles(page: Page): Promise<void> {
+  const nodes = page.locator(".react-flow__node");
+  await nodes.nth(0).click();
+  await expect(nodes.nth(0)).toHaveClass(/selected/);
+  await nodes
+    .nth(0)
+    .locator(".react-flow__handle.source")
+    .first()
+    .dragTo(nodes.nth(1).locator(".react-flow__handle.target").first(), { force: true });
+}
+
 export async function dropStencilToCanvas(
   page: Page,
   stencilId: string,

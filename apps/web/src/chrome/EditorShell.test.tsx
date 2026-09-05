@@ -19,17 +19,20 @@ describe("EditorShell", () => {
     resetDocumentStoreForTests();
   });
 
-  it("renders the top bar, the docked sidebar, and the corner toggle islands", () => {
+  it("renders the docked sidebar, title pill, and the corner toggle islands", () => {
     render(<EditorShell />);
 
     expect(screen.getByRole("heading", { name: "GraphiQ" })).toBeInTheDocument();
     expect(screen.getByLabelText("Diagram title")).toBeInTheDocument();
+    expect(screen.getByLabelText("Diagram title")).toHaveClass("graphiq-title-pill");
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
     expect(screen.getByTestId("document-kind-badge")).toHaveTextContent("class");
 
     const sidebar = screen.getByTestId("stencil");
     expect(sidebar).toHaveClass("graphiq-sidebar");
     expect(sidebar).toHaveAttribute("aria-hidden", "false");
     expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeInTheDocument();
+    expect(sidebar).toContainElement(screen.getByLabelText("Diagram title"));
 
     expect(screen.getByLabelText("Show DSL")).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByLabelText("Show diagnostics")).toHaveAttribute(

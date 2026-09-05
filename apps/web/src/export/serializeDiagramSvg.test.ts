@@ -47,6 +47,8 @@ describe("serializeDiagramSvg", () => {
     expect(svg).toContain("A");
     expect(svg).toContain("B");
     expect(svg).toContain('id="gen-hollow-triangle"');
+    expect(svg).toContain('stroke="#0f172a"');
+    expect(svg).not.toContain("currentColor");
     expect(svg).not.toContain("diagram class");
     expect(svg).not.toMatch(/\bx:\s*\d+/);
   });

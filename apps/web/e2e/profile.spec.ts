@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { openDslPanel } from "./helpers.js";
+import { expectStencilItem, openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const javaFixture = readFileSync(
@@ -25,8 +25,8 @@ test("profile extension renders a filled triangle marker", async ({ page }) => {
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("profile");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("profile");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Stereotype");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Metaclass");
+  await expectStencilItem(page, "stereotype", "Stereotype");
+  await expectStencilItem(page, "metaclass", "Metaclass");
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();

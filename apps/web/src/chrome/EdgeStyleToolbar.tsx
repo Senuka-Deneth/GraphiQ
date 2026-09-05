@@ -1,6 +1,7 @@
 import type { MarkerId } from "@graphiq/uml-notation";
 import { DEFAULT_EDGE_COLOR, DEFAULT_STROKE_WIDTH } from "../canvas/canvasDefaults.js";
 import { useDocumentStore, type ImplementedDiagramKind } from "../store/documentStore.js";
+import { DeleteIcon } from "./icons.js";
 import {
   findToolForNotation,
   notationForRelationship,
@@ -54,6 +55,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
   const reverseSelectedRelationship = useDocumentStore(
     (state) => state.reverseSelectedRelationship,
   );
+  const deleteRelationships = useDocumentStore((state) => state.deleteRelationships);
 
   if (relationship === undefined) {
     return null;
@@ -177,6 +179,17 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
           </option>
         ))}
       </select>
+      <button
+        type="button"
+        aria-label="Delete relationship"
+        data-testid="delete-relationship"
+        onClick={() => {
+          void deleteRelationships([relationshipId]);
+        }}
+        className="graphiq-icon-button"
+      >
+        <DeleteIcon />
+      </button>
     </div>
   );
 }

@@ -225,6 +225,7 @@ type DocumentStoreState = {
   importDsl: (text: string) => void;
   runParse: () => Promise<void>;
   updateNodePosition: (nodeId: string, x: number, y: number) => void;
+  updateNodeSize: (nodeId: string, width: number, height: number) => void;
   dropStencilElement: (kind: StencilDropKind, x: number, y: number) => Promise<void>;
   connectElements: (
     sourceId: string,
@@ -921,6 +922,43 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 ...existing,
                 x,
                 y,
+              },
+            },
+          },
+        };
+      });
+    },
+
+    updateNodeSize: (nodeId, width, height) => {
+      set((state) => {
+        const existing = state.document.overlay.nodes[nodeId];
+        if (existing === undefined) {
+          return state;
+        }
+
+        return {
+          document: {
+            ...state.document,
+            overlay: {
+              ...state.document.overlay,
+              nodes: {
+                ...state.document.overlay.nodes,
+                [nodeId]: {
+                  ...existing,
+                  width,
+                  height,
+                },
+              },
+            },
+          },
+          lastGoodOverlay: {
+            ...state.lastGoodOverlay,
+            nodes: {
+              ...state.lastGoodOverlay.nodes,
+              [nodeId]: {
+                ...existing,
+                width,
+                height,
               },
             },
           },

@@ -3,6 +3,7 @@ import { MarkerDefs } from "../class/MarkerDefs.js";
 import { SvgSquareGrid, SvgZoomViewport } from "../SvgZoomViewport.js";
 import { DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
 import { useDocumentStore, type StencilDropKind } from "../../store/documentStore.js";
+import { DeleteIcon } from "../../chrome/icons.js";
 import {
   dashStrokeStyle,
   lifelineDisplayName,
@@ -25,6 +26,7 @@ export function SequenceCanvas({
   const connectElements = useDocumentStore((state) => state.connectElements);
   const dropStencilElement = useDocumentStore((state) => state.dropStencilElement);
   const deleteElements = useDocumentStore((state) => state.deleteElements);
+  const deleteRelationships = useDocumentStore((state) => state.deleteRelationships);
   const renameSelectedElement = useDocumentStore((state) => state.renameSelectedElement);
 
   const svgRef = useRef<SVGSVGElement>(null);
@@ -34,6 +36,8 @@ export function SequenceCanvas({
     lifelineId: string;
     offsetX: number;
     offsetY: number;
+    x: number;
+    y: number;
   } | null>(null);
 
   const renderable = useMemo(
@@ -91,6 +95,8 @@ export function SequenceCanvas({
         lifelineId,
         offsetX: point.x - lifeline.x,
         offsetY: point.y - lifeline.y,
+        x: lifeline.x,
+        y: lifeline.y,
       });
       event.currentTarget.setPointerCapture(event.pointerId);
     },
@@ -103,18 +109,21 @@ export function SequenceCanvas({
         return;
       }
       const point = clientToSvg(event.clientX, event.clientY);
-      updateNodePosition(
-        dragState.lifelineId,
-        Math.max(0, point.x - dragState.offsetX),
-        Math.max(0, point.y - dragState.offsetY),
-      );
+      setDragState({
+        ...dragState,
+        x: Math.max(0, point.x - dragState.offsetX),
+        y: Math.max(0, point.y - dragState.offsetY),
+      });
     },
-    [clientToSvg, dragState, updateNodePosition],
+    [clientToSvg, dragState],
   );
 
   const onCanvasPointerUp = useCallback(() => {
+    if (dragState !== null) {
+      updateNodePosition(dragState.lifelineId, dragState.x, dragState.y);
+    }
     setDragState(null);
-  }, []);
+  }, [dragState, updateNodePosition]);
 
   const onElementClick = useCallback(
     (elementId: string, event: React.MouseEvent) => {
@@ -154,13 +163,29 @@ export function SequenceCanvas({
       if (event.key !== "Backspace" && event.key !== "Delete") {
         return;
       }
+      if (selectedMessageId !== null) {
+        event.preventDefault();
+        void deleteRelationships([selectedMessageId]);
+        setSelectedMessageId(null);
+        onSelectedEdgeChange?.(null);
+        return;
+      }
       if (selectedLifelineId === null) {
         return;
       }
+      event.preventDefault();
       void deleteElements([selectedLifelineId]);
       setSelectedLifelineId(null);
+      onSelectedNodeChange?.(null);
     },
-    [deleteElements, selectedLifelineId],
+    [
+      deleteElements,
+      deleteRelationships,
+      onSelectedEdgeChange,
+      onSelectedNodeChange,
+      selectedLifelineId,
+      selectedMessageId,
+    ],
   );
 
   const onPaneDoubleClick = useCallback(
@@ -204,6 +229,29 @@ export function SequenceCanvas({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
+      {selectedLifelineId !== null || selectedMessageId !== null ? (
+        <button
+          type="button"
+          className="graphiq-island-controls graphiq-icon-button absolute left-3 top-3 z-20"
+          aria-label="Delete element"
+          data-testid="delete-element"
+          onClick={() => {
+            if (selectedMessageId !== null) {
+              void deleteRelationships([selectedMessageId]);
+              setSelectedMessageId(null);
+              onSelectedEdgeChange?.(null);
+              return;
+            }
+            if (selectedLifelineId !== null) {
+              void deleteElements([selectedLifelineId]);
+              setSelectedLifelineId(null);
+              onSelectedNodeChange?.(null);
+            }
+          }}
+        >
+          <DeleteIcon />
+        </button>
+      ) : null}
       <SvgZoomViewport width={renderable.width} height={renderable.height}>
       <MarkerDefs />
       <svg
@@ -248,11 +296,17 @@ export function SequenceCanvas({
           </g>
         ))}
 
-        {renderable.lifelines.map((lifeline) => (
+        {renderable.lifelines.map((lifeline) => {
+          const preview =
+            dragState !== null && dragState.lifelineId === lifeline.id
+              ? { x: dragState.x - lifeline.x, y: dragState.y - lifeline.y }
+              : { x: 0, y: 0 };
+          return (
           <g
             key={lifeline.id}
             data-testid="lifeline-head"
             data-element-id={lifeline.id}
+            transform={`translate(${preview.x} ${preview.y})`}
             onPointerDown={(event) => onLifelinePointerDown(lifeline.id, event)}
             onClick={(event) => onElementClick(lifeline.id, event)}
           >
@@ -289,7 +343,8 @@ export function SequenceCanvas({
               {lifelineDisplayName(lifeline)}
             </text>
           </g>
-        ))}
+          );
+        })}
 
         {noteElements.map(({ element, node }) => (
           <g

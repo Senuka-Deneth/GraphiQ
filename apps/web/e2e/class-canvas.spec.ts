@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { openDslPanel } from "./helpers.js";
+import { connectFlowNodesByHandles, openDslPanel } from "./helpers.js";
 
 function normalizeDsl(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -24,11 +24,7 @@ test("canvas structural edits update DSL and moves do not", async ({ page }) => 
   await expect(page.locator(".react-flow__node")).toHaveCount(2, { timeout: 10_000 });
 
   await page.locator('[data-relationship-tool="generalization"]').click();
-
-  const nodes = page.locator(".react-flow__node");
-  const sourceHandle = nodes.nth(0).locator(".react-flow__handle.source").first();
-  const targetHandle = nodes.nth(1).locator(".react-flow__handle.target").first();
-  await sourceHandle.dragTo(targetHandle, { force: true });
+  await connectFlowNodesByHandles(page);
 
   await expect
     .poll(async () => normalizeDsl(await editor.innerText()))
@@ -36,7 +32,7 @@ test("canvas structural edits update DSL and moves do not", async ({ page }) => 
 
   const dslAfterConnect = normalizeDsl(await editor.innerText());
 
-  const node = nodes.nth(0);
+  const node = page.locator(".react-flow__node").nth(0);
   const box = await node.boundingBox();
   if (!box) {
     throw new Error("Expected first node to have a bounding box");

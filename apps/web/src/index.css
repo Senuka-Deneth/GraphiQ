@@ -2,19 +2,18 @@
 
 /* Editor chrome tokens only. UML notation colors are Step 5 (uml-notation). */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
-  /* The diagram surface stays light in both schemes: UML notation is black on
-     white and the node components hard-code their own colors. */
+  /* The diagram surface stays light: UML notation is black on white. */
   --color-canvas: #f8fafc;
 
   /* Radii measured from the macOS Apple Maps chrome. */
   --graphiq-radius-island: 12px;
   --graphiq-radius-control: 8px;
   --graphiq-radius-row: 6px;
+  --graphiq-radius-pill: 999px;
 
   --graphiq-inset: 12px;
-  --graphiq-topbar-h: 46px;
   /* Height of the DSL/diagnostics toggle stack plus the top inset. Shared so
      the zoom island inside the canvas cannot drift away from it. */
   --graphiq-right-stack-offset: 84px;
@@ -38,30 +37,11 @@
   --graphiq-warning: #a1560a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --graphiq-backdrop: #2a2a2c;
-    --graphiq-vibrancy: rgba(28, 28, 30, 0.72);
-    --graphiq-island: rgba(40, 40, 42, 0.74);
-    --graphiq-island-hover: rgba(255, 255, 255, 0.09);
-    --graphiq-island-active: rgba(255, 255, 255, 0.16);
-    --graphiq-hairline: rgba(255, 255, 255, 0.12);
-    --graphiq-shadow: 0 8px 24px rgba(0, 0, 0, 0.44), 0 1px 2px rgba(0, 0, 0, 0.32);
-
-    --graphiq-label: #f5f5f7;
-    --graphiq-label-secondary: rgba(235, 235, 245, 0.6);
-    --graphiq-accent: #0a84ff;
-    --graphiq-field: rgba(255, 255, 255, 0.08);
-    --graphiq-syntax-keyword: #c9a7ff;
-    --graphiq-error: #ff6961;
-    --graphiq-warning: #ffb340;
-  }
-}
-
 body {
   margin: 0;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  font-size: 15px;
   color: var(--graphiq-label);
   background-color: var(--graphiq-backdrop);
 }
@@ -74,14 +54,6 @@ body {
     border-right: 1px solid var(--graphiq-hairline);
   }
 
-  .graphiq-topbar {
-    background-color: var(--graphiq-vibrancy);
-    backdrop-filter: blur(30px) saturate(1.8);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8);
-    border-bottom: 1px solid var(--graphiq-hairline);
-    height: var(--graphiq-topbar-h);
-  }
-
   .graphiq-island {
     background-color: var(--graphiq-island);
     backdrop-filter: blur(30px) saturate(1.8);
@@ -92,7 +64,7 @@ body {
     color: var(--graphiq-label);
   }
 
-  /* A single 30x30 corner button, or a group of them stacked in one island. */
+  /* A single 36px corner button, or a group of them stacked in one island. */
   .graphiq-island-controls {
     background-color: var(--graphiq-island);
     backdrop-filter: blur(30px) saturate(1.8);
@@ -111,7 +83,7 @@ body {
     gap: 6px;
     border-radius: var(--graphiq-radius-control);
     color: var(--graphiq-label);
-    font-size: 12px;
+    font-size: 15px;
     line-height: 1;
   }
 
@@ -134,8 +106,8 @@ body {
 
   .graphiq-icon-button {
     display: inline-flex;
-    height: 30px;
-    width: 30px;
+    height: 36px;
+    width: 36px;
     flex: none;
     align-items: center;
     justify-content: center;
@@ -156,16 +128,39 @@ body {
     color: var(--graphiq-accent-ink);
   }
 
-  /* Sidebar list row: 28px tall, no border, rounded hover only. */
+  .graphiq-icon-tile {
+    display: flex;
+    height: 36px;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--graphiq-radius-control);
+    color: var(--graphiq-label);
+  }
+
+  .graphiq-icon-tile:hover {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-icon-tile:active {
+    background-color: var(--graphiq-island-active);
+  }
+
+  .graphiq-icon-tile[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  /* Sidebar list row kept for any remaining labeled chrome. */
   .graphiq-row {
     display: flex;
-    min-height: 28px;
+    min-height: 36px;
     width: 100%;
     align-items: center;
     gap: 8px;
     border-radius: var(--graphiq-radius-row);
     padding: 0 8px;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--graphiq-label);
     text-align: left;
   }
@@ -180,8 +175,8 @@ body {
   }
 
   .graphiq-section-label {
-    padding: 0 8px;
-    font-size: 11px;
+    padding: 0 4px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--graphiq-label-secondary);
   }
@@ -191,7 +186,27 @@ body {
     border-radius: var(--graphiq-radius-row);
     background-color: var(--graphiq-field);
     color: var(--graphiq-label);
-    font-size: 12px;
+    font-size: 15px;
+  }
+
+  .graphiq-title-pill {
+    display: block;
+    width: 100%;
+    height: 36px;
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-pill);
+    background-color: rgba(255, 255, 255, 0.82);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    padding: 0 14px;
+    font-size: 15px;
+    line-height: 36px;
+    color: var(--graphiq-label);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  }
+
+  .graphiq-title-pill::placeholder {
+    color: var(--graphiq-label-secondary);
   }
 }
 
@@ -223,4 +238,31 @@ body {
   .graphiq-blink {
     animation: none;
   }
+}
+
+.graphiq-flow-canvas .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.graphiq-flow-canvas .react-flow__node.selected .react-flow__handle,
+.graphiq-flow-canvas:has([data-connecting="true"]) .react-flow__handle,
+.graphiq-flow-canvas .react-flow:has(.react-flow__connectionline) .react-flow__handle,
+.graphiq-flow-canvas .react-flow:has(.react-flow__connection) .react-flow__handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.graphiq-resize-handle {
+  width: 8px !important;
+  height: 8px !important;
+  border: 1.5px solid var(--graphiq-accent) !important;
+  border-radius: 1px !important;
+  background: #ffffff !important;
+}
+
+.graphiq-resize-line {
+  border-color: var(--graphiq-accent) !important;
 }

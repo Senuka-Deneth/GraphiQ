@@ -101,3 +101,15 @@ export function ExportIcon() {
     </Glyph>
   );
 }
+
+export function DeleteIcon() {
+  return (
+    <Glyph>
+      <path d="M4 6h12" />
+      <path d="M8 6V4.5h4V6" />
+      <path d="M6.5 6v10h7V6" />
+      <path d="M8.5 8.5v5" />
+      <path d="M11.5 8.5v5" />
+    </Glyph>
+  );
+}

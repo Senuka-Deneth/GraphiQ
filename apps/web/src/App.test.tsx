@@ -37,13 +37,13 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByTestId("stencil")).toBeInTheDocument();
-    expect(screen.getByText("Class")).toBeInTheDocument();
-    expect(screen.getByText("Interface")).toBeInTheDocument();
-    expect(screen.getByText("Enumeration")).toBeInTheDocument();
-    expect(screen.getByText("Abstract class")).toBeInTheDocument();
-    expect(screen.getByText("Note")).toBeInTheDocument();
-    expect(screen.getByText("Text")).toBeInTheDocument();
-    expect(screen.getByText("Generalization")).toBeInTheDocument();
+    expect(screen.getByLabelText("Class")).toBeInTheDocument();
+    expect(screen.getByLabelText("Interface")).toBeInTheDocument();
+    expect(screen.getByLabelText("Enumeration")).toBeInTheDocument();
+    expect(screen.getByLabelText("Abstract class")).toBeInTheDocument();
+    expect(screen.getByLabelText("Note")).toBeInTheDocument();
+    expect(screen.getByLabelText("Text")).toBeInTheDocument();
+    expect(screen.getByLabelText("Generalization")).toBeInTheDocument();
 
     expect(screen.getByTestId("canvas-panel")).toBeInTheDocument();
     expect(screen.getByTestId("dsl-editor-panel")).toBeInTheDocument();

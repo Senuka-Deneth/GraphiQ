@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { openDslPanel } from "./helpers.js";
+import { expectStencilItem, openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const carFixture = readFileSync(
@@ -20,8 +20,8 @@ test("composite structure document renders frame, parts, border port, and connec
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText(
     "compositeStructure",
   );
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Part");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Port");
+  await expectStencilItem(page, "part", "Part");
+  await expectStencilItem(page, "port", "Port");
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();

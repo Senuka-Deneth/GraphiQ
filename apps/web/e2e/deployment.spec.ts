@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { openDslPanel } from "./helpers.js";
+import { expectStencilItem, openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const prodFixture = readFileSync(
@@ -18,7 +18,7 @@ test("deployment document nests artifacts inside device nodes with a solid commu
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("deployment");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("deployment");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Device");
+  await expectStencilItem(page, "device", "Device");
   await expect(page.locator('[data-testid="relationship-toolbar"]')).not.toContainText(
     "Manifestation",
   );

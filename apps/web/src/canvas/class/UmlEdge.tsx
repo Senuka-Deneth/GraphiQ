@@ -13,6 +13,7 @@ import { assertNever } from "@graphiq/uml-core";
 import { dashStrokeStyle } from "./ClassNode.js";
 import { DEFAULT_EDGE_COLOR, DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
 import type { DiagnosticSeverity } from "../../diagnostics/bindDiagnosticSpans.js";
+import { paintedMarkerUrl } from "./markerPaint.js";
 
 export type UmlEdgeData = {
   relationshipType: RelationshipType;
@@ -26,10 +27,6 @@ export type UmlEdgeData = {
 };
 
 export const umlEdgeTypeName = "umlEdge" as const;
-
-function markerUrl(id: string | null): string | undefined {
-  return id !== null ? `url(#${id})` : undefined;
-}
 
 export type UmlFlowEdge = Edge<UmlEdgeData, typeof umlEdgeTypeName>;
 
@@ -134,15 +131,15 @@ export function UmlEdge({
     targetPosition,
   );
 
-  const computedMarkerStart = markerUrl(notation.sourceMarkerId);
-  const computedMarkerEnd = markerUrl(notation.targetMarkerId);
-
   const diagnosticStroke =
     data?.diagnosticSeverity === "error"
       ? "#dc2626"
       : data?.diagnosticSeverity === "warning"
         ? "#d97706"
         : undefined;
+  const paint = diagnosticStroke ?? data?.strokeColor ?? DEFAULT_EDGE_COLOR;
+  const computedMarkerStart = paintedMarkerUrl(notation.sourceMarkerId, paint);
+  const computedMarkerEnd = paintedMarkerUrl(notation.targetMarkerId, paint);
 
   return (
     <BaseEdge
@@ -157,7 +154,7 @@ export function UmlEdge({
       data-diagnostic={data?.diagnosticSeverity}
       style={{
         ...style,
-        stroke: diagnosticStroke ?? data?.strokeColor ?? DEFAULT_EDGE_COLOR,
+        stroke: paint,
         strokeWidth: data?.diagnosticSeverity !== undefined ? 2.5 : (data?.strokeWidth ?? DEFAULT_STROKE_WIDTH),
         ...(notation.lineStyle === "dash" ? dashStrokeStyle : {}),
       }}

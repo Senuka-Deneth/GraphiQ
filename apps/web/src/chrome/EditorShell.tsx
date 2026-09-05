@@ -26,10 +26,7 @@ import { downloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
 import { exportDocumentPng, exportDocumentSvg } from "../export/exportDocument.js";
 import {
   DiagnosticsIcon,
-  DownloadIcon,
   DslIcon,
-  ExportIcon,
-  ImportIcon,
 } from "./icons.js";
 import { Stencil } from "./Stencil.js";
 
@@ -109,88 +106,74 @@ export function EditorShell() {
     (diagnostic) => diagnostic.severity === "error",
   ).length;
 
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="graphiq-topbar flex shrink-0 items-center gap-3 px-3">
-        <h1 className="shrink-0 text-lg font-semibold tracking-tight">GraphiQ</h1>
-        <input
-          type="text"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          className="graphiq-field h-7 min-w-0 flex-1 px-2 text-[13px]"
-          aria-label="Diagram title"
-        />
-        <span
-          className="graphiq-section-label shrink-0"
-          data-testid="document-kind-badge"
-        >
-          {kind}
-        </span>
-        <button
-          type="button"
-          className="graphiq-control h-7 shrink-0 px-2"
-          data-testid="download-dsl-guide"
-          onClick={() => downloadDslGuide()}
-        >
-          <DownloadIcon />
-          DSL guide
-        </button>
-        <button
-          type="button"
-          className="graphiq-control h-7 shrink-0 px-2"
-          data-testid="import-dsl"
-          onClick={handleImportDslClick}
-        >
-          <ImportIcon />
-          Import DSL
-        </button>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept=".md,.dsl,.txt,text/markdown,text/plain"
-          className="hidden"
-          data-testid="import-dsl-input"
-          onChange={(event) => {
-            void handleImportDslFile(event);
-          }}
-        />
-        <button
-          type="button"
-          className="graphiq-control h-7 shrink-0 px-2"
-          data-testid="export-svg"
-          onClick={() => exportDocumentSvg(useDocumentStore.getState().document)}
-        >
-          <ExportIcon />
-          SVG
-        </button>
-        <button
-          type="button"
-          className="graphiq-control h-7 shrink-0 px-2"
-          data-testid="export-png"
-          onClick={() => {
-            void exportDocumentPng(useDocumentStore.getState().document);
-          }}
-        >
-          <ExportIcon />
-          PNG
-        </button>
-      </header>
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Backspace" && event.key !== "Delete") {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("input, textarea, select, [contenteditable='true']")
+      ) {
+        return;
+      }
+      if (
+        target instanceof HTMLElement &&
+        target.closest(".react-flow, [data-testid='sequence-canvas'], [data-testid='timing-canvas']")
+      ) {
+        return;
+      }
+      if (selectedNodeId !== null) {
+        event.preventDefault();
+        void useDocumentStore.getState().deleteElements([selectedNodeId]);
+        setSelectedNodeId(null);
+        return;
+      }
+      if (selectedEdgeId !== null) {
+        event.preventDefault();
+        void useDocumentStore.getState().deleteRelationships([selectedEdgeId]);
+        setSelectedEdgeId(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedEdgeId, selectedNodeId]);
 
-      <div className="relative flex min-h-0 flex-1">
-        <Stencil
-          kind={kind}
-          implementedKinds={IMPLEMENTED_KINDS}
-          relationshipTool={relationshipTool}
-          onSelectTool={setRelationshipTool}
-          onCreateDocument={createDocument}
-          open={sidebarOpen}
-          onToggle={() => setSidebarOpen((open) => !open)}
-          canEditMember={kind === "class" && selectedClassElement !== null}
-          onEditMember={
-            kind === "class" ? () => editMemberTriggerRef.current?.click() : undefined
-          }
-        />
-        <div className="relative min-h-0 min-w-0 flex-1">
+  return (
+    <div className="relative flex h-full min-h-0">
+      <Stencil
+        kind={kind}
+        implementedKinds={IMPLEMENTED_KINDS}
+        relationshipTool={relationshipTool}
+        onSelectTool={setRelationshipTool}
+        onCreateDocument={createDocument}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((open) => !open)}
+        canEditMember={kind === "class" && selectedClassElement !== null}
+        onEditMember={
+          kind === "class" ? () => editMemberTriggerRef.current?.click() : undefined
+        }
+        title={title}
+        onTitleChange={setTitle}
+        onDownloadGuide={() => downloadDslGuide()}
+        onImportClick={handleImportDslClick}
+        onExportSvg={() => exportDocumentSvg(useDocumentStore.getState().document)}
+        onExportPng={() => {
+          void exportDocumentPng(useDocumentStore.getState().document);
+        }}
+      />
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".md,.dsl,.txt,text/markdown,text/plain"
+        className="hidden"
+        data-testid="import-dsl-input"
+        onChange={(event) => {
+          void handleImportDslFile(event);
+        }}
+      />
+      <div className="relative min-h-0 min-w-0 flex-1">
           <div className="h-full min-h-0" data-testid="canvas-panel">
             <KindCanvas
               key={documentId}
@@ -262,7 +245,6 @@ export function EditorShell() {
 
           <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} />
         </div>
-      </div>
     </div>
   );
 }

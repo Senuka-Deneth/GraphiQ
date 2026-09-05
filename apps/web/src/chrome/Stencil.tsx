@@ -20,7 +20,12 @@ import type {
   RelationshipTool,
 } from "../store/documentStore.js";
 import { ConnectorToolIcon, StencilShapeIcon } from "./stencilIcons.js";
-import { SidebarToggleIcon } from "./icons.js";
+import {
+  DownloadIcon,
+  ExportIcon,
+  ImportIcon,
+  SidebarToggleIcon,
+} from "./icons.js";
 import { relationshipToolsForKind } from "./relationshipTools.js";
 
 export type StencilItem = {
@@ -207,11 +212,17 @@ type StencilProps = {
   onToggle: () => void;
   canEditMember?: boolean;
   onEditMember?: () => void;
+  title: string;
+  onTitleChange: (title: string) => void;
+  onDownloadGuide: () => void;
+  onImportClick: () => void;
+  onExportSvg: () => void;
+  onExportPng: () => void;
 };
 
-const MIN_SIDEBAR_WIDTH = 200;
-const MAX_SIDEBAR_WIDTH = 360;
-const DEFAULT_SIDEBAR_WIDTH = 224;
+const MIN_SIDEBAR_WIDTH = 216;
+const MAX_SIDEBAR_WIDTH = 320;
+const DEFAULT_SIDEBAR_WIDTH = 240;
 
 function clampSidebarWidth(width: number): number {
   return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, Math.round(width)));
@@ -227,6 +238,12 @@ export function Stencil({
   onToggle,
   canEditMember = false,
   onEditMember,
+  title,
+  onTitleChange,
+  onDownloadGuide,
+  onImportClick,
+  onExportSvg,
+  onExportPng,
 }: StencilProps) {
   const items = stencilItemsForKind(kind);
   const tools = relationshipToolsForKind(kind);
@@ -279,8 +296,8 @@ export function Stencil({
         aria-label="Element stencil"
         aria-hidden={!open}
       >
-        <div className="flex shrink-0 items-center justify-between gap-2 px-2 pb-1 pt-2">
-          <span className="graphiq-section-label">Diagram</span>
+        <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-3">
+          <h1 className="text-[15px] font-semibold tracking-tight">GraphiQ</h1>
           <button
             type="button"
             data-testid={open ? "stencil-toggle" : undefined}
@@ -292,13 +309,23 @@ export function Stencil({
             <SidebarToggleIcon />
           </button>
         </div>
-        <div className="shrink-0 px-2 pb-2">
+        <div className="shrink-0 px-3 pb-3">
+          <input
+            type="text"
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            className="graphiq-title-pill"
+            aria-label="Diagram title"
+            placeholder="GraphiQ"
+          />
+        </div>
+        <div className="flex shrink-0 items-center gap-2 px-3 pb-3">
           <select
             value={kind}
             onChange={(event) =>
               onCreateDocument(event.target.value as ImplementedDiagramKind)
             }
-            className="graphiq-field h-7 w-full px-2"
+            className="graphiq-field h-9 min-w-0 flex-1 px-2 text-[15px]"
             aria-label="Create diagram kind"
             data-testid="new-document-kind"
           >
@@ -308,10 +335,13 @@ export function Stencil({
               </option>
             ))}
           </select>
+          <span className="graphiq-section-label shrink-0" data-testid="document-kind-badge">
+            {kind}
+          </span>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-          <div className="graphiq-section-label flex h-6 items-center">Shapes</div>
-          <ul className="mb-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+          <div className="graphiq-section-label flex h-7 items-center">Shapes</div>
+          <ul className="mb-3 grid grid-cols-3 gap-1">
             {items.map((item) => (
               <li key={item.id}>
                 <div
@@ -320,33 +350,35 @@ export function Stencil({
                     event.dataTransfer.setData("application/graphiq-stencil", item.id);
                     event.dataTransfer.effectAllowed = "move";
                   }}
-                  className="graphiq-row cursor-grab active:cursor-grabbing"
+                  className="graphiq-icon-tile cursor-grab active:cursor-grabbing"
                   data-stencil-item={item.id}
+                  aria-label={item.label}
+                  title={item.label}
                 >
                   <StencilShapeIcon id={item.id} />
-                  {item.label}
                 </div>
               </li>
             ))}
           </ul>
           <div
-            className="graphiq-section-label flex h-6 items-center"
+            className="graphiq-section-label flex h-7 items-center"
             data-testid="relationship-toolbar"
           >
             Connectors
           </div>
-          <ul>
+          <ul className="grid grid-cols-3 gap-1">
             {tools.map((tool) => (
               <li key={tool.id}>
                 <button
                   type="button"
                   data-relationship-tool={tool.id}
+                  aria-label={tool.label}
+                  title={tool.label}
                   aria-pressed={relationshipTool === tool.id}
                   onClick={() => onSelectTool(tool.id)}
-                  className="graphiq-row"
+                  className="graphiq-icon-tile"
                 >
                   <ConnectorToolIcon id={tool.id} />
-                  {tool.label}
                 </button>
               </li>
             ))}
@@ -354,7 +386,7 @@ export function Stencil({
         </div>
         {onEditMember ? (
           <div
-            className="shrink-0 px-2 pb-2 pt-1"
+            className="shrink-0 px-3 pb-2 pt-1"
             style={{ borderTop: "1px solid var(--graphiq-hairline)" }}
           >
             <button
@@ -362,12 +394,57 @@ export function Stencil({
               data-testid="edit-member-button"
               disabled={!canEditMember}
               onClick={onEditMember}
-              className="graphiq-control h-7 w-full disabled:cursor-not-allowed"
+              className="graphiq-control h-9 w-full text-[15px] disabled:cursor-not-allowed"
             >
               Edit member
             </button>
           </div>
         ) : null}
+        <div
+          className="flex shrink-0 items-center justify-between gap-1 px-3 py-3"
+          style={{ borderTop: "1px solid var(--graphiq-hairline)" }}
+        >
+          <button
+            type="button"
+            className="graphiq-icon-tile"
+            data-testid="download-dsl-guide"
+            aria-label="Download DSL guide"
+            title="DSL guide"
+            onClick={onDownloadGuide}
+          >
+            <DownloadIcon />
+          </button>
+          <button
+            type="button"
+            className="graphiq-icon-tile"
+            data-testid="import-dsl"
+            aria-label="Import DSL"
+            title="Import DSL"
+            onClick={onImportClick}
+          >
+            <ImportIcon />
+          </button>
+          <button
+            type="button"
+            className="graphiq-icon-tile"
+            data-testid="export-svg"
+            aria-label="Export SVG"
+            title="Export SVG"
+            onClick={onExportSvg}
+          >
+            <ExportIcon />
+          </button>
+          <button
+            type="button"
+            className="graphiq-icon-tile"
+            data-testid="export-png"
+            aria-label="Export PNG"
+            title="Export PNG"
+            onClick={onExportPng}
+          >
+            <ExportIcon />
+          </button>
+        </div>
         {open ? (
           <div
             role="separator"
