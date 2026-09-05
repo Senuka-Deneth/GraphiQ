@@ -102,22 +102,37 @@ export function TimingCanvas() {
     setDragState(null);
   }, []);
 
-  const onLifelineClick = useCallback(
-    (lifelineId: string, event: React.MouseEvent) => {
+  const onElementClick = useCallback(
+    (elementId: string, event: React.MouseEvent) => {
       event.stopPropagation();
       const point = clientToSvg(event.clientX, event.clientY);
       const time = svgXToTime(point.x);
 
-      if (selectedLifelineId !== null && selectedLifelineId !== lifelineId) {
-        void connectElements(selectedLifelineId, lifelineId, { time: selectedTime });
+      if (selectedLifelineId !== null && selectedLifelineId !== elementId) {
+        void connectElements(selectedLifelineId, elementId, { time: selectedTime });
         setSelectedLifelineId(null);
         return;
       }
 
-      setSelectedLifelineId(lifelineId);
+      setSelectedLifelineId(elementId);
       setSelectedTime(time);
     },
     [clientToSvg, connectElements, selectedLifelineId, selectedTime],
+  );
+
+  const noteElements = useMemo(
+    () =>
+      model.elements.flatMap((element) => {
+        if (element.elementType !== "note") {
+          return [];
+        }
+        const node = overlay.nodes[element.id];
+        if (node === undefined) {
+          return [];
+        }
+        return [{ element, node }];
+      }),
+    [model.elements, overlay.nodes],
   );
 
   const onKeyDown = useCallback(
@@ -152,7 +167,11 @@ export function TimingCanvas() {
         onPointerMove={onCanvasPointerMove}
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
-        onClick={() => setSelectedLifelineId(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            setSelectedLifelineId(null);
+          }
+        }}
       >
         <line
           x1={160}
@@ -189,8 +208,9 @@ export function TimingCanvas() {
           <g
             key={lifeline.id}
             data-testid="timing-lifeline"
+            data-element-id={lifeline.id}
             onPointerDown={(event) => onLifelinePointerDown(lifeline.id, event)}
-            onClick={(event) => onLifelineClick(lifeline.id, event)}
+            onClick={(event) => onElementClick(lifeline.id, event)}
           >
             <line
               x1={160}
@@ -221,6 +241,34 @@ export function TimingCanvas() {
               }
               strokeWidth={selectedLifelineId === lifeline.id ? 2 : 0}
             />
+          </g>
+        ))}
+
+        {noteElements.map(({ element, node }) => (
+          <g
+            key={element.id}
+            data-testid="timing-note"
+            data-element-id={element.id}
+            onClick={(event) => onElementClick(element.id, event)}
+          >
+            <rect
+              x={node.x}
+              y={node.y}
+              width={node.width}
+              height={node.height}
+              fill="#fffbeb"
+              stroke={selectedLifelineId === element.id ? "#0f172a" : "#f59e0b"}
+              strokeWidth={selectedLifelineId === element.id ? 2 : 1}
+              rx={2}
+            />
+            <text
+              x={node.x + node.width / 2}
+              y={node.y + node.height / 2 + 4}
+              textAnchor="middle"
+              className="fill-amber-950 text-xs"
+            >
+              {element.name}
+            </text>
           </g>
         ))}
 

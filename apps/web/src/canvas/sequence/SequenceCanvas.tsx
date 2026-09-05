@@ -103,17 +103,32 @@ export function SequenceCanvas() {
     setDragState(null);
   }, []);
 
-  const onLifelineClick = useCallback(
-    (lifelineId: string, event: React.MouseEvent) => {
+  const onElementClick = useCallback(
+    (elementId: string, event: React.MouseEvent) => {
       event.stopPropagation();
-      if (selectedLifelineId !== null && selectedLifelineId !== lifelineId) {
-        void connectElements(selectedLifelineId, lifelineId);
+      if (selectedLifelineId !== null && selectedLifelineId !== elementId) {
+        void connectElements(selectedLifelineId, elementId);
         setSelectedLifelineId(null);
         return;
       }
-      setSelectedLifelineId(lifelineId);
+      setSelectedLifelineId(elementId);
     },
     [connectElements, selectedLifelineId],
+  );
+
+  const noteElements = useMemo(
+    () =>
+      model.elements.flatMap((element) => {
+        if (element.elementType !== "note") {
+          return [];
+        }
+        const node = overlay.nodes[element.id];
+        if (node === undefined) {
+          return [];
+        }
+        return [{ element, node }];
+      }),
+    [model.elements, overlay.nodes],
   );
 
   const onKeyDown = useCallback(
@@ -150,7 +165,11 @@ export function SequenceCanvas() {
         onPointerMove={onCanvasPointerMove}
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
-        onClick={() => setSelectedLifelineId(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            setSelectedLifelineId(null);
+          }
+        }}
       >
         {renderable.combinedFragments.map((fragment) => (
           <g key={fragment.id} data-testid="combined-fragment">
@@ -177,8 +196,9 @@ export function SequenceCanvas() {
           <g
             key={lifeline.id}
             data-testid="lifeline-head"
+            data-element-id={lifeline.id}
             onPointerDown={(event) => onLifelinePointerDown(lifeline.id, event)}
-            onClick={(event) => onLifelineClick(lifeline.id, event)}
+            onClick={(event) => onElementClick(lifeline.id, event)}
           >
             <line
               x1={lifeline.centerX}
@@ -211,6 +231,34 @@ export function SequenceCanvas() {
               className="fill-slate-900 text-xs"
             >
               {lifelineDisplayName(lifeline)}
+            </text>
+          </g>
+        ))}
+
+        {noteElements.map(({ element, node }) => (
+          <g
+            key={element.id}
+            data-testid="sequence-note"
+            data-element-id={element.id}
+            onClick={(event) => onElementClick(element.id, event)}
+          >
+            <rect
+              x={node.x}
+              y={node.y}
+              width={node.width}
+              height={node.height}
+              fill="#fffbeb"
+              stroke={selectedLifelineId === element.id ? "#0f172a" : "#f59e0b"}
+              strokeWidth={selectedLifelineId === element.id ? 2 : 1}
+              rx={2}
+            />
+            <text
+              x={node.x + node.width / 2}
+              y={node.y + node.height / 2 + 4}
+              textAnchor="middle"
+              className="fill-amber-950 text-xs"
+            >
+              {element.name}
             </text>
           </g>
         ))}
