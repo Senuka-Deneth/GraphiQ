@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { useRef, useState, type PointerEvent } from "react";
 import type {
   ClassStencilDropKind,
   ComponentStencilDropKind,
@@ -19,6 +20,7 @@ import type {
   RelationshipTool,
 } from "../store/documentStore.js";
 import { ConnectorToolIcon, StencilShapeIcon } from "./stencilIcons.js";
+import { SidebarToggleIcon } from "./icons.js";
 import { relationshipToolsForKind } from "./relationshipTools.js";
 
 export type StencilItem = {
@@ -207,6 +209,14 @@ type StencilProps = {
   onEditMember?: () => void;
 };
 
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 360;
+const DEFAULT_SIDEBAR_WIDTH = 224;
+
+function clampSidebarWidth(width: number): number {
+  return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, Math.round(width)));
+}
+
 export function Stencil({
   kind,
   implementedKinds,
@@ -221,6 +231,31 @@ export function Stencil({
   const items = stencilItemsForKind(kind);
   const tools = relationshipToolsForKind(kind);
 
+  const [width, setWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const handleResizePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    dragRef.current = { startX: event.clientX, startWidth: width };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleResizePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (drag === null) {
+      return;
+    }
+    setWidth(clampSidebarWidth(drag.startWidth + event.clientX - drag.startX));
+  };
+
+  const handleResizePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current === null) {
+      return;
+    }
+    dragRef.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   return (
     <>
       {!open ? (
@@ -230,42 +265,40 @@ export function Stencil({
           aria-expanded={false}
           aria-label="Show stencil"
           onClick={onToggle}
-          className="absolute left-3 top-3 z-20 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+          className="graphiq-island-controls graphiq-icon-button absolute left-3 top-3 z-20"
         >
-          Stencil
+          <SidebarToggleIcon />
         </button>
       ) : null}
       <aside
-        className={`graphiq-chrome-transition flex shrink-0 flex-col overflow-hidden border-r border-slate-300 bg-white ${
-          open ? "w-56 min-w-56" : "pointer-events-none w-0 min-w-0 border-r-0"
+        className={`graphiq-chrome-transition relative flex shrink-0 flex-col overflow-hidden ${
+          open ? "graphiq-sidebar" : "pointer-events-none w-0 min-w-0"
         }`}
+        style={open ? { width, minWidth: width } : undefined}
         data-testid="stencil"
         aria-label="Element stencil"
         aria-hidden={!open}
       >
-        <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-2 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Diagram
-          </span>
+        <div className="flex shrink-0 items-center justify-between gap-2 px-2 pb-1 pt-2">
+          <span className="graphiq-section-label">Diagram</span>
           <button
             type="button"
             data-testid={open ? "stencil-toggle" : undefined}
             aria-expanded={open}
             aria-label="Hide stencil"
             onClick={onToggle}
-            className="rounded px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100"
+            className="graphiq-icon-button"
           >
-            Hide
+            <SidebarToggleIcon />
           </button>
         </div>
-        <label className="flex flex-col gap-1 border-b border-slate-200 px-2 py-2 text-xs text-slate-600">
-          <span>Kind</span>
+        <div className="shrink-0 px-2 pb-2">
           <select
             value={kind}
             onChange={(event) =>
               onCreateDocument(event.target.value as ImplementedDiagramKind)
             }
-            className="rounded border border-slate-300 px-2 py-1 text-sm text-slate-900"
+            className="graphiq-field h-7 w-full px-2"
             aria-label="Create diagram kind"
             data-testid="new-document-kind"
           >
@@ -275,12 +308,10 @@ export function Stencil({
               </option>
             ))}
           </select>
-        </label>
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Shapes
-          </div>
-          <ul className="mb-3 grid grid-cols-2 gap-1">
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+          <div className="graphiq-section-label flex h-6 items-center">Shapes</div>
+          <ul className="mb-2">
             {items.map((item) => (
               <li key={item.id}>
                 <div
@@ -289,7 +320,7 @@ export function Stencil({
                     event.dataTransfer.setData("application/graphiq-stencil", item.id);
                     event.dataTransfer.effectAllowed = "move";
                   }}
-                  className="flex cursor-grab flex-col items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1 py-1.5 text-center text-[11px] leading-tight text-slate-800 active:cursor-grabbing"
+                  className="graphiq-row cursor-grab active:cursor-grabbing"
                   data-stencil-item={item.id}
                 >
                   <StencilShapeIcon id={item.id} />
@@ -299,12 +330,12 @@ export function Stencil({
             ))}
           </ul>
           <div
-            className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500"
+            className="graphiq-section-label flex h-6 items-center"
             data-testid="relationship-toolbar"
           >
             Connectors
           </div>
-          <ul className="grid grid-cols-2 gap-1">
+          <ul>
             {tools.map((tool) => (
               <li key={tool.id}>
                 <button
@@ -312,11 +343,7 @@ export function Stencil({
                   data-relationship-tool={tool.id}
                   aria-pressed={relationshipTool === tool.id}
                   onClick={() => onSelectTool(tool.id)}
-                  className={`flex w-full flex-col items-center gap-0.5 rounded border px-1 py-1.5 text-center text-[11px] leading-tight ${
-                    relationshipTool === tool.id
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100"
-                  }`}
+                  className="graphiq-row"
                 >
                   <ConnectorToolIcon id={tool.id} />
                   {tool.label}
@@ -326,17 +353,32 @@ export function Stencil({
           </ul>
         </div>
         {onEditMember ? (
-          <div className="border-t border-slate-200 p-2">
+          <div
+            className="shrink-0 px-2 pb-2 pt-1"
+            style={{ borderTop: "1px solid var(--graphiq-hairline)" }}
+          >
             <button
               type="button"
               data-testid="edit-member-button"
               disabled={!canEditMember}
               onClick={onEditMember}
-              className="w-full rounded px-2 py-1 text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="graphiq-control h-7 w-full disabled:cursor-not-allowed"
             >
               Edit member
             </button>
           </div>
+        ) : null}
+        {open ? (
+          <div
+            role="separator"
+            aria-label="Resize sidebar"
+            aria-orientation="vertical"
+            onPointerDown={handleResizePointerDown}
+            onPointerMove={handleResizePointerMove}
+            onPointerUp={handleResizePointerUp}
+            onPointerCancel={handleResizePointerUp}
+            className="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize"
+          />
         ) : null}
       </aside>
     </>

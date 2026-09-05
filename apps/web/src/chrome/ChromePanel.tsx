@@ -1,81 +1,47 @@
 import type { ReactNode } from "react";
 
-const hideButtonClassName =
-  "rounded px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100";
-
 type ChromePanelProps = {
   open: boolean;
-  onToggle: () => void;
   panelTestId: string;
-  toggleTestId: string;
   title: string;
-  showLabel: string;
-  hideLabel: string;
-  collapsedButtonLabel: string;
-  collapsedButtonClassName: string;
-  expandedClassName: string;
-  collapsedClassName: string;
+  /** Geometry of the open island: position, width, height. */
+  openClassName: string;
   children: ReactNode;
   role?: "status";
   ariaLive?: "polite";
 };
 
+/**
+ * A floating chrome island over the canvas. The panel stays mounted while
+ * closed (CodeMirror must survive a collapse) but collapses to a zero-size,
+ * non-interactive box so nothing inside it is focusable or hit-testable.
+ *
+ * Panels do not own their toggle. The persistent corner buttons in
+ * `EditorShell` are the single toggle for each panel.
+ */
 export function ChromePanel({
   open,
-  onToggle,
   panelTestId,
-  toggleTestId,
   title,
-  showLabel,
-  hideLabel,
-  collapsedButtonLabel,
-  collapsedButtonClassName,
-  expandedClassName,
-  collapsedClassName,
+  openClassName,
   children,
   role,
   ariaLive,
 }: ChromePanelProps) {
   return (
-    <>
-      {!open ? (
-        <button
-          type="button"
-          data-testid={toggleTestId}
-          aria-expanded={false}
-          aria-label={showLabel}
-          onClick={onToggle}
-          className={collapsedButtonClassName}
-        >
-          {collapsedButtonLabel}
-        </button>
-      ) : null}
-      <div
-        className={`graphiq-chrome-transition flex shrink-0 flex-col overflow-hidden ${
-          open ? `opacity-100 ${expandedClassName}` : `pointer-events-none opacity-0 ${collapsedClassName}`
-        }`}
-        data-testid={panelTestId}
-        aria-hidden={!open}
-        role={role}
-        aria-live={ariaLive}
-      >
-        <div className="flex items-center justify-between border-b border-slate-200 px-3 py-1.5">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {title}
-          </div>
-          <button
-            type="button"
-            data-testid={open ? toggleTestId : undefined}
-            aria-expanded={open}
-            aria-label={hideLabel}
-            onClick={onToggle}
-            className={hideButtonClassName}
-          >
-            Hide
-          </button>
-        </div>
-        {children}
-      </div>
-    </>
+    <div
+      className={`graphiq-chrome-transition absolute z-20 flex flex-col overflow-hidden ${
+        open
+          ? `graphiq-island opacity-100 ${openClassName}`
+          : "h-0 w-0 border-0 p-0 opacity-0 pointer-events-none"
+      }`}
+      data-testid={panelTestId}
+      aria-hidden={!open}
+      role={role}
+      aria-live={ariaLive}
+    >
+      <div className="graphiq-section-label flex h-6 shrink-0 items-center">{title}</div>
+      {children}
+    </div>
   );
 }

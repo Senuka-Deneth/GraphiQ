@@ -22,6 +22,8 @@ const editorTheme = EditorView.theme({
     height: "100%",
     fontSize: "13px",
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    backgroundColor: "transparent",
+    color: "var(--graphiq-label)",
   },
   ".cm-scroller": {
     overflow: "auto",
@@ -29,17 +31,24 @@ const editorTheme = EditorView.theme({
   },
   ".cm-content": {
     padding: "8px 0",
+    caretColor: "var(--graphiq-label)",
   },
   ".cm-gutters": {
-    backgroundColor: "#f8fafc",
-    borderRight: "1px solid #e2e8f0",
-    color: "#64748b",
+    backgroundColor: "transparent",
+    borderRight: "1px solid var(--graphiq-hairline)",
+    color: "var(--graphiq-label-secondary)",
+  },
+  ".cm-activeLine": {
+    backgroundColor: "var(--graphiq-island-hover)",
   },
   ".cm-activeLineGutter": {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "var(--graphiq-island-hover)",
+  },
+  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+    backgroundColor: "var(--graphiq-island-active)",
   },
   "&.cm-focused .cm-cursor": {
-    borderLeftColor: "#0f172a",
+    borderLeftColor: "var(--graphiq-label)",
   },
   ".cm-lintRange-error": {
     backgroundImage:
@@ -157,7 +166,7 @@ export function DslEditor({
   }, [revision, value]);
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden bg-white">
+    <div className="min-h-0 flex-1 overflow-hidden">
       <div ref={containerRef} className="h-full w-full" />
     </div>
   );

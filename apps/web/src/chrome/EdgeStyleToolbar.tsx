@@ -68,7 +68,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
 
   return (
     <div
-      className="pointer-events-auto absolute bottom-14 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 shadow-md"
+      className="graphiq-island pointer-events-auto absolute left-1/2 top-3 z-40 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 px-2 py-1.5"
       data-testid="edge-style-toolbar"
     >
       {ROUTE_STYLES.map((route) => (
@@ -79,11 +79,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
           aria-pressed={routeStyle === route.id}
           data-route-style={route.id}
           onClick={() => updateEdgeOverlay(relationshipId, { routeStyle: route.id })}
-          className={`rounded px-2 py-1 text-xs ${
-            routeStyle === route.id
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
+          className="graphiq-control h-7 px-2"
         >
           {route.label}
         </button>
@@ -96,10 +92,10 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
           onChange={(event) =>
             updateEdgeOverlay(relationshipId, { strokeColor: event.target.value })
           }
-          className="h-6 w-6 cursor-pointer rounded-full border border-slate-300 bg-white p-0"
+          className="h-6 w-6 cursor-pointer rounded-full border border-[var(--graphiq-hairline)] bg-transparent p-0"
         />
       </label>
-      <label className="flex items-center gap-1 text-xs text-slate-600">
+      <label className="flex items-center gap-1 text-xs text-[var(--graphiq-label-secondary)]">
         <span className="sr-only">Line width</span>
         <input
           type="number"
@@ -113,7 +109,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
               strokeWidth: Number(event.target.value),
             })
           }
-          className="w-14 rounded border border-slate-300 px-1 py-0.5 text-xs"
+          className="graphiq-field h-7 w-14 px-1"
         />
         <span>px</span>
       </label>
@@ -127,7 +123,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
           });
           void changeSelectedRelationshipType(relationshipId, next);
         }}
-        className="rounded border border-slate-300 px-1 py-0.5 text-xs"
+        className="graphiq-field h-7 px-1"
       >
         <option value="solid">Solid</option>
         <option value="dash">Dashed</option>
@@ -143,7 +139,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
           });
           void changeSelectedRelationshipType(relationshipId, next);
         }}
-        className="rounded border border-slate-300 px-1 py-0.5 text-xs"
+        className="graphiq-field h-7 px-1"
       >
         {startMarkers.map((marker) => (
           <option key={marker ?? "none"} value={marker ?? "none"}>
@@ -158,7 +154,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
         onClick={() => {
           void reverseSelectedRelationship(relationshipId);
         }}
-        className="rounded px-2 py-1 text-xs bg-slate-100 text-slate-700 hover:bg-slate-200"
+        className="graphiq-control h-7 px-2"
       >
         Swap
       </button>
@@ -173,7 +169,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
           });
           void changeSelectedRelationshipType(relationshipId, next);
         }}
-        className="rounded border border-slate-300 px-1 py-0.5 text-xs"
+        className="graphiq-field h-7 px-1"
       >
         {endMarkers.map((marker) => (
           <option key={marker ?? "none"} value={marker ?? "none"}>

@@ -2,7 +2,8 @@ import { HighlightStyle, StreamLanguage, syntaxHighlighting } from "@codemirror/
 import { tags } from "@lezer/highlight";
 
 const dslHighlightStyle = HighlightStyle.define([
-  { tag: tags.keyword, color: "#7c3aed", fontWeight: "600" },
+  { tag: tags.keyword, color: "var(--graphiq-syntax-keyword)", fontWeight: "600" },
+  { tag: tags.comment, color: "var(--graphiq-label-secondary)" },
 ]);
 
 const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({

@@ -24,6 +24,13 @@ import { DslEditor } from "./DslEditor.js";
 import { EdgeStyleToolbar } from "./EdgeStyleToolbar.js";
 import { downloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
 import { exportDocumentPng, exportDocumentSvg } from "../export/exportDocument.js";
+import {
+  DiagnosticsIcon,
+  DownloadIcon,
+  DslIcon,
+  ExportIcon,
+  ImportIcon,
+} from "./icons.js";
 import { Stencil } from "./Stencil.js";
 
 const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
@@ -98,40 +105,43 @@ export function EditorShell() {
     importDsl(text);
   };
 
+  const errorCount = diagnostics.filter(
+    (diagnostic) => diagnostic.severity === "error",
+  ).length;
+
   return (
-    <div className="relative flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 items-center gap-4 border-b border-slate-300 bg-white px-4 py-2">
-        <h1 className="text-lg font-semibold tracking-tight text-slate-900">GraphiQ</h1>
-        <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-600">
-          <span className="shrink-0">Title</span>
-          <input
-            type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-slate-900"
-            aria-label="Diagram title"
-          />
-        </label>
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="graphiq-topbar flex shrink-0 items-center gap-3 px-3">
+        <h1 className="shrink-0 text-lg font-semibold tracking-tight">GraphiQ</h1>
+        <input
+          type="text"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          className="graphiq-field h-7 min-w-0 flex-1 px-2 text-[13px]"
+          aria-label="Diagram title"
+        />
         <span
-          className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+          className="graphiq-section-label shrink-0"
           data-testid="document-kind-badge"
         >
           {kind}
         </span>
         <button
           type="button"
-          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          className="graphiq-control h-7 shrink-0 px-2"
           data-testid="download-dsl-guide"
           onClick={() => downloadDslGuide()}
         >
-          Download DSL guide
+          <DownloadIcon />
+          DSL guide
         </button>
         <button
           type="button"
-          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          className="graphiq-control h-7 shrink-0 px-2"
           data-testid="import-dsl"
           onClick={handleImportDslClick}
         >
+          <ImportIcon />
           Import DSL
         </button>
         <input
@@ -146,21 +156,23 @@ export function EditorShell() {
         />
         <button
           type="button"
-          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          className="graphiq-control h-7 shrink-0 px-2"
           data-testid="export-svg"
           onClick={() => exportDocumentSvg(useDocumentStore.getState().document)}
         >
-          Export SVG
+          <ExportIcon />
+          SVG
         </button>
         <button
           type="button"
-          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          className="graphiq-control h-7 shrink-0 px-2"
           data-testid="export-png"
           onClick={() => {
             void exportDocumentPng(useDocumentStore.getState().document);
           }}
         >
-          Export PNG
+          <ExportIcon />
+          PNG
         </button>
       </header>
 
@@ -178,8 +190,8 @@ export function EditorShell() {
             kind === "class" ? () => editMemberTriggerRef.current?.click() : undefined
           }
         />
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1" data-testid="canvas-panel">
+        <div className="relative min-h-0 min-w-0 flex-1">
+          <div className="h-full min-h-0" data-testid="canvas-panel">
             <KindCanvas
               key={documentId}
               kind={kind}
@@ -189,39 +201,68 @@ export function EditorShell() {
               selectedNodeId={selectedNodeId}
             />
           </div>
+
           {selectedEdgeId !== null ? (
             <EdgeStyleToolbar relationshipId={selectedEdgeId} diagramKind={kind} />
           ) : null}
-        </div>
-        <ChromePanel
-          open={dslOpen}
-          onToggle={() => setDslOpen((open) => !open)}
-          panelTestId="dsl-editor-panel"
-          toggleTestId="dsl-panel-toggle"
-          title="DSL"
-          showLabel="Show DSL"
-          hideLabel="Hide DSL"
-          collapsedButtonLabel="DSL"
-          collapsedButtonClassName="absolute right-3 top-3 z-20 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-800 shadow-sm hover:bg-slate-50"
-          expandedClassName="w-80 min-w-80 border-l border-slate-300 bg-white"
-          collapsedClassName="w-0 min-w-0"
-        >
-          <DslEditor
-            value={dsl}
-            revision={dslRevision}
-            diagnostics={diagnostics}
-            onChange={setDsl}
-            onFocus={() => setDslEditorFocused(true)}
-            onBlur={() => setDslEditorFocused(false)}
-          />
-        </ChromePanel>
-      </div>
 
-      <DiagnosticsList
-        diagnostics={diagnostics}
-        open={diagnosticsOpen}
-        onToggle={() => setDiagnosticsOpen((open) => !open)}
-      />
+          <div className="graphiq-island-controls absolute right-3 top-3 z-30 flex flex-col">
+            <button
+              type="button"
+              className="graphiq-icon-button"
+              data-testid="dsl-panel-toggle"
+              aria-expanded={dslOpen}
+              aria-pressed={dslOpen}
+              aria-label={dslOpen ? "Hide DSL" : "Show DSL"}
+              onClick={() => setDslOpen((open) => !open)}
+            >
+              <DslIcon />
+            </button>
+            <div className="h-px bg-[var(--graphiq-hairline)]" />
+            <button
+              type="button"
+              className="graphiq-icon-button relative"
+              data-testid="diagnostics-toggle"
+              aria-expanded={diagnosticsOpen}
+              aria-pressed={diagnosticsOpen}
+              aria-label={
+                diagnosticsOpen
+                  ? "Hide diagnostics"
+                  : errorCount > 0
+                    ? `Show diagnostics, ${errorCount} errors`
+                    : "Show diagnostics"
+              }
+              onClick={() => setDiagnosticsOpen((open) => !open)}
+            >
+              <DiagnosticsIcon />
+              {errorCount > 0 ? (
+                <span
+                  className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[var(--graphiq-error)]"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </button>
+          </div>
+
+          <ChromePanel
+            open={dslOpen}
+            panelTestId="dsl-editor-panel"
+            title="DSL"
+            openClassName="bottom-3 right-[calc(var(--graphiq-inset)+38px)] top-3 w-90"
+          >
+            <DslEditor
+              value={dsl}
+              revision={dslRevision}
+              diagnostics={diagnostics}
+              onChange={setDsl}
+              onFocus={() => setDslEditorFocused(true)}
+              onBlur={() => setDslEditorFocused(false)}
+            />
+          </ChromePanel>
+
+          <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} />
+        </div>
+      </div>
     </div>
   );
 }

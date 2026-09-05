@@ -2,13 +2,197 @@
 
 /* Editor chrome tokens only. UML notation colors are Step 5 (uml-notation). */
 :root {
+  color-scheme: light dark;
+
+  /* The diagram surface stays light in both schemes: UML notation is black on
+     white and the node components hard-code their own colors. */
   --color-canvas: #f8fafc;
-  --color-ink: #0f172a;
+
+  /* Radii measured from the macOS Apple Maps chrome. */
+  --graphiq-radius-island: 12px;
+  --graphiq-radius-control: 8px;
+  --graphiq-radius-row: 6px;
+
+  --graphiq-inset: 12px;
+  --graphiq-topbar-h: 46px;
+  /* Height of the DSL/diagnostics toggle stack plus the top inset. Shared so
+     the zoom island inside the canvas cannot drift away from it. */
+  --graphiq-right-stack-offset: 84px;
+
+  /* What the vibrancy surfaces blend against where no canvas sits behind them. */
+  --graphiq-backdrop: #f2f2f7;
+  --graphiq-vibrancy: rgba(255, 255, 255, 0.72);
+  --graphiq-island: rgba(255, 255, 255, 0.8);
+  --graphiq-island-hover: rgba(0, 0, 0, 0.05);
+  --graphiq-island-active: rgba(0, 0, 0, 0.09);
+  --graphiq-hairline: rgba(0, 0, 0, 0.08);
+  --graphiq-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  --graphiq-label: #1c1c1e;
+  --graphiq-label-secondary: rgba(60, 60, 67, 0.6);
+  --graphiq-accent: #007aff;
+  --graphiq-accent-ink: #ffffff;
+  --graphiq-field: rgba(255, 255, 255, 0.75);
+  --graphiq-syntax-keyword: #7c3aed;
+  --graphiq-error: #d70015;
+  --graphiq-warning: #a1560a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --graphiq-backdrop: #2a2a2c;
+    --graphiq-vibrancy: rgba(28, 28, 30, 0.72);
+    --graphiq-island: rgba(40, 40, 42, 0.74);
+    --graphiq-island-hover: rgba(255, 255, 255, 0.09);
+    --graphiq-island-active: rgba(255, 255, 255, 0.16);
+    --graphiq-hairline: rgba(255, 255, 255, 0.12);
+    --graphiq-shadow: 0 8px 24px rgba(0, 0, 0, 0.44), 0 1px 2px rgba(0, 0, 0, 0.32);
+
+    --graphiq-label: #f5f5f7;
+    --graphiq-label-secondary: rgba(235, 235, 245, 0.6);
+    --graphiq-accent: #0a84ff;
+    --graphiq-field: rgba(255, 255, 255, 0.08);
+    --graphiq-syntax-keyword: #c9a7ff;
+    --graphiq-error: #ff6961;
+    --graphiq-warning: #ffb340;
+  }
 }
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  color: var(--graphiq-label);
+  background-color: var(--graphiq-backdrop);
+}
+
+@layer components {
+  .graphiq-sidebar {
+    background-color: var(--graphiq-vibrancy);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border-right: 1px solid var(--graphiq-hairline);
+  }
+
+  .graphiq-topbar {
+    background-color: var(--graphiq-vibrancy);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border-bottom: 1px solid var(--graphiq-hairline);
+    height: var(--graphiq-topbar-h);
+  }
+
+  .graphiq-island {
+    background-color: var(--graphiq-island);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-island);
+    box-shadow: var(--graphiq-shadow);
+    color: var(--graphiq-label);
+  }
+
+  /* A single 30x30 corner button, or a group of them stacked in one island. */
+  .graphiq-island-controls {
+    background-color: var(--graphiq-island);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-control);
+    box-shadow: var(--graphiq-shadow);
+    color: var(--graphiq-label);
+    overflow: hidden;
+  }
+
+  .graphiq-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: var(--graphiq-radius-control);
+    color: var(--graphiq-label);
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .graphiq-control:hover:not(:disabled) {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-control:active:not(:disabled) {
+    background-color: var(--graphiq-island-active);
+  }
+
+  .graphiq-control:disabled {
+    opacity: 0.4;
+  }
+
+  .graphiq-control[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  .graphiq-icon-button {
+    display: inline-flex;
+    height: 30px;
+    width: 30px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--graphiq-radius-control);
+    color: var(--graphiq-label);
+  }
+
+  .graphiq-icon-button:hover:not(:disabled) {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-icon-button:active:not(:disabled) {
+    background-color: var(--graphiq-island-active);
+  }
+
+  .graphiq-icon-button[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  /* Sidebar list row: 28px tall, no border, rounded hover only. */
+  .graphiq-row {
+    display: flex;
+    min-height: 28px;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    border-radius: var(--graphiq-radius-row);
+    padding: 0 8px;
+    font-size: 13px;
+    color: var(--graphiq-label);
+    text-align: left;
+  }
+
+  .graphiq-row:hover {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-row[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  .graphiq-section-label {
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--graphiq-label-secondary);
+  }
+
+  .graphiq-field {
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-row);
+    background-color: var(--graphiq-field);
+    color: var(--graphiq-label);
+    font-size: 12px;
+  }
 }
 
 .graphiq-chrome-transition {
@@ -17,8 +201,26 @@ body {
   transition-timing-function: ease;
 }
 
+@keyframes graphiq-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.graphiq-blink {
+  animation: graphiq-blink 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .graphiq-chrome-transition {
     transition: none;
+  }
+
+  .graphiq-blink {
+    animation: none;
   }
 }

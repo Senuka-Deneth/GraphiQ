@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App } from "./App";
 import { initDocumentPersistenceForTests, resetPersistenceForTests } from "./persist/initDocumentPersistence.js";
-import { resetDocumentStoreForTests } from "./store/documentStore.js";
+import { resetDocumentStoreForTests, useDocumentStore } from "./store/documentStore.js";
 
 describe("App", () => {
   beforeEach(async () => {
@@ -14,6 +14,18 @@ describe("App", () => {
   afterEach(async () => {
     await resetPersistenceForTests();
     resetDocumentStoreForTests();
+  });
+
+  it("shows a white loading screen with blinking GraphiQ while restoring", () => {
+    useDocumentStore.setState({ persistState: "loading" });
+    render(<App />);
+
+    const screenEl = screen.getByTestId("persist-state");
+    expect(screenEl).toHaveAttribute("data-value", "loading");
+    expect(screenEl).toHaveClass("bg-white");
+
+    const logo = screen.getByText("GraphiQ");
+    expect(logo).toHaveClass("graphiq-blink");
   });
 
   it("renders the GraphiQ heading", async () => {

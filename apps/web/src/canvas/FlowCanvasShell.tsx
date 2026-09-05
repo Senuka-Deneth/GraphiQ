@@ -1,16 +1,11 @@
-import {
-  Controls,
-  ReactFlow,
-  type Edge,
-  type Node,
-  type NodeTypes,
-} from "@xyflow/react";
+import { ReactFlow, type Edge, type Node, type NodeTypes } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { MouseEvent, ReactNode } from "react";
 import { MarkerDefs } from "./class/MarkerDefs.js";
 import { UmlEdge, umlEdgeTypeName } from "./class/UmlEdge.js";
 import { DEFAULT_VIEWPORT, FLOW_CANVAS_DEFAULTS } from "./canvasDefaults.js";
 import { GraphiqFlowBackground } from "./GraphiqFlowBackground.js";
+import { CanvasControls } from "../chrome/CanvasControls.js";
 import { useDocumentStore } from "../store/documentStore.js";
 import { useFlowCanvasCallbacks } from "./useFlowCanvasCallbacks.js";
 
@@ -54,7 +49,10 @@ export function FlowCanvasShell({
   } = useFlowCanvasCallbacks({ onSelectedNodeChange, onSelectedEdgeChange });
 
   return (
-    <div className="h-full w-full" data-testid={testId}>
+    <div
+      className="h-full w-full bg-[var(--color-canvas)]"
+      data-testid={testId}
+    >
       <MarkerDefs />
       <ReactFlow
         nodes={nodes}
@@ -76,7 +74,7 @@ export function FlowCanvasShell({
         {...FLOW_CANVAS_DEFAULTS}
       >
         <GraphiqFlowBackground />
-        <Controls />
+        <CanvasControls />
       </ReactFlow>
       {children}
     </div>

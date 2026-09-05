@@ -6,6 +6,7 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
 } from "./canvasDefaults.js";
+import { ZoomInIcon, ZoomOutIcon } from "../chrome/icons.js";
 
 type SvgZoomViewportProps = {
   width: number;
@@ -28,25 +29,35 @@ export function SvgZoomViewport({ width, height, children }: SvgZoomViewportProp
   }, []);
 
   return (
-    <div className="relative h-full w-full overflow-auto" onWheel={onWheel}>
-      <div className="absolute right-3 top-3 z-10 flex gap-1">
-        <button
-          type="button"
-          aria-label="Zoom out"
-          data-testid="svg-zoom-out"
-          onClick={() => setZoom((current) => clampZoom(Number((current - 0.25).toFixed(2))))}
-          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-        >
-          −
-        </button>
+    <div
+      className="relative h-full w-full overflow-auto bg-[var(--color-canvas)]"
+      onWheel={onWheel}
+    >
+      <div
+        className="graphiq-island-controls absolute z-10 flex flex-col"
+        style={{
+          top: "var(--graphiq-right-stack-offset)",
+          right: "var(--graphiq-inset)",
+        }}
+      >
         <button
           type="button"
           aria-label="Zoom in"
           data-testid="svg-zoom-in"
           onClick={() => setZoom((current) => clampZoom(Number((current + 0.25).toFixed(2))))}
-          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
+          className="graphiq-icon-button"
         >
-          +
+          <ZoomInIcon />
+        </button>
+        <div className="h-px bg-[var(--graphiq-hairline)]" />
+        <button
+          type="button"
+          aria-label="Zoom out"
+          data-testid="svg-zoom-out"
+          onClick={() => setZoom((current) => clampZoom(Number((current - 0.25).toFixed(2))))}
+          className="graphiq-icon-button"
+        >
+          <ZoomOutIcon />
         </button>
       </div>
       <div

@@ -7,17 +7,19 @@ export function App() {
   if (persistState === "loading") {
     return (
       <div
-        className="flex h-screen items-center justify-center bg-[var(--color-canvas)] text-[var(--color-ink)]"
+        className="flex h-screen items-center justify-center bg-white"
         data-testid="persist-state"
         data-value="loading"
       >
-        Loading…
+        <div className="graphiq-blink text-lg font-semibold tracking-tight text-slate-900">
+          GraphiQ
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--color-canvas)] text-[var(--color-ink)]">
+    <div className="flex h-screen flex-col overflow-hidden">
       <span
         className="sr-only"
         data-testid="persist-state"
