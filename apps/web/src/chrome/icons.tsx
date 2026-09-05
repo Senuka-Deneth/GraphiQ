@@ -102,6 +102,14 @@ export function ExportIcon() {
   );
 }
 
+export function BackIcon() {
+  return (
+    <Glyph>
+      <path d="M12.5 4.5 6.5 10l6 5.5" />
+    </Glyph>
+  );
+}
+
 export function DeleteIcon() {
   return (
     <Glyph>

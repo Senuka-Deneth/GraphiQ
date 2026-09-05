@@ -20,7 +20,7 @@ describe("EditorShell", () => {
   });
 
   it("renders the docked sidebar, title pill, and the corner toggle islands", () => {
-    render(<EditorShell />);
+    render(<EditorShell onOpenExport={() => undefined} />);
 
     expect(screen.getByRole("heading", { name: "GraphiQ" })).toBeInTheDocument();
     expect(screen.getByLabelText("Diagram title")).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe("EditorShell", () => {
   });
 
   it("keeps closed panels mounted but collapsed to zero size", () => {
-    render(<EditorShell />);
+    render(<EditorShell onOpenExport={() => undefined} />);
 
     const dslIsland = screen.getByTestId("dsl-editor-panel");
     expect(dslIsland).toHaveClass("h-0", "w-0", "pointer-events-none");
@@ -53,11 +53,19 @@ describe("EditorShell", () => {
   });
 
   it("names exactly one toggle button per panel state", () => {
-    render(<EditorShell />);
+    render(<EditorShell onOpenExport={() => undefined} />);
 
     expect(screen.queryAllByLabelText("Hide DSL")).toHaveLength(0);
     expect(screen.queryAllByLabelText("Show DSL")).toHaveLength(1);
     expect(screen.queryAllByLabelText("Hide stencil")).toHaveLength(1);
     expect(screen.queryAllByLabelText("Show stencil")).toHaveLength(0);
+  });
+
+  it("puts a single export control on the canvas and not in the sidebar", () => {
+    render(<EditorShell onOpenExport={() => undefined} />);
+
+    expect(screen.getByTestId("open-export")).toBeInTheDocument();
+    expect(screen.queryByTestId("export-svg")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("export-png")).not.toBeInTheDocument();
   });
 });
