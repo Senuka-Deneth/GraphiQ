@@ -202,7 +202,8 @@ class Good {
         kind === "activity" ||
         kind === "stateMachine" ||
         kind === "sequence" ||
-        kind === "timing"
+        kind === "timing" ||
+        kind === "interactionOverview"
       ) {
         continue;
       }

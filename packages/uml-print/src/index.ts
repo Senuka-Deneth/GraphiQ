@@ -23,3 +23,8 @@ export { sequenceAstToModel, synthesizeSequenceExecutionSpecs } from "./sequence
 export { timingAstToModel } from "./timingAstToModel.js";
 export { printSequence, structuralSequenceModel } from "./printSequence.js";
 export { printTiming, structuralTimingModel } from "./printTiming.js";
+export { interactionOverviewAstToModel } from "./interactionOverviewAstToModel.js";
+export {
+  printInteractionOverview,
+  structuralInteractionOverviewModel,
+} from "./printInteractionOverview.js";

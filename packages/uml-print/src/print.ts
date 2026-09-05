@@ -14,6 +14,7 @@ import { printActivity } from "./printActivity.js";
 import { printStateMachine } from "./printStateMachine.js";
 import { printSequence } from "./printSequence.js";
 import { printTiming } from "./printTiming.js";
+import { printInteractionOverview } from "./printInteractionOverview.js";
 
 export type PrintOptions = {
   cst?: unknown;
@@ -49,7 +50,7 @@ export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions
     case "timing":
       return printTiming(model, { name: options?.name });
     case "interactionOverview":
-      throw new Error(`not implemented`);
+      return printInteractionOverview(model, { name: options?.name });
     default:
       return assertNever(kind);
   }

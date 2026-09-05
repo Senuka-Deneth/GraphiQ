@@ -61,6 +61,7 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "stateMachine",
       "sequence",
       "timing",
+      "interactionOverview",
       "lifeline",
       "alt",
       "opt",
@@ -90,6 +91,7 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "join",
       "flowFinal",
       "interruptible",
+      "ref",
     ] as const;
 
     for (const keyword of keywords) {

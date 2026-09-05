@@ -16,6 +16,11 @@ import {
   createStateMachineFixtureModel,
   layoutStateMachine,
 } from "./layoutStateMachine.js";
+import {
+  createInteractionOverviewFixtureModel,
+  layoutInteractionOverview,
+  measureInteractionOverviewNode,
+} from "./layoutInteractionOverview.js";
 import { emptyOverlay } from "./overlay.js";
 
 describe("measureClassNode", () => {
@@ -702,11 +707,92 @@ describe("layoutTiming", () => {
   });
 });
 
+describe("layoutInteractionOverview", () => {
+  it("lays out the section 5.14 fixture as a directed activity", async () => {
+    const model = createInteractionOverviewFixtureModel();
+    const overlay = await layoutInteractionOverview(model, emptyOverlay(), "full");
+
+    const initial = overlay.nodes["initial"];
+    const checkout = overlay.nodes["ref-checkout"];
+    const fulfill = overlay.nodes["ref-fulfill"];
+    const activityFinal = overlay.nodes["final"];
+
+    expect(initial).toBeDefined();
+    expect(checkout).toBeDefined();
+    expect(fulfill).toBeDefined();
+    expect(activityFinal).toBeDefined();
+    if (
+      initial === undefined ||
+      checkout === undefined ||
+      fulfill === undefined ||
+      activityFinal === undefined
+    ) {
+      throw new Error("expected OrderFlow overlay nodes");
+    }
+
+    expect(checkout.y).toBeGreaterThan(initial.y);
+    expect(fulfill.y).toBeGreaterThan(checkout.y);
+    expect(activityFinal.y).toBeGreaterThan(fulfill.y);
+    expect(checkout.width).toBeGreaterThanOrEqual(160);
+    expect(checkout.height).toBeGreaterThanOrEqual(80);
+    expect(fulfill.width).toBeGreaterThanOrEqual(160);
+    expect(fulfill.height).toBeGreaterThanOrEqual(80);
+  });
+
+  it("measures interaction-use frames at notation minimums", () => {
+    const size = measureInteractionOverviewNode({
+      id: "ref-checkout",
+      elementType: "interactionUse",
+      name: "Checkout",
+    });
+    expect(size.width).toBeGreaterThanOrEqual(160);
+    expect(size.height).toBeGreaterThanOrEqual(80);
+  });
+
+  it("preserves a positioned interaction use in incremental mode", async () => {
+    const model = createInteractionOverviewFixtureModel();
+    const firstPass = await layoutInteractionOverview(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["ref-checkout"];
+    if (pinned === undefined) {
+      throw new Error("expected Checkout node");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "ref-checkout": { ...pinned, x: 12, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutInteractionOverview(
+      withNote.value,
+      pinnedOverlay,
+      "incremental",
+    );
+    expect(incremental.nodes["ref-checkout"]?.x).toBe(12);
+    expect(incremental.nodes["ref-checkout"]?.y).toBe(40);
+  });
+});
+
 describe("layoutDocument", () => {
-  it("throws for non-implemented diagram kinds", async () => {
-    const model = emptyModel("interactionOverview");
-    await expect(
-      layoutDocument("interactionOverview", model, emptyOverlay(), "first-open-empty-overlay"),
-    ).rejects.toThrow("layout not implemented for interactionOverview");
+  it("routes interaction overview to the dedicated engine", async () => {
+    const model = createInteractionOverviewFixtureModel();
+    const overlay = await layoutDocument(
+      "interactionOverview",
+      model,
+      emptyOverlay(),
+      "first-open-empty-overlay",
+    );
+    expect(overlay.nodes["ref-checkout"]).toBeDefined();
+    expect(overlay.nodes["ref-checkout"]?.width).toBeGreaterThanOrEqual(160);
   });
 });

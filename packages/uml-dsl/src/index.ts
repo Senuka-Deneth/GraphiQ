@@ -68,6 +68,10 @@ export type {
   AstTimingState,
   AstTimingStateBlock,
   AstTimingMessage,
+  InteractionOverviewDiagramAst,
+  AstInteractionOverviewNode,
+  AstInteractionOverviewNodeKind,
+  AstInteractionOverviewFlow,
   DslSpan,
 } from "./ast.js";
 export {

@@ -14,6 +14,7 @@ import { layoutActivity } from "./layoutActivity.js";
 import { layoutStateMachine } from "./layoutStateMachine.js";
 import { layoutSequence } from "./layoutSequence.js";
 import { layoutTiming } from "./layoutTiming.js";
+import { layoutInteractionOverview } from "./layoutInteractionOverview.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
 import { reasonToLayoutMode } from "./overlay.js";
 
@@ -53,7 +54,7 @@ export async function layoutDocument(
     case "timing":
       return layoutTiming(model, overlay, mode);
     case "interactionOverview":
-      throw new Error(`layout not implemented for ${kind}`);
+      return layoutInteractionOverview(model, overlay, mode);
     default:
       return assertNever(kind);
   }

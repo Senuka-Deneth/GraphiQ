@@ -8,7 +8,6 @@ import {
   kindMismatchDiagnostic,
   lexerErrorToDiagnostic,
   parserErrorToDiagnostic,
-  unsupportedKindDiagnostic,
 } from "./diagnostics.js";
 import { parseClassCst, parseClassDocument } from "./grammars/class.js";
 import { parseComponentCst, parseComponentDocument } from "./grammars/component.js";
@@ -29,6 +28,10 @@ import { parseActivityCst, parseActivityDocument } from "./grammars/activity.js"
 import { parseStateMachineCst, parseStateMachineDocument } from "./grammars/stateMachine.js";
 import { parseSequenceCst, parseSequenceDocument } from "./grammars/sequence.js";
 import { parseTimingCst, parseTimingDocument } from "./grammars/timing.js";
+import {
+  parseInteractionOverviewCst,
+  parseInteractionOverviewDocument,
+} from "./grammars/interactionOverview.js";
 
 export type ParseSuccess = {
   ast: DiagramAst;
@@ -72,9 +75,7 @@ export function parse(
     case "timing":
       return parseTiming(kind, text);
     case "interactionOverview":
-      return err({
-        diagnostics: [unsupportedKindDiagnostic(kind)],
-      });
+      return parseInteractionOverview(kind, text);
     default:
       return assertNever(kind);
   }
@@ -525,6 +526,40 @@ function parseTiming(
   }
 
   const ast = parseTimingDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    diagnostics,
+  });
+}
+
+function parseInteractionOverview(
+  expectedKind: "interactionOverview",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors } = parseInteractionOverviewCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseInteractionOverviewDocument(cst);
 
   return ok({
     ast,

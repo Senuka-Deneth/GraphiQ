@@ -17,6 +17,7 @@ import { STATE_MACHINE_RULES } from "./rules/stateMachine/index.js";
 import { COMMUNICATION_RULES } from "./rules/communication/index.js";
 import { SEQUENCE_RULES } from "./rules/sequence/index.js";
 import { TIMING_RULES } from "./rules/timing/index.js";
+import { INTERACTION_OVERVIEW_RULES } from "./rules/interactionOverview/index.js";
 import type { UmlRule } from "./types.js";
 
 
@@ -52,7 +53,7 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
     case "timing":
       return TIMING_RULES;
     case "interactionOverview":
-      return [];
+      return INTERACTION_OVERVIEW_RULES;
     default:
       return assertNever(kind);
   }

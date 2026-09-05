@@ -582,6 +582,38 @@ export type TimingDiagramAst = {
   span: DslSpan;
 };
 
+export type AstInteractionOverviewNodeKind =
+  | "interactionUse"
+  | "initialNode"
+  | "activityFinalNode"
+  | "decisionNode"
+  | "mergeNode"
+  | "forkNode"
+  | "joinNode";
+
+export type AstInteractionOverviewNode = {
+  nodeKind: AstInteractionOverviewNodeKind;
+  name: string;
+  span: DslSpan;
+};
+
+export type AstInteractionOverviewFlow = {
+  sourceName: string;
+  targetName: string;
+  sourceIsRef: boolean;
+  targetIsRef: boolean;
+  guard?: string;
+  span: DslSpan;
+};
+
+export type InteractionOverviewDiagramAst = {
+  kind: "interactionOverview";
+  name?: string;
+  nodes: AstInteractionOverviewNode[];
+  flows: AstInteractionOverviewFlow[];
+  span: DslSpan;
+};
+
 export type DiagramAst =
   | ClassDiagramAst
   | ObjectDiagramAst
@@ -595,4 +627,5 @@ export type DiagramAst =
   | ActivityDiagramAst
   | StateMachineDiagramAst
   | SequenceDiagramAst
-  | TimingDiagramAst;
+  | TimingDiagramAst
+  | InteractionOverviewDiagramAst;

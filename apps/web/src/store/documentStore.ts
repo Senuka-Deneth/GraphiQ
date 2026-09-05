@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureTimingNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureInteractionOverviewNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureTimingNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -19,7 +19,7 @@ import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine" | "sequence" | "timing";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine" | "sequence" | "timing" | "interactionOverview";
 
 export type GraphiqDocument = {
   id: string;
@@ -86,6 +86,8 @@ export type SequenceRelationshipTool = Extract<
 
 export type TimingRelationshipTool = SequenceRelationshipTool;
 
+export type InteractionOverviewRelationshipTool = Extract<RelationshipType, "controlFlow">;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -99,7 +101,8 @@ export type RelationshipTool =
   | ActivityRelationshipTool
   | StateMachineRelationshipTool
   | SequenceRelationshipTool
-  | TimingRelationshipTool;
+  | TimingRelationshipTool
+  | InteractionOverviewRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -170,6 +173,16 @@ export type SequenceStencilDropKind = "lifeline" | "combined-fragment" | "note";
 
 export type TimingStencilDropKind = "lifeline" | "note";
 
+export type InteractionOverviewStencilDropKind =
+  | "interactionUse"
+  | "initialNode"
+  | "activityFinalNode"
+  | "decisionNode"
+  | "mergeNode"
+  | "forkNode"
+  | "joinNode"
+  | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -183,7 +196,8 @@ export type StencilDropKind =
   | ActivityStencilDropKind
   | StateMachineStencilDropKind
   | SequenceStencilDropKind
-  | TimingStencilDropKind;
+  | TimingStencilDropKind
+  | InteractionOverviewStencilDropKind;
 
 type DocumentStoreState = {
   document: GraphiqDocument;
@@ -227,6 +241,7 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   stateMachine: "diagram stateMachine\n",
   sequence: "diagram sequence\n",
   timing: "diagram timing\n",
+  interactionOverview: "diagram interactionOverview\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -243,6 +258,7 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   stateMachine: "Untitled state machine diagram",
   sequence: "Untitled sequence diagram",
   timing: "Untitled timing diagram",
+  interactionOverview: "Untitled interaction overview diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -259,6 +275,7 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   stateMachine: "transition",
   sequence: "synchCall",
   timing: "synchCall",
+  interactionOverview: "controlFlow",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
@@ -603,6 +620,10 @@ function defaultOverlayNode(
 
   if (model.kind === "timing") {
     return { x, y, ...measureTimingNode(element) };
+  }
+
+  if (model.kind === "interactionOverview") {
+    return { x, y, ...measureInteractionOverviewNode(element) };
   }
 
   if (element.elementType === "note") {
@@ -1253,6 +1274,56 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 return addElement(model, {
                   elementType: "lifeline",
                   name: uniqueElementName(model, "lifeline"),
+                });
+            }
+          }
+
+          if (document.kind === "interactionOverview") {
+            switch (kind) {
+              case "interactionUse":
+                return addElement(model, {
+                  elementType: "interactionUse",
+                  name: uniqueElementName(model, "Interaction"),
+                });
+              case "initialNode":
+                return addElement(model, {
+                  elementType: "initialNode",
+                  name: uniqueElementName(model, "initial"),
+                });
+              case "activityFinalNode":
+                return addElement(model, {
+                  elementType: "activityFinalNode",
+                  name: uniqueElementName(model, "final"),
+                });
+              case "decisionNode":
+                return addElement(model, {
+                  elementType: "decisionNode",
+                  name: uniqueElementName(model, "decision"),
+                });
+              case "mergeNode":
+                return addElement(model, {
+                  elementType: "mergeNode",
+                  name: uniqueElementName(model, "merge"),
+                });
+              case "forkNode":
+                return addElement(model, {
+                  elementType: "forkNode",
+                  name: uniqueElementName(model, "fork"),
+                });
+              case "joinNode":
+                return addElement(model, {
+                  elementType: "joinNode",
+                  name: uniqueElementName(model, "join"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, "Note"),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "interactionUse",
+                  name: uniqueElementName(model, "Interaction"),
                 });
             }
           }

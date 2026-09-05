@@ -37,6 +37,11 @@ export {
   TIMING_TIME_AXIS_Y,
   timeToX,
 } from "./layoutTiming.js";
+export {
+  createInteractionOverviewFixtureModel,
+  layoutInteractionOverview,
+  measureInteractionOverviewNode,
+} from "./layoutInteractionOverview.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
   LayoutMode,

@@ -7,6 +7,7 @@ import type {
   StateMachineDiagramAst,
   SequenceDiagramAst,
   TimingDiagramAst,
+  InteractionOverviewDiagramAst,
   AstStateMachineBodyItem,
   CompositeStructureDiagramAst,
   DeploymentDiagramAst,
@@ -422,6 +423,30 @@ function findTimingMessageSpan(
   )?.span;
 }
 
+function findInteractionOverviewElementSpan(ast: InteractionOverviewDiagramAst, name: string) {
+  const declared = ast.nodes.find((node) => node.name === name);
+  if (declared !== undefined) {
+    return declared.span;
+  }
+  return ast.flows.find(
+    (flow) =>
+      (flow.sourceIsRef && flow.sourceName === name) ||
+      (flow.targetIsRef && flow.targetName === name) ||
+      flow.sourceName === name ||
+      flow.targetName === name,
+  )?.span;
+}
+
+function findInteractionOverviewFlowSpan(
+  ast: InteractionOverviewDiagramAst,
+  sourceName: string,
+  targetName: string,
+) {
+  return ast.flows.find(
+    (flow) => flow.sourceName === sourceName && flow.targetName === targetName,
+  )?.span;
+}
+
 function findStateMachineTransitionSpan(
   ast: StateMachineDiagramAst,
   sourceName: string,
@@ -633,6 +658,8 @@ function bindOneDiagnostic(
                                     relationship.time,
                                     relationship.name,
                                   )
+                              : ast.kind === "interactionOverview"
+                                ? findInteractionOverviewFlowSpan(ast, sourceName, targetName)
                         : undefined;
         if (span !== undefined) {
           return { ...diagnostic, dslSpan: span };
@@ -680,6 +707,8 @@ function bindOneDiagnostic(
                                       )?.name ?? "",
                                       element.name,
                                     )
+                                : ast.kind === "interactionOverview"
+                                  ? findInteractionOverviewElementSpan(ast, element.name)
                         : undefined;
       if (span !== undefined) {
         return { ...diagnostic, dslSpan: span };

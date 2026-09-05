@@ -14,6 +14,7 @@ import type {
   StateMachineRelationshipTool,
   SequenceRelationshipTool,
   TimingRelationshipTool,
+  InteractionOverviewRelationshipTool,
   RelationshipTool,
 } from "../store/documentStore.js";
 
@@ -112,6 +113,11 @@ const TIMING_RELATIONSHIP_TOOLS: readonly {
   { id: "reply", label: "Reply" },
 ] as const;
 
+const INTERACTION_OVERVIEW_RELATIONSHIP_TOOLS: readonly {
+  id: InteractionOverviewRelationshipTool;
+  label: string;
+}[] = [{ id: "controlFlow", label: "Control flow" }] as const;
+
 function toolsForKind(diagramKind: ImplementedDiagramKind) {
   switch (diagramKind) {
     case "class":
@@ -140,6 +146,8 @@ function toolsForKind(diagramKind: ImplementedDiagramKind) {
       return SEQUENCE_RELATIONSHIP_TOOLS;
     case "timing":
       return TIMING_RELATIONSHIP_TOOLS;
+    case "interactionOverview":
+      return INTERACTION_OVERVIEW_RELATIONSHIP_TOOLS;
     default:
       return assertNever(diagramKind);
   }
