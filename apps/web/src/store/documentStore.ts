@@ -1,4 +1,4 @@
-import { createId, type Diagnostic } from "@graphiq/uml-core";
+import { createId, isDiagramKind, type Diagnostic } from "@graphiq/uml-core";
 import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureInteractionOverviewNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureTimingNode, measureUseCaseNode, type EdgeRouteStyle, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
@@ -21,6 +21,7 @@ import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
+import { extractGraphiqDsl } from "../dsl-guide/extractGraphiqDsl.js";
 
 export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine" | "sequence" | "timing" | "interactionOverview";
 
@@ -221,6 +222,7 @@ type DocumentStoreState = {
   setDslEditorFocused: (focused: boolean) => void;
   setRelationshipTool: (tool: RelationshipTool) => void;
   createDocument: (kind: ImplementedDiagramKind) => void;
+  importDsl: (text: string) => void;
   runParse: () => Promise<void>;
   updateNodePosition: (nodeId: string, x: number, y: number) => void;
   dropStencilElement: (kind: StencilDropKind, x: number, y: number) => Promise<void>;
@@ -301,8 +303,16 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
+const IMPORT_NO_DIAGRAM_RULE_ID = "dsl.import-no-diagram";
 
-function createDocumentForKind(kind: ImplementedDiagramKind): GraphiqDocument {
+function isImplementedDiagramKind(kind: string): kind is ImplementedDiagramKind {
+  return isDiagramKind(kind);
+}
+
+function createDocumentForKind(
+  kind: ImplementedDiagramKind,
+  dsl?: string,
+): GraphiqDocument {
   const model = emptyModel(kind);
   return {
     id: createId(),
@@ -310,7 +320,7 @@ function createDocumentForKind(kind: ImplementedDiagramKind): GraphiqDocument {
     title: DEFAULT_TITLE_BY_KIND[kind],
     model,
     overlay: emptyOverlay(),
-    dsl: INITIAL_DSL_BY_KIND[kind],
+    dsl: dsl ?? INITIAL_DSL_BY_KIND[kind],
   };
 }
 
@@ -735,6 +745,76 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       void import("../persist/initDocumentPersistence.js").then(({ persistNewDocument }) =>
         persistNewDocument(document),
       );
+    },
+
+    importDsl: (text) => {
+      const { parseTimer } = get();
+      if (parseTimer !== null) {
+        clearTimeout(parseTimer);
+      }
+
+      const extracted = extractGraphiqDsl(text);
+      if (extracted === null) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: IMPORT_NO_DIAGRAM_RULE_ID,
+              severity: "error",
+              message:
+                "No GraphiQ DSL document found. Expected text starting with diagram <kind>.",
+              elementIds: [],
+            },
+          ],
+          parseTimer: null,
+        });
+        return;
+      }
+
+      if (!isImplementedDiagramKind(extracted.kind)) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: IMPORT_NO_DIAGRAM_RULE_ID,
+              severity: "error",
+              message: `Unsupported diagram kind "${extracted.kind}".`,
+              elementIds: [],
+            },
+          ],
+          parseTimer: null,
+        });
+        return;
+      }
+
+      const importedKind = extracted.kind;
+      const importedDsl = extracted.dsl;
+      const { document } = get();
+      const kindChanged = document.kind !== importedKind;
+      const nextDocument = kindChanged
+        ? createDocumentForKind(importedKind, importedDsl)
+        : { ...document, dsl: importedDsl };
+      const freshModel = emptyModel(importedKind);
+      const freshOverlay = emptyOverlay();
+
+      set((state) => ({
+        document: nextDocument,
+        diagnostics: [],
+        lastGoodModel: freshModel,
+        lastGoodOverlay: freshOverlay,
+        lastParseSource: refreshParseSource(importedKind, importedDsl),
+        dslRevision: state.dslRevision + 1,
+        parseTimer: null,
+        relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[importedKind],
+      }));
+
+      if (kindChanged) {
+        void import("../persist/initDocumentPersistence.js").then(({ persistNewDocument }) =>
+          persistNewDocument(nextDocument),
+        );
+      }
+
+      void get().runParse();
     },
 
     setDsl: (dsl) => {

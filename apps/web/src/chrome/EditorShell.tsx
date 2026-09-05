@@ -1,5 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
-import { useEffect, useRef, useState, type ReactElement, type RefObject } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactElement, type RefObject } from "react";
 import { ClassCanvas } from "../canvas/class/ClassCanvas.js";
 import { ComponentCanvas } from "../canvas/component/ComponentCanvas.js";
 import { DeploymentCanvas } from "../canvas/deployment/DeploymentCanvas.js";
@@ -22,6 +22,7 @@ import { ChromePanel } from "./ChromePanel.js";
 import { DiagnosticsList } from "./DiagnosticsList.js";
 import { DslEditor } from "./DslEditor.js";
 import { EdgeStyleToolbar } from "./EdgeStyleToolbar.js";
+import { downloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
 import { exportDocumentPng, exportDocumentSvg } from "../export/exportDocument.js";
 import { Stencil } from "./Stencil.js";
 
@@ -55,7 +56,10 @@ export function EditorShell() {
   const setDslEditorFocused = useDocumentStore((state) => state.setDslEditorFocused);
   const setRelationshipTool = useDocumentStore((state) => state.setRelationshipTool);
   const createDocument = useDocumentStore((state) => state.createDocument);
+  const importDsl = useDocumentStore((state) => state.importDsl);
   const documentId = useDocumentStore((state) => state.document.id);
+
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -80,6 +84,20 @@ export function EditorShell() {
           (element) => element.id === selectedNodeId && element.elementType === "class",
         );
 
+  const handleImportDslClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportDslFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file === undefined) {
+      return;
+    }
+    const text = await file.text();
+    importDsl(text);
+  };
+
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 items-center gap-4 border-b border-slate-300 bg-white px-4 py-2">
@@ -100,6 +118,32 @@ export function EditorShell() {
         >
           {kind}
         </span>
+        <button
+          type="button"
+          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          data-testid="download-dsl-guide"
+          onClick={() => downloadDslGuide()}
+        >
+          Download DSL guide
+        </button>
+        <button
+          type="button"
+          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          data-testid="import-dsl"
+          onClick={handleImportDslClick}
+        >
+          Import DSL
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".md,.dsl,.txt,text/markdown,text/plain"
+          className="hidden"
+          data-testid="import-dsl-input"
+          onChange={(event) => {
+            void handleImportDslFile(event);
+          }}
+        />
         <button
           type="button"
           className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
