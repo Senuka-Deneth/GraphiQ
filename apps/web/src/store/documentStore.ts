@@ -199,6 +199,8 @@ export type StencilDropKind =
   | TimingStencilDropKind
   | InteractionOverviewStencilDropKind;
 
+export type PersistState = "loading" | "saving" | "saved";
+
 type DocumentStoreState = {
   document: GraphiqDocument;
   diagnostics: Diagnostic[];
@@ -209,6 +211,7 @@ type DocumentStoreState = {
   parseTimer: ReturnType<typeof setTimeout> | null;
   dslEditorFocused: boolean;
   relationshipTool: RelationshipTool;
+  persistState: PersistState;
   setTitle: (title: string) => void;
   setDsl: (dsl: string) => void;
   setDslEditorFocused: (focused: boolean) => void;
@@ -680,6 +683,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
     parseTimer: null,
     dslEditorFocused: false,
     relationshipTool: "generalization",
+    persistState: "loading",
 
     setTitle: (title) => {
       set((state) => ({
@@ -710,6 +714,9 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         parseTimer: null,
         relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[kind],
       });
+      void import("../persist/initDocumentPersistence.js").then(({ persistNewDocument }) =>
+        persistNewDocument(document),
+      );
     },
 
     setDsl: (dsl) => {
@@ -1621,5 +1628,6 @@ export function resetDocumentStoreForTests(): void {
     parseTimer: null,
     dslEditorFocused: false,
     relationshipTool: "generalization",
+    persistState: "saved",
   });
 }
