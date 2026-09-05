@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const checkoutFixture = readFileSync(
@@ -20,6 +21,7 @@ shop -> customer : 1: duplicate()
 
 test("communication document renders instances and numbered message labels", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("communication");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("communication");
@@ -40,6 +42,7 @@ test("communication document renders instances and numbered message labels", asy
 
 test("duplicate sequence numbers show comm.number-unique-in-interaction", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("communication");
   const editor = page.locator('[data-testid="dsl-editor"]');

@@ -10,3 +10,15 @@ body {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
 }
+
+.graphiq-chrome-transition {
+  transition-property: width, min-width, max-height, min-height, border-width, opacity;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graphiq-chrome-transition {
+    transition: none;
+  }
+}

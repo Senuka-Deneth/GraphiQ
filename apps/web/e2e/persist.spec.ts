@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const PERSIST_CLASS_DSL = `diagram class Persisted
 
@@ -9,6 +10,7 @@ class Order {
 
 test("reload restores the last saved diagram and DSL", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
   await expect(page.locator('[data-testid="persist-state"][data-value="saved"]')).toBeAttached({
     timeout: 10_000,
   });
@@ -26,6 +28,7 @@ test("reload restores the last saved diagram and DSL", async ({ page }) => {
   await expect(page.locator('[data-testid="persist-state"][data-value="saved"]')).toBeAttached({
     timeout: 10_000,
   });
+  await openDslPanel(page);
 
   await expect(page.locator(".react-flow__node")).toHaveCount(1, { timeout: 10_000 });
   await expect(editor).toContainText("class Order");

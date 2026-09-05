@@ -1,5 +1,5 @@
 import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureInteractionOverviewNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureTimingNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureInteractionOverviewNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureTimingNode, measureUseCaseNode, type EdgeRouteStyle, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -7,7 +7,10 @@ import {
   removeElement,
   removeRelationship,
   renameElement,
+  reverseRelationship,
   setClassAttribute,
+  setMessageSort,
+  updateRelationshipType,
   type ModelCommandError,
   type UmlModel,
 } from "@graphiq/uml-model";
@@ -197,7 +200,8 @@ export type StencilDropKind =
   | StateMachineStencilDropKind
   | SequenceStencilDropKind
   | TimingStencilDropKind
-  | InteractionOverviewStencilDropKind;
+  | InteractionOverviewStencilDropKind
+  | "text";
 
 export type PersistState = "loading" | "saving" | "saved";
 
@@ -229,6 +233,20 @@ type DocumentStoreState = {
   deleteRelationships: (relationshipIds: readonly string[]) => Promise<void>;
   renameSelectedElement: (elementId: string, name: string) => Promise<void>;
   editFirstAttribute: (elementId: string, value: string) => Promise<void>;
+  updateViewport: (viewport: { x: number; y: number; zoom: number }) => void;
+  updateEdgeOverlay: (
+    relationshipId: string,
+    patch: {
+      routeStyle?: EdgeRouteStyle;
+      strokeColor?: string;
+      strokeWidth?: number;
+    },
+  ) => void;
+  changeSelectedRelationshipType: (
+    relationshipId: string,
+    tool: RelationshipTool | undefined,
+  ) => Promise<void>;
+  reverseSelectedRelationship: (relationshipId: string) => Promise<void>;
 };
 
 const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -832,12 +850,14 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
     dropStencilElement: async (kind, x, y) => {
       const { document } = get();
+      const resolvedKind: Exclude<StencilDropKind, "text"> = kind === "text" ? "note" : kind;
+      const noteLabel = kind === "text" ? "Text" : "Note";
       let dropX = x;
       let dropY = y;
       let activityParentId: string | undefined;
       let stateMachineParentId: string | undefined;
 
-      if (document.kind === "activity" && kind !== "activityPartition") {
+      if (document.kind === "activity" && resolvedKind !== "activityPartition") {
         const hit = findActivityPartitionAtPoint(document.model, document.overlay, x, y);
         if (hit !== undefined) {
           activityParentId = hit.parentId;
@@ -860,7 +880,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         set,
         (model) => {
           if (document.kind === "object") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "instance":
                 return addElement(model, {
                   elementType: "instanceSpecification",
@@ -870,7 +890,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -882,7 +902,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "package") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "package":
                 return addElement(model, {
                   elementType: "package",
@@ -907,7 +927,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -918,7 +938,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "component") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "component":
                 return addElement(model, {
                   elementType: "component",
@@ -942,7 +962,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -953,7 +973,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "deployment") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "node":
                 return addElement(model, {
                   elementType: "node",
@@ -977,7 +997,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -988,7 +1008,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "profile") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "stereotype":
                 return addElement(model, {
                   elementType: "stereotype",
@@ -1013,7 +1033,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -1028,7 +1048,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               (element) => element.elementType === "subject" && element.parentId === undefined,
             );
 
-            switch (kind) {
+            switch (resolvedKind) {
               case "actor":
                 return addElement(model, {
                   elementType: "actor",
@@ -1048,7 +1068,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -1065,7 +1085,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 element.parentId === undefined,
             );
 
-            switch (kind) {
+            switch (resolvedKind) {
               case "class":
                 return addElement(model, {
                   elementType: "class",
@@ -1094,7 +1114,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -1108,7 +1128,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "communication") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "instance":
                 return addElement(model, {
                   elementType: "instanceSpecification",
@@ -1118,7 +1138,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -1132,7 +1152,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           if (document.kind === "activity") {
             const parent =
               activityParentId !== undefined ? { parentId: activityParentId } : {};
-            switch (kind) {
+            switch (resolvedKind) {
               case "action":
                 return addElement(model, {
                   elementType: "action",
@@ -1195,7 +1215,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                   ...parent,
                 });
               default:
@@ -1210,7 +1230,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           if (document.kind === "stateMachine") {
             const parent =
               stateMachineParentId !== undefined ? { parentId: stateMachineParentId } : {};
-            switch (kind) {
+            switch (resolvedKind) {
               case "state":
                 return addElement(model, {
                   elementType: "state",
@@ -1254,7 +1274,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                   ...parent,
                 });
               default:
@@ -1267,7 +1287,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "sequence") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "lifeline":
                 return addElement(model, {
                   elementType: "lifeline",
@@ -1284,7 +1304,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -1295,7 +1315,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "timing") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "lifeline":
                 return addElement(model, {
                   elementType: "lifeline",
@@ -1305,7 +1325,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -1316,7 +1336,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "interactionOverview") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "interactionUse":
                 return addElement(model, {
                   elementType: "interactionUse",
@@ -1355,7 +1375,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -1365,7 +1385,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             }
           }
 
-          switch (kind) {
+          switch (resolvedKind) {
             case "class":
               return addElement(model, {
                 elementType: "class",
@@ -1391,7 +1411,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             case "note":
               return addElement(model, {
                 elementType: "note",
-                name: uniqueElementName(model, "Note"),
+                name: uniqueElementName(model, noteLabel),
               });
             default:
               return addElement(model, { elementType: "class", name: "Class" });
@@ -1612,6 +1632,179 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           typeName: match[3] ?? attribute.typeName,
         });
       });
+    },
+
+    updateViewport: (viewport) => {
+      set((state) => ({
+        document: {
+          ...state.document,
+          overlay: {
+            ...state.document.overlay,
+            viewport,
+          },
+        },
+        lastGoodOverlay: {
+          ...state.lastGoodOverlay,
+          viewport,
+        },
+      }));
+    },
+
+    updateEdgeOverlay: (relationshipId, patch) => {
+      set((state) => {
+        const existing = state.document.overlay.edges[relationshipId] ?? { id: relationshipId };
+        const nextEdge = {
+          ...existing,
+          id: relationshipId,
+          ...patch,
+        };
+        return {
+          document: {
+            ...state.document,
+            overlay: {
+              ...state.document.overlay,
+              edges: {
+                ...state.document.overlay.edges,
+                [relationshipId]: nextEdge,
+              },
+            },
+          },
+          lastGoodOverlay: {
+            ...state.lastGoodOverlay,
+            edges: {
+              ...state.lastGoodOverlay.edges,
+              [relationshipId]: nextEdge,
+            },
+          },
+        };
+      });
+    },
+
+    changeSelectedRelationshipType: async (relationshipId, tool) => {
+      if (!canApplyStructuralCommand(get())) {
+        return;
+      }
+
+      if (tool === undefined) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: ILLEGAL_CONNECTOR_RULE_ID,
+              severity: "error",
+              message: "That connector style is not a legal UML relationship for this diagram",
+              elementIds: [relationshipId],
+            },
+          ],
+        });
+        return;
+      }
+
+      const { document } = get();
+      const relationship = document.model.relationships.find((item) => item.id === relationshipId);
+      if (relationship === undefined) {
+        return;
+      }
+
+      const source = document.model.elements.find((element) => element.id === relationship.sourceId);
+      const target = document.model.elements.find((element) => element.id === relationship.targetId);
+      if (source === undefined || target === undefined) {
+        return;
+      }
+
+      if (document.kind === "sequence" || document.kind === "timing") {
+        const result = setMessageSort(document.model, relationshipId, tool as SequenceRelationshipTool);
+        if (!result.ok) {
+          set({
+            diagnostics: [
+              {
+                id: createId(),
+                ruleId: result.error.code,
+                severity: "error",
+                message: result.error.message,
+                elementIds: [relationshipId],
+              },
+            ],
+          });
+          return;
+        }
+        await commitStructuralModelChange(get, set, result.value);
+        return;
+      }
+
+      const nextType = tool as RelationshipType;
+      if (
+        !isConnectorAllowed({
+          kind: document.kind,
+          relationship: nextType,
+          source: source.elementType,
+          target: target.elementType,
+        })
+      ) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: ILLEGAL_CONNECTOR_RULE_ID,
+              severity: "error",
+              message: `Relationship "${nextType}" from ${source.elementType} to ${target.elementType} is not allowed on a ${document.kind} diagram`,
+              elementIds: [relationship.sourceId, relationship.targetId],
+            },
+          ],
+        });
+        return;
+      }
+
+      await applyModelCommand(get, set, (model) =>
+        updateRelationshipType(model, relationshipId, nextType),
+      );
+    },
+
+    reverseSelectedRelationship: async (relationshipId) => {
+      if (!canApplyStructuralCommand(get())) {
+        return;
+      }
+
+      const { document } = get();
+      const relationship = document.model.relationships.find((item) => item.id === relationshipId);
+      if (relationship === undefined) {
+        return;
+      }
+
+      const source = document.model.elements.find((element) => element.id === relationship.targetId);
+      const target = document.model.elements.find((element) => element.id === relationship.sourceId);
+      if (source === undefined || target === undefined) {
+        return;
+      }
+
+      const connectorRelationship =
+        document.kind === "sequence" || document.kind === "timing"
+          ? "message"
+          : relationship.relationshipType;
+
+      if (
+        !isConnectorAllowed({
+          kind: document.kind,
+          relationship: connectorRelationship,
+          source: source.elementType,
+          target: target.elementType,
+        })
+      ) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: ILLEGAL_CONNECTOR_RULE_ID,
+              severity: "error",
+              message: `Reversing this relationship is not allowed on a ${document.kind} diagram`,
+              elementIds: [relationship.sourceId, relationship.targetId],
+            },
+          ],
+        });
+        return;
+      }
+
+      await applyModelCommand(get, set, (model) => reverseRelationship(model, relationshipId));
     },
   };
 });

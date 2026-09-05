@@ -62,4 +62,11 @@ describe("MARKER_IDS", () => {
       expect(SVG_MARKERS[id]).toEqual(getMarker(id));
     }
   });
+
+  it("sizes markers to one grid cell at zoom 1", () => {
+    for (const id of MARKER_IDS) {
+      expect(getMarker(id).markerWidth).toBe(16);
+      expect(getMarker(id).markerHeight).toBe(16);
+    }
+  });
 });

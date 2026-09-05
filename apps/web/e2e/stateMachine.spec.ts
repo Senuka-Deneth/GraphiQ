@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const orderLifecycleFixture = readFileSync(
@@ -19,6 +20,7 @@ test("state machine document renders states and transitions from the section 5.1
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("stateMachine");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("stateMachine");
@@ -40,6 +42,7 @@ test("state machine document renders states and transitions from the section 5.1
 
 test("initial with trigger shows sm.initial-one-outgoing-no-trigger", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("stateMachine");
   const editor = page.locator('[data-testid="dsl-editor"]');

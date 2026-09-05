@@ -44,10 +44,11 @@ export {
 } from "./layoutInteractionOverview.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
+  EdgeRouteStyle,
   LayoutMode,
   NotationOverlay,
   OverlayEdge,
   OverlayNode,
   RelayoutReason,
 } from "./overlay.js";
-export { emptyOverlay, reasonToLayoutMode } from "./overlay.js";
+export { emptyOverlay, mergeOverlayEdgePresentation, reasonToLayoutMode } from "./overlay.js";

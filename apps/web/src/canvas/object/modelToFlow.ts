@@ -8,7 +8,7 @@ import {
 import type { NoteFlowNode } from "../class/NoteNode.js";
 import { noteNodeTypeName } from "../class/NoteNode.js";
 import type { UmlFlowEdge } from "../class/UmlEdge.js";
-import { umlEdgeTypeName } from "../class/UmlEdge.js";
+import { buildUmlFlowEdge } from "../class/UmlEdge.js";
 import type { InstanceFlowNode } from "./InstanceNode.js";
 import { instanceNodeTypeName } from "./InstanceNode.js";
 
@@ -79,22 +79,13 @@ export function objectModelToFlow(
     }
   }
 
-  const edges: UmlFlowEdge[] = model.relationships.map((relationship: UmlRelationship) => {
-    const edgeSeverity = severityById.get(relationship.id);
-    return {
-      id: relationship.id,
-      source: relationship.sourceId,
-      target: relationship.targetId,
-      type: umlEdgeTypeName,
-      data: {
-        relationshipType: relationship.relationshipType,
-        label: relationship.name,
-        diagnosticSeverity: edgeSeverity,
-      },
-      className: diagnosticClassName(edgeSeverity),
-      selectable: true,
-    };
-  });
+  const edges: UmlFlowEdge[] = model.relationships.map((relationship: UmlRelationship) =>
+    buildUmlFlowEdge(
+      relationship,
+      overlay.edges[relationship.id],
+      severityById.get(relationship.id),
+    ),
+  );
 
   return { nodes, edges };
 }

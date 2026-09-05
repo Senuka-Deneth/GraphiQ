@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const CLASS_GENERALIZATION_DSL = `diagram class
 
@@ -13,6 +14,7 @@ A --|> B
 
 test("typing class DSL renders two classes and a generalization edge", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();

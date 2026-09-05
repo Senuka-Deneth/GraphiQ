@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const javaFixture = readFileSync(
@@ -20,6 +21,7 @@ extension Entity -> Order
 
 test("profile extension renders a filled triangle marker", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("profile");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("profile");
@@ -44,6 +46,7 @@ test("profile extension renders a filled triangle marker", async ({ page }) => {
 
 test("extension to Order shows prf.metaclass-not-a-user-class", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("profile");
   const editor = page.locator('[data-testid="dsl-editor"]');

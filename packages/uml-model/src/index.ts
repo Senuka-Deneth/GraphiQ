@@ -78,8 +78,11 @@ export {
   removeElement,
   removeRelationship,
   renameElement,
+  reverseRelationship,
   setClassAttribute,
   setClassOperation,
+  setMessageSort,
+  updateRelationshipType,
 } from "./commands.js";
 
 export {

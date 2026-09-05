@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { waitForPersistReady } from "./helpers.js";
+import { waitForPersistReady, openDslPanel } from "./helpers.js";
 
 const IMPLEMENTED_KINDS = [
   "class",
@@ -21,6 +21,7 @@ const IMPLEMENTED_KINDS = [
 test.describe("implemented diagram kind smoke", () => {
   test("new-document control lists all implemented kinds", async ({ page }) => {
     await page.goto("/");
+    await openDslPanel(page);
     await waitForPersistReady(page);
 
     const options = page.locator('[data-testid="new-document-kind"] option');
@@ -32,6 +33,7 @@ test.describe("implemented diagram kind smoke", () => {
 
   test("class drag does not change DSL", async ({ page }) => {
     await page.goto("/");
+    await openDslPanel(page);
     await waitForPersistReady(page);
 
     const canvas = page.locator('[data-testid="class-canvas"]');

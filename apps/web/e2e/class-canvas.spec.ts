@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 function normalizeDsl(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -6,6 +7,7 @@ function normalizeDsl(text: string): string {
 
 test("canvas structural edits update DSL and moves do not", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   const canvas = page.locator('[data-testid="class-canvas"]');
   const editor = page.locator('[data-testid="dsl-editor"]');

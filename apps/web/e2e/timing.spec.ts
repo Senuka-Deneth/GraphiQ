@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const lampFixture = readFileSync(
@@ -24,6 +25,7 @@ test("timing document renders lifelines and ordered states from the section 5.13
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("timing");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("timing");
@@ -52,6 +54,7 @@ test("overlapping intervals show tm.intervals-non-overlapping-per-lifeline", asy
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("timing");
   const editor = page.locator('[data-testid="dsl-editor"]');

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 import { readFileSync } from "node:fs";
 
 const CLASS_GENERALIZATION_DSL = `diagram class ExportE2E
@@ -14,6 +15,7 @@ Alpha --|> Beta
 
 test("export SVG and PNG include diagram content", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
   await expect(page.locator('[data-testid="persist-state"][data-value="saved"]')).toBeAttached({
     timeout: 10_000,
   });

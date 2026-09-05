@@ -6,6 +6,19 @@ export async function waitForPersistReady(page: Page): Promise<void> {
   });
 }
 
+export async function openDslPanel(page: Page): Promise<void> {
+  const hideButton = page.getByRole("button", { name: "Hide DSL" });
+  if (!(await hideButton.isVisible())) {
+    await page.getByRole("button", { name: "Show DSL" }).click();
+    await expect(hideButton).toBeVisible();
+  }
+
+  const panel = page.locator('[data-testid="dsl-editor-panel"]');
+  await expect
+    .poll(async () => (await panel.boundingBox())?.width ?? 0)
+    .toBeGreaterThan(200);
+}
+
 export async function selectDiagramKind(page: Page, kind: string): Promise<void> {
   await page.locator('[data-testid="new-document-kind"]').selectOption(kind);
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText(kind);

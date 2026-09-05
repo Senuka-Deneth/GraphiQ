@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { MarkerDefs } from "../class/MarkerDefs.js";
-import { useDocumentStore } from "../../store/documentStore.js";
+import { SvgSquareGrid, SvgZoomViewport } from "../SvgZoomViewport.js";
+import { DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
+import { useDocumentStore, type StencilDropKind } from "../../store/documentStore.js";
 import {
   dashStrokeStyle,
   lifelineDisplayName,
@@ -9,7 +11,13 @@ import {
   strokeForDiagnostic,
 } from "./modelToSvg.js";
 
-export function SequenceCanvas() {
+export function SequenceCanvas({
+  onSelectedNodeChange,
+  onSelectedEdgeChange,
+}: {
+  onSelectedNodeChange?: (nodeId: string | null) => void;
+  onSelectedEdgeChange?: (edgeId: string | null) => void;
+}) {
   const model = useDocumentStore((state) => state.document.model);
   const overlay = useDocumentStore((state) => state.document.overlay);
   const diagnostics = useDocumentStore((state) => state.diagnostics);
@@ -17,9 +25,11 @@ export function SequenceCanvas() {
   const connectElements = useDocumentStore((state) => state.connectElements);
   const dropStencilElement = useDocumentStore((state) => state.dropStencilElement);
   const deleteElements = useDocumentStore((state) => state.deleteElements);
+  const renameSelectedElement = useDocumentStore((state) => state.renameSelectedElement);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedLifelineId, setSelectedLifelineId] = useState<string | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{
     lifelineId: string;
     offsetX: number;
@@ -55,12 +65,12 @@ export function SequenceCanvas() {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      const kind = event.dataTransfer.getData("application/graphiq-stencil");
+      const kind = event.dataTransfer.getData("application/graphiq-stencil") as StencilDropKind;
       if (!kind) {
         return;
       }
       const point = clientToSvg(event.clientX, event.clientY);
-      void dropStencilElement(kind as "lifeline" | "combined-fragment" | "note", point.x, point.y);
+      void dropStencilElement(kind, point.x, point.y);
     },
     [clientToSvg, dropStencilElement],
   );
@@ -74,6 +84,9 @@ export function SequenceCanvas() {
       }
       const point = clientToSvg(event.clientX, event.clientY);
       setSelectedLifelineId(lifelineId);
+      onSelectedNodeChange?.(lifelineId);
+      onSelectedEdgeChange?.(null);
+      setSelectedMessageId(null);
       setDragState({
         lifelineId,
         offsetX: point.x - lifeline.x,
@@ -81,7 +94,7 @@ export function SequenceCanvas() {
       });
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [clientToSvg, renderable.lifelines],
+    [clientToSvg, onSelectedEdgeChange, onSelectedNodeChange, renderable.lifelines],
   );
 
   const onCanvasPointerMove = useCallback(
@@ -109,11 +122,16 @@ export function SequenceCanvas() {
       if (selectedLifelineId !== null && selectedLifelineId !== elementId) {
         void connectElements(selectedLifelineId, elementId);
         setSelectedLifelineId(null);
+        onSelectedNodeChange?.(null);
+        onSelectedEdgeChange?.(null);
         return;
       }
       setSelectedLifelineId(elementId);
+      onSelectedNodeChange?.(elementId);
+      onSelectedEdgeChange?.(null);
+      setSelectedMessageId(null);
     },
-    [connectElements, selectedLifelineId],
+    [connectElements, onSelectedEdgeChange, onSelectedNodeChange, selectedLifelineId],
   );
 
   const noteElements = useMemo(
@@ -145,17 +163,48 @@ export function SequenceCanvas() {
     [deleteElements, selectedLifelineId],
   );
 
+  const onPaneDoubleClick = useCallback(
+    async (event: React.MouseEvent<SVGSVGElement>) => {
+      if (event.target !== event.currentTarget) {
+        return;
+      }
+      const point = clientToSvg(event.clientX, event.clientY);
+      await dropStencilElement("text", point.x, point.y);
+      const last = useDocumentStore.getState().document.model.elements.at(-1);
+      if (last?.elementType !== "note") {
+        return;
+      }
+      const nextName = window.prompt("Text", last.name);
+      if (nextName !== null && nextName.trim().length > 0) {
+        await renameSelectedElement(last.id, nextName.trim());
+      }
+    },
+    [clientToSvg, dropStencilElement, renameSelectedElement],
+  );
+
+  const onMessageClick = useCallback(
+    (messageId: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      setSelectedMessageId(messageId);
+      setSelectedLifelineId(null);
+      onSelectedNodeChange?.(null);
+      onSelectedEdgeChange?.(messageId);
+    },
+    [onSelectedEdgeChange, onSelectedNodeChange],
+  );
+
   const headHeight = lifelineHeadHeight();
 
   return (
     <div
-      className="relative h-full w-full overflow-auto bg-slate-50"
+      className="relative h-full w-full bg-slate-50"
       data-testid="sequence-canvas"
       onDragOver={onDragOver}
       onDrop={onDrop}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
+      <SvgZoomViewport width={renderable.width} height={renderable.height}>
       <MarkerDefs />
       <svg
         ref={svgRef}
@@ -165,12 +214,19 @@ export function SequenceCanvas() {
         onPointerMove={onCanvasPointerMove}
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
+        onDoubleClick={(event) => {
+          void onPaneDoubleClick(event);
+        }}
         onClick={(event) => {
           if (event.target === event.currentTarget) {
             setSelectedLifelineId(null);
+            setSelectedMessageId(null);
+            onSelectedNodeChange?.(null);
+            onSelectedEdgeChange?.(null);
           }
         }}
       >
+        <SvgSquareGrid width={renderable.width} height={renderable.height} />
         {renderable.combinedFragments.map((fragment) => (
           <g key={fragment.id} data-testid="combined-fragment">
             <rect
@@ -281,14 +337,19 @@ export function SequenceCanvas() {
           const stroke = strokeForDiagnostic(message.diagnosticSeverity) ?? "#0f172a";
           const dashProps = message.lineStyle === "dash" ? dashStrokeStyle : {};
           return (
-            <g key={message.id} data-testid="sequence-message" data-marker-id={message.markerId}>
+            <g
+              key={message.id}
+              data-testid="sequence-message"
+              data-marker-id={message.markerId}
+              onClick={(event) => onMessageClick(message.id, event)}
+            >
               <line
                 x1={message.x1}
                 y1={message.y}
                 x2={message.x2}
                 y2={message.y}
                 stroke={stroke}
-                strokeWidth={1.5}
+                strokeWidth={selectedMessageId === message.id ? DEFAULT_STROKE_WIDTH + 0.5 : DEFAULT_STROKE_WIDTH}
                 markerEnd={`url(#${message.markerId})`}
                 {...dashProps}
               />
@@ -306,6 +367,7 @@ export function SequenceCanvas() {
           );
         })}
       </svg>
+      </SvgZoomViewport>
     </div>
   );
 }

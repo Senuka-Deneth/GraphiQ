@@ -30,11 +30,15 @@ describe("App", () => {
     expect(screen.getByText("Enumeration")).toBeInTheDocument();
     expect(screen.getByText("Abstract class")).toBeInTheDocument();
     expect(screen.getByText("Note")).toBeInTheDocument();
+    expect(screen.getByText("Text")).toBeInTheDocument();
+    expect(screen.getByText("Generalization")).toBeInTheDocument();
 
     expect(screen.getByTestId("canvas-panel")).toBeInTheDocument();
     expect(screen.getByTestId("dsl-editor-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("dsl-panel-toggle")).toBeInTheDocument();
     expect(screen.getByTestId("diagnostics-list")).toBeInTheDocument();
-    expect(screen.getByText("No issues")).toBeInTheDocument();
+    expect(screen.getByTestId("diagnostics-toggle")).toBeInTheDocument();
+    expect(screen.getByLabelText("Show diagnostics")).toBeInTheDocument();
 
     await waitFor(() => {
       const editor = document.querySelector('[data-testid="dsl-editor"]');

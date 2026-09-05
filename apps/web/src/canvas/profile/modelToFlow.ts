@@ -11,7 +11,7 @@ import { classNodeTypeName } from "../class/ClassNode.js";
 import type { NoteFlowNode } from "../class/NoteNode.js";
 import { noteNodeTypeName } from "../class/NoteNode.js";
 import type { UmlFlowEdge } from "../class/UmlEdge.js";
-import { umlEdgeTypeName } from "../class/UmlEdge.js";
+import { buildUmlFlowEdge } from "../class/UmlEdge.js";
 import type { ProfileFrameFlowNode } from "./ProfileFrameNode.js";
 import { profileFrameNodeTypeName } from "./ProfileFrameNode.js";
 
@@ -140,23 +140,13 @@ export function profileModelToFlow(
     }
   }
 
-  const edges: UmlFlowEdge[] = model.relationships.map((relationship) => {
-    const overlayEdge = overlay.edges[relationship.id];
-    const diagnosticSeverity = severityById.get(relationship.id);
-
-    return {
-      id: relationship.id,
-      type: umlEdgeTypeName,
-      source: relationship.sourceId,
-      target: relationship.targetId,
-      data: {
-        relationshipType: relationship.relationshipType,
-        waypoints: overlayEdge?.waypoints,
-        diagnosticSeverity,
-      },
-      className: diagnosticClassName(diagnosticSeverity),
-    };
-  });
+  const edges: UmlFlowEdge[] = model.relationships.map((relationship) =>
+    buildUmlFlowEdge(
+      relationship,
+      overlay.edges[relationship.id],
+      severityById.get(relationship.id),
+    ),
+  );
 
   return { nodes, edges };
 }

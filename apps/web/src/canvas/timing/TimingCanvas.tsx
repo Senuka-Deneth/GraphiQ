@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { MarkerDefs } from "../class/MarkerDefs.js";
-import { useDocumentStore } from "../../store/documentStore.js";
+import { SvgSquareGrid, SvgZoomViewport } from "../SvgZoomViewport.js";
+import { DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
+import { useDocumentStore, type StencilDropKind } from "../../store/documentStore.js";
 import {
   dashStrokeStyle,
   lifelineDisplayName,
@@ -9,7 +11,13 @@ import {
   timingModelToSvg,
 } from "./modelToSvg.js";
 
-export function TimingCanvas() {
+export function TimingCanvas({
+  onSelectedNodeChange,
+  onSelectedEdgeChange,
+}: {
+  onSelectedNodeChange?: (nodeId: string | null) => void;
+  onSelectedEdgeChange?: (edgeId: string | null) => void;
+}) {
   const model = useDocumentStore((state) => state.document.model);
   const overlay = useDocumentStore((state) => state.document.overlay);
   const diagnostics = useDocumentStore((state) => state.diagnostics);
@@ -17,9 +25,11 @@ export function TimingCanvas() {
   const connectElements = useDocumentStore((state) => state.connectElements);
   const dropStencilElement = useDocumentStore((state) => state.dropStencilElement);
   const deleteElements = useDocumentStore((state) => state.deleteElements);
+  const renameSelectedElement = useDocumentStore((state) => state.renameSelectedElement);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedLifelineId, setSelectedLifelineId] = useState<string | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<number>(0);
   const [dragState, setDragState] = useState<{
     lifelineId: string;
@@ -55,12 +65,12 @@ export function TimingCanvas() {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      const kind = event.dataTransfer.getData("application/graphiq-stencil");
+      const kind = event.dataTransfer.getData("application/graphiq-stencil") as StencilDropKind;
       if (!kind) {
         return;
       }
       const point = clientToSvg(event.clientX, event.clientY);
-      void dropStencilElement(kind as "lifeline" | "note", point.x, point.y);
+      void dropStencilElement(kind, point.x, point.y);
     },
     [clientToSvg, dropStencilElement],
   );
@@ -73,13 +83,17 @@ export function TimingCanvas() {
         return;
       }
       const point = clientToSvg(event.clientX, event.clientY);
+      setSelectedLifelineId(lifelineId);
+      setSelectedMessageId(null);
+      onSelectedNodeChange?.(lifelineId);
+      onSelectedEdgeChange?.(null);
       setDragState({
         lifelineId,
         offsetY: point.y - lifeline.y,
       });
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [clientToSvg, renderable.lifelines],
+    [clientToSvg, onSelectedEdgeChange, onSelectedNodeChange, renderable.lifelines],
   );
 
   const onCanvasPointerMove = useCallback(
@@ -111,13 +125,18 @@ export function TimingCanvas() {
       if (selectedLifelineId !== null && selectedLifelineId !== elementId) {
         void connectElements(selectedLifelineId, elementId, { time: selectedTime });
         setSelectedLifelineId(null);
+        onSelectedNodeChange?.(null);
+        onSelectedEdgeChange?.(null);
         return;
       }
 
       setSelectedLifelineId(elementId);
       setSelectedTime(time);
+      setSelectedMessageId(null);
+      onSelectedNodeChange?.(elementId);
+      onSelectedEdgeChange?.(null);
     },
-    [clientToSvg, connectElements, selectedLifelineId, selectedTime],
+    [clientToSvg, connectElements, onSelectedEdgeChange, onSelectedNodeChange, selectedLifelineId, selectedTime],
   );
 
   const noteElements = useMemo(
@@ -149,15 +168,46 @@ export function TimingCanvas() {
     [deleteElements, selectedLifelineId],
   );
 
+  const onPaneDoubleClick = useCallback(
+    async (event: React.MouseEvent<SVGSVGElement>) => {
+      if (event.target !== event.currentTarget) {
+        return;
+      }
+      const point = clientToSvg(event.clientX, event.clientY);
+      await dropStencilElement("text", point.x, point.y);
+      const last = useDocumentStore.getState().document.model.elements.at(-1);
+      if (last?.elementType !== "note") {
+        return;
+      }
+      const nextName = window.prompt("Text", last.name);
+      if (nextName !== null && nextName.trim().length > 0) {
+        await renameSelectedElement(last.id, nextName.trim());
+      }
+    },
+    [clientToSvg, dropStencilElement, renameSelectedElement],
+  );
+
+  const onMessageClick = useCallback(
+    (messageId: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      setSelectedMessageId(messageId);
+      setSelectedLifelineId(null);
+      onSelectedNodeChange?.(null);
+      onSelectedEdgeChange?.(messageId);
+    },
+    [onSelectedEdgeChange, onSelectedNodeChange],
+  );
+
   return (
     <div
-      className="relative h-full w-full overflow-auto bg-slate-50"
+      className="relative h-full w-full bg-slate-50"
       data-testid="timing-canvas"
       onDragOver={onDragOver}
       onDrop={onDrop}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
+      <SvgZoomViewport width={renderable.width} height={renderable.height}>
       <MarkerDefs />
       <svg
         ref={svgRef}
@@ -167,12 +217,19 @@ export function TimingCanvas() {
         onPointerMove={onCanvasPointerMove}
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
+        onDoubleClick={(event) => {
+          void onPaneDoubleClick(event);
+        }}
         onClick={(event) => {
           if (event.target === event.currentTarget) {
             setSelectedLifelineId(null);
+            setSelectedMessageId(null);
+            onSelectedNodeChange?.(null);
+            onSelectedEdgeChange?.(null);
           }
         }}
       >
+        <SvgSquareGrid width={renderable.width} height={renderable.height} />
         <line
           x1={160}
           y1={renderable.axisY}
@@ -298,14 +355,19 @@ export function TimingCanvas() {
           const stroke = strokeForDiagnostic(message.diagnosticSeverity) ?? "#0f172a";
           const dashProps = message.lineStyle === "dash" ? dashStrokeStyle : {};
           return (
-            <g key={message.id} data-testid="timing-message" data-marker-id={message.markerId}>
+            <g
+              key={message.id}
+              data-testid="timing-message"
+              data-marker-id={message.markerId}
+              onClick={(event) => onMessageClick(message.id, event)}
+            >
               <line
                 x1={message.x}
                 y1={message.y1}
                 x2={message.x}
                 y2={message.y2}
                 stroke={stroke}
-                strokeWidth={1.5}
+                strokeWidth={selectedMessageId === message.id ? DEFAULT_STROKE_WIDTH + 0.5 : DEFAULT_STROKE_WIDTH}
                 markerEnd={`url(#${message.markerId})`}
                 {...dashProps}
               />
@@ -322,6 +384,7 @@ export function TimingCanvas() {
           );
         })}
       </svg>
+      </SvgZoomViewport>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
 import type { NoteFlowNode } from "../class/NoteNode.js";
 import { noteNodeTypeName } from "../class/NoteNode.js";
 import type { UmlFlowEdge } from "../class/UmlEdge.js";
-import { umlEdgeTypeName } from "../class/UmlEdge.js";
+import { buildUmlFlowEdge } from "../class/UmlEdge.js";
 import type { ActionFlowNode } from "./ActionNode.js";
 import { actionNodeTypeName } from "./ActionNode.js";
 import type { ControlFlowNode, ControlNodeKind } from "./ControlNode.js";
@@ -220,24 +220,14 @@ export function activityModelToFlow(
     }
   }
 
-  const edges: UmlFlowEdge[] = model.relationships.map((relationship) => {
-    const edgeSeverity = severityById.get(relationship.id);
-    const overlayEdge = overlay.edges[relationship.id];
-    return {
-      id: relationship.id,
-      source: relationship.sourceId,
-      target: relationship.targetId,
-      type: umlEdgeTypeName,
-      data: {
-        relationshipType: relationship.relationshipType,
-        label: flowLabel(relationship),
-        waypoints: overlayEdge?.waypoints,
-        diagnosticSeverity: edgeSeverity,
-      },
-      className: diagnosticClassName(edgeSeverity),
-      selectable: true,
-    };
-  });
+  const edges: UmlFlowEdge[] = model.relationships.map((relationship) =>
+    buildUmlFlowEdge(
+      relationship,
+      overlay.edges[relationship.id],
+      severityById.get(relationship.id),
+      flowLabel(relationship),
+    ),
+  );
 
   return { nodes, edges };
 }

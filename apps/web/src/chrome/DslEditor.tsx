@@ -157,10 +157,7 @@ export function DslEditor({
   }, [revision, value]);
 
   return (
-    <div
-      className="min-h-0 flex-1 overflow-hidden border-l border-slate-300 bg-white"
-      data-testid="dsl-editor-panel"
-    >
+    <div className="min-h-0 flex-1 overflow-hidden bg-white">
       <div ref={containerRef} className="h-full w-full" />
     </div>
   );

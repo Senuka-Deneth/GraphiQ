@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const systemFixture = readFileSync(
@@ -25,6 +26,7 @@ b ..> a : «merge»
 
 test("package document renders nested classifiers inside packages", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("package");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("package");
@@ -42,6 +44,7 @@ test("package document renders nested classifiers inside packages", async ({ pag
 
 test("merge cycle shows pkg.no-cycle-merge diagnostic and marks edges", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("package");
   const editor = page.locator('[data-testid="dsl-editor"]');

@@ -8,7 +8,7 @@ import {
 import type { NoteFlowNode } from "../class/NoteNode.js";
 import { noteNodeTypeName } from "../class/NoteNode.js";
 import type { UmlFlowEdge } from "../class/UmlEdge.js";
-import { umlEdgeTypeName } from "../class/UmlEdge.js";
+import { buildUmlFlowEdge } from "../class/UmlEdge.js";
 import type { ArtifactFlowNode } from "./ArtifactNode.js";
 import { artifactNodeTypeName } from "./ArtifactNode.js";
 import type { ComponentFlowNode } from "./ComponentNode.js";
@@ -163,22 +163,12 @@ export function componentModelToFlow(
       return [];
     }
 
-    const overlayEdge = overlay.edges[relationship.id];
-    const diagnosticSeverity = severityById.get(relationship.id);
-
     return [
-      {
-        id: relationship.id,
-        type: umlEdgeTypeName,
-        source: relationship.sourceId,
-        target: relationship.targetId,
-        data: {
-          relationshipType: relationship.relationshipType,
-          waypoints: overlayEdge?.waypoints,
-          diagnosticSeverity,
-        },
-        className: diagnosticClassName(diagnosticSeverity),
-      },
+      buildUmlFlowEdge(
+        relationship,
+        overlay.edges[relationship.id],
+        severityById.get(relationship.id),
+      ),
     ];
   });
 

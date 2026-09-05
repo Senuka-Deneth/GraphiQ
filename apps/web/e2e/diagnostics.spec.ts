@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const ILLEGAL_GENERALIZATION_DSL = `diagram class
 
@@ -25,6 +26,7 @@ class Recovered {
 
 test("illegal DSL relationship shows rule id and marks the edge", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
@@ -41,6 +43,7 @@ test("illegal DSL relationship shows rule id and marks the edge", async ({ page 
 
 test("parse error squiggles the line and keeps the last good canvas", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();

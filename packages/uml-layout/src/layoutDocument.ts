@@ -16,7 +16,7 @@ import { layoutSequence } from "./layoutSequence.js";
 import { layoutTiming } from "./layoutTiming.js";
 import { layoutInteractionOverview } from "./layoutInteractionOverview.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
-import { reasonToLayoutMode } from "./overlay.js";
+import { mergeOverlayEdgePresentation, reasonToLayoutMode } from "./overlay.js";
 
 export async function layoutDocument(
   kind: DiagramKind,
@@ -25,7 +25,16 @@ export async function layoutDocument(
   reason: RelayoutReason,
 ): Promise<NotationOverlay> {
   const mode = reasonToLayoutMode(reason);
+  const next = await layoutKind(kind, model, overlay, mode);
+  return mergeOverlayEdgePresentation(overlay, next);
+}
 
+async function layoutKind(
+  kind: DiagramKind,
+  model: UmlModel,
+  overlay: NotationOverlay,
+  mode: ReturnType<typeof reasonToLayoutMode>,
+): Promise<NotationOverlay> {
   switch (kind) {
     case "class":
       return layoutClass(model, overlay, mode);

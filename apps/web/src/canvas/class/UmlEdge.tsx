@@ -1,18 +1,28 @@
-import { getRelationshipNotation } from "@graphiq/uml-notation";
-import type { RelationshipType } from "@graphiq/uml-model";
+import { getMessageNotation, getRelationshipNotation } from "@graphiq/uml-notation";
+import type { EdgeRouteStyle, OverlayEdge } from "@graphiq/uml-layout";
+import type { MessageSort, RelationshipType, UmlRelationship } from "@graphiq/uml-model";
 import {
   BaseEdge,
+  getBezierPath,
+  getSmoothStepPath,
+  getStraightPath,
   type Edge,
   type EdgeProps,
-  getSmoothStepPath,
 } from "@xyflow/react";
+import { assertNever } from "@graphiq/uml-core";
 import { dashStrokeStyle } from "./ClassNode.js";
+import { DEFAULT_EDGE_COLOR, DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
+import type { DiagnosticSeverity } from "../../diagnostics/bindDiagnosticSpans.js";
 
 export type UmlEdgeData = {
   relationshipType: RelationshipType;
+  messageSort?: MessageSort;
   label?: string;
   waypoints?: readonly { x: number; y: number }[];
   diagnosticSeverity?: "error" | "warning";
+  routeStyle?: EdgeRouteStyle;
+  strokeColor?: string;
+  strokeWidth?: number;
 };
 
 export const umlEdgeTypeName = "umlEdge" as const;
@@ -22,6 +32,77 @@ function markerUrl(id: string | null): string | undefined {
 }
 
 export type UmlFlowEdge = Edge<UmlEdgeData, typeof umlEdgeTypeName>;
+
+function diagnosticClassName(severity: DiagnosticSeverity | undefined): string | undefined {
+  if (severity === "error") {
+    return "graphiq-diagnostic-error";
+  }
+  if (severity === "warning") {
+    return "graphiq-diagnostic-warning";
+  }
+  return undefined;
+}
+
+export function buildUmlFlowEdge(
+  relationship: UmlRelationship,
+  overlayEdge: OverlayEdge | undefined,
+  diagnosticSeverity: DiagnosticSeverity | undefined,
+  label?: string,
+): UmlFlowEdge {
+  return {
+    id: relationship.id,
+    source: relationship.sourceId,
+    target: relationship.targetId,
+    type: umlEdgeTypeName,
+    data: {
+      relationshipType: relationship.relationshipType,
+      messageSort: relationship.relationshipType === "message" ? relationship.messageSort : undefined,
+      label: label ?? relationship.name,
+      waypoints: overlayEdge?.waypoints,
+      diagnosticSeverity,
+      routeStyle: overlayEdge?.routeStyle,
+      strokeColor: overlayEdge?.strokeColor,
+      strokeWidth: overlayEdge?.strokeWidth,
+    },
+    className: diagnosticClassName(diagnosticSeverity),
+    selectable: true,
+  };
+}
+
+function edgePathForRoute(
+  routeStyle: EdgeRouteStyle,
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  sourcePosition: EdgeProps["sourcePosition"],
+  targetPosition: EdgeProps["targetPosition"],
+): [string, number, number, number, number] {
+  switch (routeStyle) {
+    case "straight":
+      return getStraightPath({ sourceX, sourceY, targetX, targetY });
+    case "bezier":
+      return getBezierPath({
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+      });
+    case "orthogonal":
+      return getSmoothStepPath({
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+      });
+    default:
+      return assertNever(routeStyle);
+  }
+}
 
 export function UmlEdge({
   id,
@@ -37,16 +118,21 @@ export function UmlEdge({
   style,
 }: EdgeProps<UmlFlowEdge>) {
   const relationshipType = data?.relationshipType ?? "association";
-  const notation = getRelationshipNotation(relationshipType);
+  const notation =
+    relationshipType === "message"
+      ? getMessageNotation(data?.messageSort ?? "synchCall")
+      : getRelationshipNotation(relationshipType);
+  const routeStyle = data?.routeStyle ?? "orthogonal";
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const [edgePath, labelX, labelY] = edgePathForRoute(
+    routeStyle,
     sourceX,
     sourceY,
     targetX,
     targetY,
     sourcePosition,
     targetPosition,
-  });
+  );
 
   const computedMarkerStart = markerUrl(notation.sourceMarkerId);
   const computedMarkerEnd = markerUrl(notation.targetMarkerId);
@@ -56,7 +142,7 @@ export function UmlEdge({
       ? "#dc2626"
       : data?.diagnosticSeverity === "warning"
         ? "#d97706"
-        : "currentColor";
+        : undefined;
 
   return (
     <BaseEdge
@@ -67,11 +153,12 @@ export function UmlEdge({
       markerStart={computedMarkerStart ?? markerStart}
       markerEnd={computedMarkerEnd ?? markerEnd}
       label={data?.label}
+      interactionWidth={24}
       data-diagnostic={data?.diagnosticSeverity}
       style={{
         ...style,
-        stroke: diagnosticStroke,
-        strokeWidth: data?.diagnosticSeverity !== undefined ? 2.5 : 1.5,
+        stroke: diagnosticStroke ?? data?.strokeColor ?? DEFAULT_EDGE_COLOR,
+        strokeWidth: data?.diagnosticSeverity !== undefined ? 2.5 : (data?.strokeWidth ?? DEFAULT_STROKE_WIDTH),
         ...(notation.lineStyle === "dash" ? dashStrokeStyle : {}),
       }}
     />

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const checkoutFixture = readFileSync(
@@ -21,6 +22,7 @@ test("sequence document renders lifelines and ordered messages from the section 
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("sequence");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("sequence");
@@ -56,6 +58,7 @@ test("sequence document renders lifelines and ordered messages from the section 
 
 test("unmatched reply shows sd.reply-matches-synch-call", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("sequence");
   const editor = page.locator('[data-testid="dsl-editor"]');

@@ -9,7 +9,7 @@ import {
 import type { NoteFlowNode } from "../class/NoteNode.js";
 import { noteNodeTypeName } from "../class/NoteNode.js";
 import type { UmlFlowEdge } from "../class/UmlEdge.js";
-import { umlEdgeTypeName } from "../class/UmlEdge.js";
+import { buildUmlFlowEdge } from "../class/UmlEdge.js";
 import type { ActorFlowNode } from "./ActorNode.js";
 import { actorNodeTypeName } from "./ActorNode.js";
 import type { SubjectFlowNode } from "./SubjectNode.js";
@@ -123,23 +123,13 @@ export function useCaseModelToFlow(
   }
 
   const edges: UmlFlowEdge[] = model.relationships.map((relationship) => {
-    const overlayEdge = overlay.edges[relationship.id];
-    const diagnosticSeverity = severityById.get(relationship.id);
     const notation = getRelationshipNotation(relationship.relationshipType);
-
-    return {
-      id: relationship.id,
-      type: umlEdgeTypeName,
-      source: relationship.sourceId,
-      target: relationship.targetId,
-      data: {
-        relationshipType: relationship.relationshipType,
-        label: relationship.name ?? notation.keyword,
-        waypoints: overlayEdge?.waypoints,
-        diagnosticSeverity,
-      },
-      className: diagnosticClassName(diagnosticSeverity),
-    };
+    return buildUmlFlowEdge(
+      relationship,
+      overlay.edges[relationship.id],
+      severityById.get(relationship.id),
+      relationship.name ?? notation.keyword,
+    );
   });
 
   return { nodes, edges };

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const fulfillOrderFixture = readFileSync(
@@ -20,6 +21,7 @@ test("activity document renders partitions and actions from the section 5.9 fixt
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("activity");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("activity");
@@ -40,6 +42,7 @@ test("activity document renders partitions and actions from the section 5.9 fixt
 
 test("incoming flow to initial shows act.initial-no-incoming", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("activity");
   const editor = page.locator('[data-testid="dsl-editor"]');
