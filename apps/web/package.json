@@ -25,6 +25,8 @@
     "@lezer/highlight": "^1.2.3",
     "@xyflow/react": "^12.10.0",
     "dexie": "^4.4.5",
+    "html-to-image": "^1.11.13",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zustand": "^5.0.15"

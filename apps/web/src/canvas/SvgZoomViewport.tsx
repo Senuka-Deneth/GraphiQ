@@ -13,13 +13,19 @@ type SvgZoomViewportProps = {
   height: number;
   children: ReactNode;
   onWheelZoom?: boolean;
+  chrome?: boolean;
 };
 
 function clampZoom(zoom: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 }
 
-export function SvgZoomViewport({ width, height, children }: SvgZoomViewportProps) {
+export function SvgZoomViewport({
+  width,
+  height,
+  children,
+  chrome = true,
+}: SvgZoomViewportProps) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
 
   const onWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
@@ -27,6 +33,14 @@ export function SvgZoomViewport({ width, height, children }: SvgZoomViewportProp
     const delta = event.deltaY > 0 ? -0.1 : 0.1;
     setZoom((current) => clampZoom(Number((current + delta).toFixed(2))));
   }, []);
+
+  if (!chrome) {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-transparent">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div

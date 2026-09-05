@@ -974,8 +974,8 @@ Actors: 24×40 stick figure plus name below. Use cases: ellipse min 140×70.
 
 Lucidchart-like density, not a marketing landing page.
 
-- Left: glass sidebar with diagram title, kind, legal stencil for the active `DiagramKind` only, export, **Download DSL guide** (`.md`), and **Import DSL** (`.md` / `.dsl` / `.txt`).
-- Center: canvas (kind renderer), grid, snap, zoom, mini-map optional after class slice.
+- Left: glass sidebar with diagram title, kind, legal stencil for the active `DiagramKind` only, **Download DSL guide** (`.md`), and **Import DSL** (`.md` / `.dsl` / `.txt`).
+- Center: canvas (kind renderer), grid, snap, zoom. One **Export** island on the canvas opens the export page.
 - Right or bottom split: CodeMirror DSL.
 - Bottom / corner: diagnostics list.
 
@@ -991,10 +991,12 @@ Stencil drag must call model commands, not insert raw XYFlow nodes.
 - Autosave debounced 500ms after model or overlay changes.
 - Last-open id in `meta`.
 
-**Export SVG/PNG** after persist:
+**Export SVG/PNG/PDF** after persist:
 
-- Serialize the visible diagram SVG (including markers).
-- PNG via `HTMLCanvasElement` from SVG blob. Do not use a third-party paid exporter.
+- Open the export page from one canvas button. Preview is a read-only live canvas (same node renderers), not a simplified redraw.
+- Capture that sheet with `html-to-image` (MIT; not a paid exporter) at 2×. PNG via blob; SVG from the same capture; PDF embeds the raster in a one-page file.
+- Options: full canvas, crop to content, custom crop, set page size (A4 / Letter / A3), include page fill.
+- Do not use a third-party paid exporter.
 
 **Export GraphiQ DSL guide (Markdown)** after editor chrome exists:
 
@@ -1632,6 +1634,50 @@ pnpm --filter @graphiq/web build
 - Import of Mermaid `classDiagram` text does not become a GraphiQ class model
 
 **Commit message:** `Add GraphiQ DSL guide download and DSL file import`
+
+---
+
+### Step 34 — Live canvas capture for export
+
+**Model:** Composer 2.5
+
+**In scope:** extract `KindCanvas`; canvas `preview` mode (no chrome, no grid, all nodes rendered); `html-to-image` capture at 2×; content bounds; PDF raster embed; stop using the simplified SVG redraw for downloads
+
+**Allowed paths:** `apps/web/**`, `docs/GRAPHIQ_BUILD_GUIDE.md`
+
+**Out of scope:** paid exporters, React Router
+
+**Done when:** unit tests cover content bounds and PDF header; editor no longer downloads the center-to-center serializer.
+
+**Commit message:** `Add live canvas diagram capture for export`
+
+---
+
+### Step 35 — Export page with PNG SVG and PDF
+
+**Model:** Composer 2.5
+
+**In scope:** one canvas Export button; Lucid-like export page using existing glass chrome; PNG, SVG, and PDF download from the live preview; remove sidebar SVG/PNG tiles
+
+**Allowed paths:** `apps/web/**`, `docs/GRAPHIQ_BUILD_GUIDE.md`
+
+**Done when:** Playwright opens export, preview shows class names, and Download yields PNG (magic + non-tiny), SVG (names + markers), and PDF (`%PDF`).
+
+**Commit message:** `Add export page with PNG SVG and PDF download`
+
+---
+
+### Step 36 — Export crop page size and page fill
+
+**Model:** Composer 2.5
+
+**In scope:** Full canvas, crop to content, custom crop, set page size (A4 / Letter / A3 + orientation), include page fill — all wired to capture and PDF `MediaBox`
+
+**Allowed paths:** `apps/web/**`, `docs/GRAPHIQ_BUILD_GUIDE.md`
+
+**Done when:** toggling content mode and page fill changes export; custom crop overlay is present; page size reveals paper controls.
+
+**Commit message:** `Add export crop page size and page fill options`
 
 ---
 

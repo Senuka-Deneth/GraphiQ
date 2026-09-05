@@ -22,7 +22,6 @@ import type {
 import { ConnectorToolIcon, StencilShapeIcon } from "./stencilIcons.js";
 import {
   DownloadIcon,
-  ExportIcon,
   ImportIcon,
   SidebarToggleIcon,
 } from "./icons.js";
@@ -216,8 +215,6 @@ type StencilProps = {
   onTitleChange: (title: string) => void;
   onDownloadGuide: () => void;
   onImportClick: () => void;
-  onExportSvg: () => void;
-  onExportPng: () => void;
 };
 
 const MIN_SIDEBAR_WIDTH = 216;
@@ -242,8 +239,6 @@ export function Stencil({
   onTitleChange,
   onDownloadGuide,
   onImportClick,
-  onExportSvg,
-  onExportPng,
 }: StencilProps) {
   const items = stencilItemsForKind(kind);
   const tools = relationshipToolsForKind(kind);
@@ -423,26 +418,6 @@ export function Stencil({
             onClick={onImportClick}
           >
             <ImportIcon />
-          </button>
-          <button
-            type="button"
-            className="graphiq-icon-tile"
-            data-testid="export-svg"
-            aria-label="Export SVG"
-            title="Export SVG"
-            onClick={onExportSvg}
-          >
-            <ExportIcon />
-          </button>
-          <button
-            type="button"
-            className="graphiq-icon-tile"
-            data-testid="export-png"
-            aria-label="Export PNG"
-            title="Export PNG"
-            onClick={onExportPng}
-          >
-            <ExportIcon />
           </button>
         </div>
         {open ? (

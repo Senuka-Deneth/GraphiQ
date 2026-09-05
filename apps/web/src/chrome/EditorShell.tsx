@@ -1,19 +1,4 @@
-import { assertNever } from "@graphiq/uml-core";
-import { useEffect, useRef, useState, type ChangeEvent, type ReactElement, type RefObject } from "react";
-import { ClassCanvas } from "../canvas/class/ClassCanvas.js";
-import { ComponentCanvas } from "../canvas/component/ComponentCanvas.js";
-import { DeploymentCanvas } from "../canvas/deployment/DeploymentCanvas.js";
-import { ObjectCanvas } from "../canvas/object/ObjectCanvas.js";
-import { PackageCanvas } from "../canvas/package/PackageCanvas.js";
-import { ProfileCanvas } from "../canvas/profile/ProfileCanvas.js";
-import { CommunicationCanvas } from "../canvas/communication/CommunicationCanvas.js";
-import { ActivityCanvas } from "../canvas/activity/ActivityCanvas.js";
-import { StateMachineCanvas } from "../canvas/stateMachine/StateMachineCanvas.js";
-import { SequenceCanvas } from "../canvas/sequence/SequenceCanvas.js";
-import { TimingCanvas } from "../canvas/timing/TimingCanvas.js";
-import { InteractionOverviewCanvas } from "../canvas/interactionOverview/InteractionOverviewCanvas.js";
-import { CompositeStructureCanvas } from "../canvas/compositeStructure/CompositeStructureCanvas.js";
-import { UseCaseCanvas } from "../canvas/useCase/UseCaseCanvas.js";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   useDocumentStore,
   type ImplementedDiagramKind,
@@ -23,10 +8,12 @@ import { DiagnosticsList } from "./DiagnosticsList.js";
 import { DslEditor } from "./DslEditor.js";
 import { EdgeStyleToolbar } from "./EdgeStyleToolbar.js";
 import { downloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
-import { exportDocumentPng, exportDocumentSvg } from "../export/exportDocument.js";
+import type { ExportEntryState } from "../export/exportSettings.js";
+import { KindCanvas } from "../canvas/KindCanvas.js";
 import {
   DiagnosticsIcon,
   DslIcon,
+  ExportIcon,
 } from "./icons.js";
 import { Stencil } from "./Stencil.js";
 
@@ -47,7 +34,11 @@ const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
   "interactionOverview",
 ];
 
-export function EditorShell() {
+export function EditorShell({
+  onOpenExport,
+}: {
+  onOpenExport?: (entry: ExportEntryState) => void;
+} = {}) {
   const title = useDocumentStore((state) => state.document.title);
   const kind = useDocumentStore((state) => state.document.kind);
   const dsl = useDocumentStore((state) => state.document.dsl);
@@ -64,6 +55,7 @@ export function EditorShell() {
   const documentId = useDocumentStore((state) => state.document.id);
 
   const importInputRef = useRef<HTMLInputElement>(null);
+  const canvasPanelRef = useRef<HTMLDivElement>(null);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -158,10 +150,6 @@ export function EditorShell() {
         onTitleChange={setTitle}
         onDownloadGuide={() => downloadDslGuide()}
         onImportClick={handleImportDslClick}
-        onExportSvg={() => exportDocumentSvg(useDocumentStore.getState().document)}
-        onExportPng={() => {
-          void exportDocumentPng(useDocumentStore.getState().document);
-        }}
       />
       <input
         ref={importInputRef}
@@ -174,7 +162,7 @@ export function EditorShell() {
         }}
       />
       <div className="relative min-h-0 min-w-0 flex-1">
-          <div className="h-full min-h-0" data-testid="canvas-panel">
+          <div ref={canvasPanelRef} className="h-full min-h-0" data-testid="canvas-panel">
             <KindCanvas
               key={documentId}
               kind={kind}
@@ -244,128 +232,28 @@ export function EditorShell() {
           </ChromePanel>
 
           <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} />
+
+          {onOpenExport !== undefined ? (
+          <div className="graphiq-island-controls absolute bottom-3 right-3 z-30">
+            <button
+              type="button"
+              className="graphiq-icon-button"
+              data-testid="open-export"
+              aria-label="Export diagram"
+              onClick={() => {
+                const box = canvasPanelRef.current?.getBoundingClientRect();
+                onOpenExport({
+                  panelWidth: Math.max(1, box?.width ?? 800),
+                  panelHeight: Math.max(1, box?.height ?? 600),
+                });
+              }}
+            >
+              <ExportIcon />
+            </button>
+          </div>
+          ) : null}
         </div>
     </div>
   );
 }
 
-type KindCanvasProps = {
-  kind: ImplementedDiagramKind;
-  onSelectedNodeChange: (nodeId: string | null) => void;
-  onSelectedEdgeChange: (edgeId: string | null) => void;
-  editMemberTriggerRef: RefObject<HTMLButtonElement | null>;
-  selectedNodeId: string | null;
-};
-
-function KindCanvas({
-  kind,
-  onSelectedNodeChange,
-  onSelectedEdgeChange,
-  editMemberTriggerRef,
-  selectedNodeId,
-}: KindCanvasProps): ReactElement {
-  switch (kind) {
-    case "class":
-      return (
-        <ClassCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-          editMemberTriggerRef={editMemberTriggerRef}
-          selectedNodeId={selectedNodeId}
-        />
-      );
-    case "object":
-      return (
-        <ObjectCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "package":
-      return (
-        <PackageCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "component":
-      return (
-        <ComponentCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "deployment":
-      return (
-        <DeploymentCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "profile":
-      return (
-        <ProfileCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "useCase":
-      return (
-        <UseCaseCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "compositeStructure":
-      return (
-        <CompositeStructureCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "communication":
-      return (
-        <CommunicationCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "activity":
-      return (
-        <ActivityCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "stateMachine":
-      return (
-        <StateMachineCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "sequence":
-      return (
-        <SequenceCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "timing":
-      return (
-        <TimingCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    case "interactionOverview":
-      return (
-        <InteractionOverviewCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          onSelectedEdgeChange={onSelectedEdgeChange}
-        />
-      );
-    default:
-      return assertNever(kind);
-  }
-}

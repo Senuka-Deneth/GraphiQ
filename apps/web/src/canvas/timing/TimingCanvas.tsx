@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { MarkerDefs } from "../class/MarkerDefs.js";
 import { SvgSquareGrid, SvgZoomViewport } from "../SvgZoomViewport.js";
+import { useCanvasMode } from "../canvasMode.js";
 import { DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
 import { useDocumentStore, type StencilDropKind } from "../../store/documentStore.js";
 import { DeleteIcon } from "../../chrome/icons.js";
@@ -19,6 +20,7 @@ export function TimingCanvas({
   onSelectedNodeChange?: (nodeId: string | null) => void;
   onSelectedEdgeChange?: (edgeId: string | null) => void;
 }) {
+  const isPreview = useCanvasMode() === "preview";
   const model = useDocumentStore((state) => state.document.model);
   const overlay = useDocumentStore((state) => state.document.overlay);
   const diagnostics = useDocumentStore((state) => state.diagnostics);
@@ -222,14 +224,15 @@ export function TimingCanvas({
 
   return (
     <div
-      className="relative h-full w-full bg-slate-50"
+      className={`relative h-full w-full ${isPreview ? "bg-transparent" : "bg-slate-50"}`}
       data-testid="timing-canvas"
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      tabIndex={0}
-      onKeyDown={onKeyDown}
+      data-canvas-mode={isPreview ? "preview" : "editor"}
+      onDragOver={isPreview ? undefined : onDragOver}
+      onDrop={isPreview ? undefined : onDrop}
+      tabIndex={isPreview ? undefined : 0}
+      onKeyDown={isPreview ? undefined : onKeyDown}
     >
-      {selectedLifelineId !== null || selectedMessageId !== null ? (
+      {!isPreview && (selectedLifelineId !== null || selectedMessageId !== null) ? (
         <button
           type="button"
           className="graphiq-island-controls graphiq-icon-button absolute left-3 top-3 z-20"
@@ -252,29 +255,38 @@ export function TimingCanvas({
           <DeleteIcon />
         </button>
       ) : null}
-      <SvgZoomViewport width={renderable.width} height={renderable.height}>
+      <SvgZoomViewport width={renderable.width} height={renderable.height} chrome={!isPreview}>
       <MarkerDefs />
       <svg
         ref={svgRef}
         className="min-h-full min-w-full"
         width={renderable.width}
         height={renderable.height}
-        onPointerMove={onCanvasPointerMove}
-        onPointerUp={onCanvasPointerUp}
-        onPointerLeave={onCanvasPointerUp}
-        onDoubleClick={(event) => {
-          void onPaneDoubleClick(event);
-        }}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            setSelectedLifelineId(null);
-            setSelectedMessageId(null);
-            onSelectedNodeChange?.(null);
-            onSelectedEdgeChange?.(null);
-          }
-        }}
+        style={isPreview ? { pointerEvents: "none" } : undefined}
+        onPointerMove={isPreview ? undefined : onCanvasPointerMove}
+        onPointerUp={isPreview ? undefined : onCanvasPointerUp}
+        onPointerLeave={isPreview ? undefined : onCanvasPointerUp}
+        onDoubleClick={
+          isPreview
+            ? undefined
+            : (event) => {
+                void onPaneDoubleClick(event);
+              }
+        }
+        onClick={
+          isPreview
+            ? undefined
+            : (event) => {
+                if (event.target === event.currentTarget) {
+                  setSelectedLifelineId(null);
+                  setSelectedMessageId(null);
+                  onSelectedNodeChange?.(null);
+                  onSelectedEdgeChange?.(null);
+                }
+              }
+        }
       >
-        <SvgSquareGrid width={renderable.width} height={renderable.height} />
+        {isPreview ? null : <SvgSquareGrid width={renderable.width} height={renderable.height} />}
         <line
           x1={160}
           y1={renderable.axisY}
