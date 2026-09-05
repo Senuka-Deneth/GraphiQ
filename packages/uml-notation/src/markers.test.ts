@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMarker, MARKER_IDS, SVG_MARKERS } from "./markers.js";
+import { getMarker, MARKER_IDS, SVG_MARKERS, UML_MARKER_SIZE } from "./markers.js";
 import type { MarkerId } from "./types.js";
 
 const EXPECTED_MARKER_IDS: readonly MarkerId[] = [
@@ -15,14 +15,17 @@ const EXPECTED_MARKER_IDS: readonly MarkerId[] = [
   "msg-reply-open",
 ];
 
-const HOLLOW_MARKER_IDS: readonly MarkerId[] = [
-  "gen-hollow-triangle",
-  "realize-hollow-triangle",
+const OPEN_MARKER_IDS: readonly MarkerId[] = [
   "assoc-open",
-  "agg-hollow-diamond",
   "dep-open",
   "msg-async-open",
   "msg-reply-open",
+];
+
+const HOLLOW_CLOSED_MARKER_IDS: readonly MarkerId[] = [
+  "gen-hollow-triangle",
+  "realize-hollow-triangle",
+  "agg-hollow-diamond",
 ];
 
 const FILLED_MARKER_IDS: readonly MarkerId[] = [
@@ -44,12 +47,17 @@ describe("MARKER_IDS", () => {
       expect(marker.id).toBe(id);
       expect(marker.orient).toBe("auto");
       expect(marker.stroke).toBe("currentColor");
+      expect(marker.markerUnits).toBe("userSpaceOnUse");
     }
   });
 
   it("uses hollow fill for open markers and filled fill for closed markers", () => {
-    for (const id of HOLLOW_MARKER_IDS) {
+    for (const id of OPEN_MARKER_IDS) {
       expect(getMarker(id).fill).toBe("none");
+    }
+
+    for (const id of HOLLOW_CLOSED_MARKER_IDS) {
+      expect(getMarker(id).fill).toBe("canvas");
     }
 
     for (const id of FILLED_MARKER_IDS) {
@@ -63,10 +71,11 @@ describe("MARKER_IDS", () => {
     }
   });
 
-  it("sizes markers to one grid cell at zoom 1", () => {
+  it("sizes markers in user space so stroke width cannot inflate them", () => {
     for (const id of MARKER_IDS) {
-      expect(getMarker(id).markerWidth).toBe(16);
-      expect(getMarker(id).markerHeight).toBe(16);
+      expect(getMarker(id).markerWidth).toBe(UML_MARKER_SIZE);
+      expect(getMarker(id).markerHeight).toBe(UML_MARKER_SIZE);
+      expect(UML_MARKER_SIZE).toBe(10);
     }
   });
 });

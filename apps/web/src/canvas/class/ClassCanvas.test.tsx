@@ -14,7 +14,7 @@ describe("ClassCanvas", () => {
     expect(generalization).not.toBeNull();
     expect(composition).not.toBeNull();
     expect(generalization?.querySelector("path")?.getAttribute("stroke")).toBe("#0f172a");
-    expect(generalization?.querySelector("path")?.getAttribute("fill")).toBe("none");
+    expect(generalization?.querySelector("path")?.getAttribute("fill")).toBe("#ffffff");
     expect(composition?.querySelector("path")?.getAttribute("fill")).toBe("#0f172a");
     expect(composition?.querySelector("path")?.getAttribute("stroke")).not.toBe("currentColor");
   });

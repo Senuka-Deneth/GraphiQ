@@ -7,13 +7,12 @@ import { ChromePanel } from "./ChromePanel.js";
 import { DiagnosticsList } from "./DiagnosticsList.js";
 import { DslEditor } from "./DslEditor.js";
 import { EdgeStyleToolbar } from "./EdgeStyleToolbar.js";
-import { downloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
+import { confirmAndDownloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
 import type { ExportEntryState } from "../export/exportSettings.js";
 import { KindCanvas } from "../canvas/KindCanvas.js";
 import {
   DiagnosticsIcon,
   DslIcon,
-  ExportIcon,
 } from "./icons.js";
 import { Stencil } from "./Stencil.js";
 
@@ -148,8 +147,21 @@ export function EditorShell({
         }
         title={title}
         onTitleChange={setTitle}
-        onDownloadGuide={() => downloadDslGuide()}
+        onDownloadGuide={() => {
+          confirmAndDownloadDslGuide();
+        }}
         onImportClick={handleImportDslClick}
+        onOpenExport={
+          onOpenExport === undefined
+            ? undefined
+            : () => {
+                const box = canvasPanelRef.current?.getBoundingClientRect();
+                onOpenExport({
+                  panelWidth: Math.max(1, box?.width ?? 800),
+                  panelHeight: Math.max(1, box?.height ?? 600),
+                });
+              }
+        }
       />
       <input
         ref={importInputRef}
@@ -232,26 +244,6 @@ export function EditorShell({
           </ChromePanel>
 
           <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} />
-
-          {onOpenExport !== undefined ? (
-          <div className="graphiq-island-controls absolute bottom-3 right-3 z-30">
-            <button
-              type="button"
-              className="graphiq-icon-button"
-              data-testid="open-export"
-              aria-label="Export diagram"
-              onClick={() => {
-                const box = canvasPanelRef.current?.getBoundingClientRect();
-                onOpenExport({
-                  panelWidth: Math.max(1, box?.width ?? 800),
-                  panelHeight: Math.max(1, box?.height ?? 600),
-                });
-              }}
-            >
-              <ExportIcon />
-            </button>
-          </div>
-          ) : null}
         </div>
     </div>
   );

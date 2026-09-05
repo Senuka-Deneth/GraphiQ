@@ -6,38 +6,56 @@ type MarkerDefsProps = {
   extraColors?: readonly string[];
 };
 
-export function MarkerDefs({ extraColors = [] }: MarkerDefsProps) {
+function MarkerNodes({ extraColors = [] }: MarkerDefsProps) {
   const colors = [DEFAULT_EDGE_COLOR, ...extraColors];
 
   return (
-    <svg aria-hidden="true" className="pointer-events-none absolute h-0 w-0 overflow-hidden">
+    <>
+      {colors.flatMap((color) =>
+        MARKER_IDS.map((id) => {
+          const marker = SVG_MARKERS[id];
+          const domId = markerDomId(id, color);
+          return (
+            <marker
+              key={domId}
+              id={domId}
+              viewBox={marker.viewBox}
+              markerWidth={marker.markerWidth}
+              markerHeight={marker.markerHeight}
+              refX={marker.refX}
+              refY={marker.refY}
+              orient={marker.orient}
+              markerUnits={marker.markerUnits}
+              overflow="visible"
+            >
+              <path
+                d={marker.pathD}
+                fill={resolveMarkerFill(marker.fill, color)}
+                stroke={resolveMarkerStroke(marker.stroke, color)}
+                strokeWidth={1}
+                strokeLinejoin="miter"
+              />
+            </marker>
+          );
+        }),
+      )}
+    </>
+  );
+}
+
+export function MarkerDefs({ extraColors = [] }: MarkerDefsProps) {
+  return (
+    <defs data-uml-marker-host="true">
+      <MarkerNodes extraColors={extraColors} />
+    </defs>
+  );
+}
+
+export function FlowMarkerDefs({ extraColors = [] }: MarkerDefsProps) {
+  return (
+    <svg className="react-flow__marker" aria-hidden="true" data-uml-marker-host="true">
       <defs>
-        {colors.flatMap((color) =>
-          MARKER_IDS.map((id) => {
-            const marker = SVG_MARKERS[id];
-            const domId = markerDomId(id, color);
-            return (
-              <marker
-                key={domId}
-                id={domId}
-                viewBox={marker.viewBox}
-                markerWidth={marker.markerWidth}
-                markerHeight={marker.markerHeight}
-                refX={marker.refX}
-                refY={marker.refY}
-                orient={marker.orient}
-                markerUnits="strokeWidth"
-              >
-                <path
-                  d={marker.pathD}
-                  fill={resolveMarkerFill(marker.fill, color)}
-                  stroke={resolveMarkerStroke(marker.stroke, color)}
-                  strokeWidth={1}
-                />
-              </marker>
-            );
-          }),
-        )}
+        <MarkerNodes extraColors={extraColors} />
       </defs>
     </svg>
   );

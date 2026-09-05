@@ -22,6 +22,7 @@ import type {
 import { ConnectorToolIcon, StencilShapeIcon } from "./stencilIcons.js";
 import {
   DownloadIcon,
+  ExportIcon,
   ImportIcon,
   SidebarToggleIcon,
 } from "./icons.js";
@@ -215,6 +216,7 @@ type StencilProps = {
   onTitleChange: (title: string) => void;
   onDownloadGuide: () => void;
   onImportClick: () => void;
+  onOpenExport?: () => void;
 };
 
 const MIN_SIDEBAR_WIDTH = 216;
@@ -239,6 +241,7 @@ export function Stencil({
   onTitleChange,
   onDownloadGuide,
   onImportClick,
+  onOpenExport,
 }: StencilProps) {
   const items = stencilItemsForKind(kind);
   const tools = relationshipToolsForKind(kind);
@@ -396,16 +399,17 @@ export function Stencil({
           </div>
         ) : null}
         <div
-          className="flex shrink-0 items-center justify-between gap-1 px-3 py-3"
+          className="grid shrink-0 grid-cols-3 gap-1 px-3 py-3"
           style={{ borderTop: "1px solid var(--graphiq-hairline)" }}
         >
           <button
             type="button"
             className="graphiq-icon-tile"
-            data-testid="download-dsl-guide"
-            aria-label="Download DSL guide"
-            title="DSL guide"
-            onClick={onDownloadGuide}
+            data-testid="open-export"
+            aria-label="Export diagram"
+            title="Export"
+            disabled={onOpenExport === undefined}
+            onClick={onOpenExport}
           >
             <DownloadIcon />
           </button>
@@ -418,6 +422,16 @@ export function Stencil({
             onClick={onImportClick}
           >
             <ImportIcon />
+          </button>
+          <button
+            type="button"
+            className="graphiq-icon-tile"
+            data-testid="download-dsl-guide"
+            aria-label="Download DSL guide"
+            title="DSL guide"
+            onClick={onDownloadGuide}
+          >
+            <ExportIcon />
           </button>
         </div>
         {open ? (

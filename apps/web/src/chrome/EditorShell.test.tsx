@@ -61,10 +61,18 @@ describe("EditorShell", () => {
     expect(screen.queryAllByLabelText("Show stencil")).toHaveLength(0);
   });
 
-  it("puts a single export control on the canvas and not in the sidebar", () => {
+  it("puts export, import, and DSL guide controls together in the sidebar", () => {
     render(<EditorShell onOpenExport={() => undefined} />);
 
-    expect(screen.getByTestId("open-export")).toBeInTheDocument();
+    const sidebar = screen.getByTestId("stencil");
+    expect(sidebar).toContainElement(screen.getByTestId("open-export"));
+    expect(sidebar).toContainElement(screen.getByTestId("import-dsl"));
+    expect(sidebar).toContainElement(screen.getByTestId("download-dsl-guide"));
+    expect(screen.getByTestId("open-export")).toHaveAttribute("aria-label", "Export diagram");
+    expect(screen.getByTestId("download-dsl-guide")).toHaveAttribute(
+      "aria-label",
+      "Download DSL guide",
+    );
     expect(screen.queryByTestId("export-svg")).not.toBeInTheDocument();
     expect(screen.queryByTestId("export-png")).not.toBeInTheDocument();
   });

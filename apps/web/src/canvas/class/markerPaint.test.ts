@@ -20,8 +20,9 @@ describe("markerPaint", () => {
     expect(markerDomId("gen-hollow-triangle", "#ff00aa")).toBe("gen-hollow-triangle__ff00aa");
   });
 
-  it("paints currentColor as the edge color and leaves hollow fills empty", () => {
+  it("paints currentColor as the edge color and fills hollow closed markers with white", () => {
     expect(resolveMarkerFill("none", DEFAULT_EDGE_COLOR)).toBe("none");
+    expect(resolveMarkerFill("canvas", DEFAULT_EDGE_COLOR)).toBe("#ffffff");
     expect(resolveMarkerFill("currentColor", DEFAULT_EDGE_COLOR)).toBe(DEFAULT_EDGE_COLOR);
     expect(resolveMarkerStroke("currentColor", DEFAULT_EDGE_COLOR)).toBe(DEFAULT_EDGE_COLOR);
   });

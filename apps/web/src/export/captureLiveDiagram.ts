@@ -45,6 +45,85 @@ export function exportDomFilter(node: Node): boolean {
   return !isExportChrome(node);
 }
 
+const MARKER_URL_ID = /url\(\s*#([^)]+?)\s*\)/;
+
+function markerIdsFromRef(value: string | null): string[] {
+  if (value === null || value.length === 0) {
+    return [];
+  }
+  const match = MARKER_URL_ID.exec(value);
+  return match?.[1] === undefined ? [] : [match[1]];
+}
+
+export function inlineSvgMarkers(root: HTMLElement): () => void {
+  const restorers: Array<() => void> = [];
+  const sourceMarkers = new Map<string, SVGMarkerElement>();
+  for (const marker of root.querySelectorAll("marker")) {
+    if (marker.id.length > 0 && !sourceMarkers.has(marker.id)) {
+      sourceMarkers.set(marker.id, marker);
+    }
+  }
+  if (sourceMarkers.size === 0) {
+    return () => undefined;
+  }
+
+  const svgNs = "http://www.w3.org/2000/svg";
+  for (const svg of root.querySelectorAll("svg")) {
+    const refs = new Set<string>();
+    for (const element of svg.querySelectorAll("[marker-end], [marker-start]")) {
+      for (const id of markerIdsFromRef(element.getAttribute("marker-end"))) {
+        refs.add(id);
+      }
+      for (const id of markerIdsFromRef(element.getAttribute("marker-start"))) {
+        refs.add(id);
+      }
+    }
+    if (refs.size === 0) {
+      continue;
+    }
+    const existing = new Set([...svg.querySelectorAll("marker")].map((item) => item.id));
+    const missing = [...refs].filter((id) => !existing.has(id) && sourceMarkers.has(id));
+    if (missing.length === 0) {
+      continue;
+    }
+    let defs = svg.querySelector(":scope > defs");
+    if (defs === null) {
+      defs = document.createElementNS(svgNs, "defs");
+      svg.insertBefore(defs, svg.firstChild);
+      const created = defs;
+      restorers.push(() => created.remove());
+    }
+    for (const id of missing) {
+      const original = sourceMarkers.get(id);
+      if (original === undefined) {
+        continue;
+      }
+      const clone = original.cloneNode(true);
+      if (!(clone instanceof Element)) {
+        continue;
+      }
+      defs.appendChild(clone);
+      restorers.push(() => clone.remove());
+    }
+  }
+
+  for (const marker of sourceMarkers.values()) {
+    const host = marker.closest("svg");
+    if (host?.querySelector("[marker-end], [marker-start]") !== null) {
+      continue;
+    }
+    const id = marker.id;
+    marker.removeAttribute("id");
+    restorers.push(() => marker.setAttribute("id", id));
+  }
+
+  return () => {
+    for (const restore of [...restorers].reverse()) {
+      restore();
+    }
+  };
+}
+
 export async function waitForExportPaint(): Promise<void> {
   if (typeof document !== "undefined" && document.fonts !== undefined) {
     await document.fonts.ready;
@@ -84,19 +163,24 @@ function captureOutputSize(options: CaptureLiveOptions): { width: number; height
 
 async function capturePngBlob(element: HTMLElement, options: CaptureLiveOptions): Promise<Blob> {
   const output = captureOutputSize(options);
-  const blob = await toBlob(element, {
-    width: output.width,
-    height: output.height,
-    pixelRatio: options.pixelRatio ?? EXPORT_PIXEL_RATIO,
-    backgroundColor: options.backgroundColor,
-    cacheBust: false,
-    filter: exportDomFilter,
-    style: captureStyle(options),
-  });
-  if (blob === null) {
-    throw new Error("PNG capture failed");
+  const restoreMarkers = inlineSvgMarkers(element);
+  try {
+    const blob = await toBlob(element, {
+      width: output.width,
+      height: output.height,
+      pixelRatio: options.pixelRatio ?? EXPORT_PIXEL_RATIO,
+      backgroundColor: options.backgroundColor,
+      cacheBust: false,
+      filter: exportDomFilter,
+      style: captureStyle(options),
+    });
+    if (blob === null) {
+      throw new Error("PNG capture failed");
+    }
+    return blob;
+  } finally {
+    restoreMarkers();
   }
-  return blob;
 }
 
 export async function captureElementPng(
@@ -111,15 +195,20 @@ export async function captureElementSvg(
   options: CaptureLiveOptions,
 ): Promise<string> {
   const output = captureOutputSize(options);
-  return toSvg(element, {
-    width: output.width,
-    height: output.height,
-    pixelRatio: 1,
-    backgroundColor: options.backgroundColor,
-    cacheBust: false,
-    filter: exportDomFilter,
-    style: captureStyle(options),
-  });
+  const restoreMarkers = inlineSvgMarkers(element);
+  try {
+    return await toSvg(element, {
+      width: output.width,
+      height: output.height,
+      pixelRatio: 1,
+      backgroundColor: options.backgroundColor,
+      cacheBust: false,
+      filter: exportDomFilter,
+      style: captureStyle(options),
+    });
+  } finally {
+    restoreMarkers();
+  }
 }
 
 export async function captureLiveDiagram(

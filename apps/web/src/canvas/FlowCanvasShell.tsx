@@ -10,7 +10,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { MarkerDefs } from "./class/MarkerDefs.js";
+import { FlowMarkerDefs } from "./class/MarkerDefs.js";
 import { extraStrokeColors } from "./class/markerPaint.js";
 import { UmlEdge, umlEdgeTypeName, type UmlEdgeData } from "./class/UmlEdge.js";
 import { useCanvasMode, usePreviewViewport } from "./canvasMode.js";
@@ -45,6 +45,27 @@ function preserveSelected<T extends { id: string; selected?: boolean }>(
     ...item,
     selected: selectedIds.has(item.id),
   }));
+}
+
+function numericDataField(data: Node["data"], key: "width" | "height"): number | undefined {
+  if (typeof data !== "object" || data === null || !(key in data)) {
+    return undefined;
+  }
+  const value = data[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function withExplicitNodeSize(node: Node): Node {
+  const width = numericDataField(node.data, "width") ?? node.width;
+  const height = numericDataField(node.data, "height") ?? node.height;
+  if (width === undefined && height === undefined) {
+    return node;
+  }
+  return {
+    ...node,
+    ...(width !== undefined ? { width } : {}),
+    ...(height !== undefined ? { height } : {}),
+  };
 }
 
 function applyNodeDimensionData(nodes: Node[], changes: NodeChange[]): Node[] {
@@ -132,7 +153,7 @@ export function FlowCanvasShell({
     () => (isPreview ? nodeTypes : wrapNodeTypes(nodeTypes)),
     [isPreview, nodeTypes],
   );
-  const [nodes, setNodes] = useState<Node[]>(modelNodes);
+  const [nodes, setNodes] = useState<Node[]>(() => modelNodes.map(withExplicitNodeSize));
   const [edges, setEdges] = useState<Edge[]>(modelEdges);
   const interactingRef = useRef(false);
 
@@ -140,7 +161,7 @@ export function FlowCanvasShell({
     if (interactingRef.current) {
       return;
     }
-    setNodes((previous) => preserveSelected(modelNodes, previous));
+    setNodes((previous) => preserveSelected(modelNodes.map(withExplicitNodeSize), previous));
   }, [modelNodes]);
 
   useLayoutEffect(() => {
@@ -226,7 +247,7 @@ export function FlowCanvasShell({
         maxZoom={FLOW_CANVAS_DEFAULTS.maxZoom}
         proOptions={FLOW_CANVAS_DEFAULTS.proOptions}
       >
-        <MarkerDefs extraColors={extraColors} />
+        <FlowMarkerDefs extraColors={extraColors} />
         {isPreview ? null : <ConnectionInProgressFlag />}
         {isPreview ? null : <GraphiqFlowBackground />}
         {isPreview ? null : <CanvasControls />}

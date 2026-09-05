@@ -1,4 +1,7 @@
+import type { SvgMarkerDef } from "@graphiq/uml-notation";
 import { DEFAULT_EDGE_COLOR } from "../canvasDefaults.js";
+
+export const CANVAS_MARKER_FILL = "#ffffff";
 
 export function markerDomId(markerId: string, color: string): string {
   if (color === DEFAULT_EDGE_COLOR) {
@@ -18,10 +21,12 @@ export function paintedMarkerUrl(markerId: string | null, color: string): string
   return `url(#${markerDomId(markerId, color)})`;
 }
 
-export function resolveMarkerFill(fill: "none" | "currentColor", color: string): string {
+export function resolveMarkerFill(fill: SvgMarkerDef["fill"], color: string): string {
   switch (fill) {
     case "none":
       return "none";
+    case "canvas":
+      return CANVAS_MARKER_FILL;
     case "currentColor":
       return color;
     default: {

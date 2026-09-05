@@ -225,22 +225,16 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
               data-sheet-width={String(visibleSheet.width)}
               data-sheet-height={String(visibleSheet.height)}
             >
-              <div
-                style={{
-                  width: visibleSheet.width,
-                  height: visibleSheet.height,
-                  transform: `scale(${displayScale})`,
-                  transformOrigin: "top left",
+              <ExportPreviewFrame
+                document={document}
+                sourceRect={visibleSource}
+                sheetSize={{
+                  width: visibleSheet.width * displayScale,
+                  height: visibleSheet.height * displayScale,
                 }}
-              >
-                <ExportPreviewFrame
-                  document={document}
-                  sourceRect={visibleSource}
-                  sheetSize={visibleSheet}
-                  includePageFill={settings.includePageFill}
-                  captureRef={captureRef}
-                />
-              </div>
+                includePageFill={settings.includePageFill}
+                captureRef={captureRef}
+              />
               {editingCustomCrop ? (
                 <ExportCropOverlay
                   bounds={previewRect}

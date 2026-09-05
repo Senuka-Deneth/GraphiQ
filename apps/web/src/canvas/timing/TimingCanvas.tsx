@@ -256,7 +256,6 @@ export function TimingCanvas({
         </button>
       ) : null}
       <SvgZoomViewport width={renderable.width} height={renderable.height} chrome={!isPreview}>
-      <MarkerDefs />
       <svg
         ref={svgRef}
         className="min-h-full min-w-full"
@@ -286,6 +285,7 @@ export function TimingCanvas({
               }
         }
       >
+        <MarkerDefs />
         {isPreview ? null : <SvgSquareGrid width={renderable.width} height={renderable.height} />}
         <line
           x1={160}

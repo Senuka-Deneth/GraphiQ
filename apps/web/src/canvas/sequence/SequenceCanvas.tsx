@@ -256,7 +256,6 @@ export function SequenceCanvas({
         </button>
       ) : null}
       <SvgZoomViewport width={renderable.width} height={renderable.height} chrome={!isPreview}>
-      <MarkerDefs />
       <svg
         ref={svgRef}
         className="min-h-full min-w-full"
@@ -286,6 +285,7 @@ export function SequenceCanvas({
               }
         }
       >
+        <MarkerDefs />
         {isPreview ? null : <SvgSquareGrid width={renderable.width} height={renderable.height} />}
         {renderable.combinedFragments.map((fragment) => (
           <g key={fragment.id} data-testid="combined-fragment">

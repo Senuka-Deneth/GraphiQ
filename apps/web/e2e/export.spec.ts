@@ -73,6 +73,13 @@ async function openExportPreview(page: Page): Promise<void> {
   await expect(page.locator('[data-testid="export-capture-root"] .react-flow__node')).toHaveCount(2, {
     timeout: 10_000,
   });
+  await expect(page.locator('[data-testid="export-capture-root"] .react-flow__edge-path')).toHaveCount(
+    1,
+    { timeout: 10_000 },
+  );
+  await expect(
+    page.locator('[data-testid="export-capture-root"] .react-flow__edge-path').first(),
+  ).toHaveAttribute("marker-end", /gen-hollow-triangle/);
 }
 
 test("export page downloads live PNG SVG and PDF", async ({ page }) => {

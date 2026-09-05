@@ -317,7 +317,7 @@ body {
 }
 
 .graphiq-flow-canvas[data-canvas-mode="preview"] .react-flow__handle {
-  display: none !important;
+  pointer-events: none !important;
 }
 
 .graphiq-flow-canvas .react-flow__handle {

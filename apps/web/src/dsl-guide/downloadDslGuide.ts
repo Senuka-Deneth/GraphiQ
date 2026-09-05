@@ -11,3 +11,14 @@ export function getDslGuideText(): string {
 export function downloadDslGuide(): void {
   downloadText(guideText, GUIDE_FILENAME, GUIDE_MIME);
 }
+
+export const DSL_GUIDE_CONFIRM_MESSAGE =
+  "Download the GraphiQ DSL guide as graphiq-dsl-guide.md?";
+
+export function confirmAndDownloadDslGuide(): boolean {
+  if (!window.confirm(DSL_GUIDE_CONFIRM_MESSAGE)) {
+    return false;
+  }
+  downloadDslGuide();
+  return true;
+}

@@ -26,6 +26,9 @@ test("download DSL guide saves graphiq-dsl-guide.md with all kind headers", asyn
   await waitForPersistReady(page);
 
   const download = page.waitForEvent("download");
+  page.once("dialog", (dialog) => {
+    void dialog.accept();
+  });
   await page.locator('[data-testid="download-dsl-guide"]').click();
   const file = await download;
   expect(file.suggestedFilename()).toBe("graphiq-dsl-guide.md");
