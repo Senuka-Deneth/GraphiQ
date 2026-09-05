@@ -20,6 +20,7 @@ import {
 } from "../store/documentStore.js";
 import { DiagnosticsList } from "./DiagnosticsList.js";
 import { DslEditor } from "./DslEditor.js";
+import { exportDocumentPng, exportDocumentSvg } from "../export/exportDocument.js";
 import { RelationshipToolbar } from "./RelationshipToolbar.js";
 import { Stencil } from "./Stencil.js";
 
@@ -102,6 +103,24 @@ export function EditorShell() {
         >
           {kind}
         </span>
+        <button
+          type="button"
+          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          data-testid="export-svg"
+          onClick={() => exportDocumentSvg(useDocumentStore.getState().document)}
+        >
+          Export SVG
+        </button>
+        <button
+          type="button"
+          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          data-testid="export-png"
+          onClick={() => {
+            void exportDocumentPng(useDocumentStore.getState().document);
+          }}
+        >
+          Export PNG
+        </button>
       </header>
 
       <div className="flex min-h-0 flex-1">
