@@ -15,6 +15,7 @@ import type {
   DslSpan,
   TimingDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   AtSign,
   Colon,
@@ -320,13 +321,16 @@ export function parseTimingCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
-  const { tokens, errors: lexerErrors } = timingLexer.tokenize(text);
-  parser.input = tokens;
+  const lexResult = timingLexer.tokenize(text);
+  const { errors: lexerErrors } = lexResult;
+  parser.input = lexResult.tokens;
   const cst = parser.document();
   return {
     cst,
     lexerErrors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

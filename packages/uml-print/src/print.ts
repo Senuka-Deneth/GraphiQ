@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import type { DiagramKind } from "@graphiq/uml-core";
 import type { UmlModel } from "@graphiq/uml-model";
 import { printClass } from "./printClass.js";
+import type { PrintSource } from "./printClassPreserving.js";
 import { printComponent } from "./printComponent.js";
 import { printDeployment } from "./printDeployment.js";
 import { printObject } from "./printObject.js";
@@ -16,15 +17,17 @@ import { printSequence } from "./printSequence.js";
 import { printTiming } from "./printTiming.js";
 import { printInteractionOverview } from "./printInteractionOverview.js";
 
+export type { PrintSource } from "./printClassPreserving.js";
+
 export type PrintOptions = {
-  cst?: unknown;
+  source?: PrintSource;
   name?: string;
 };
 
 export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions): string {
   switch (kind) {
     case "class":
-      return printClass(model, { name: options?.name });
+      return printClass(model, { name: options?.name, source: options?.source });
     case "object":
       return printObject(model, { name: options?.name });
     case "package":

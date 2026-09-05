@@ -8,6 +8,7 @@ import type {
   DslSpan,
   UseCaseDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   ActorKeyword,
   AngleStereotype,
@@ -317,6 +318,7 @@ export function parseUseCaseCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = useCaseLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -326,5 +328,6 @@ export function parseUseCaseCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

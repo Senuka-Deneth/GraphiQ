@@ -7,6 +7,7 @@ import type {
   DeploymentDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   AngleStereotype,
   ArtifactKeyword,
@@ -294,6 +295,7 @@ export function parseDeploymentCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = deploymentLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -303,5 +305,6 @@ export function parseDeploymentCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

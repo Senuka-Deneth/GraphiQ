@@ -15,6 +15,7 @@ import type {
   DslSpan,
   SequenceDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   AltKeyword,
   AsyncArrow,
@@ -272,13 +273,16 @@ export function parseSequenceCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
-  const { tokens, errors: lexerErrors } = sequenceLexer.tokenize(text);
-  parser.input = tokens;
+  const lexResult = sequenceLexer.tokenize(text);
+  const { errors: lexerErrors } = lexResult;
+  parser.input = lexResult.tokens;
   const cst = parser.document();
   return {
     cst,
     lexerErrors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

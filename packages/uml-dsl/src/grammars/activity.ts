@@ -15,6 +15,7 @@ import type {
   AstActivityPartition,
   DslSpan,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   ActionKeyword,
   ActivityKeyword,
@@ -528,6 +529,7 @@ export function parseActivityCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = activityLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -537,5 +539,6 @@ export function parseActivityCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

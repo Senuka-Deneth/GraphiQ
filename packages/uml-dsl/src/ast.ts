@@ -5,6 +5,12 @@ export type DslSpan = {
   end: number;
 };
 
+export type DslComment = {
+  kind: "line" | "block";
+  image: string;
+  span: DslSpan;
+};
+
 export type AstAttribute = {
   visibility: Visibility;
   name: string;
@@ -30,6 +36,7 @@ export type AstOperation = {
 export type AstClassClassifier = {
   classifierKind: "class";
   name: string;
+  nameSpan: DslSpan;
   isAbstract: boolean;
   attributes: AstAttribute[];
   operations: AstOperation[];
@@ -39,6 +46,7 @@ export type AstClassClassifier = {
 export type AstInterfaceClassifier = {
   classifierKind: "interface";
   name: string;
+  nameSpan: DslSpan;
   attributes: AstAttribute[];
   operations: AstOperation[];
   span: DslSpan;
@@ -47,6 +55,7 @@ export type AstInterfaceClassifier = {
 export type AstEnumerationClassifier = {
   classifierKind: "enumeration";
   name: string;
+  nameSpan: DslSpan;
   literals: string[];
   span: DslSpan;
 };
@@ -58,7 +67,9 @@ export type AstClassifier =
 
 export type AstRelationship = {
   sourceName: string;
+  sourceNameSpan: DslSpan;
   targetName: string;
+  targetNameSpan: DslSpan;
   relationshipType: RelationshipType;
   sourceMultiplicity?: string;
   targetMultiplicity?: string;

@@ -13,7 +13,7 @@ import {
 } from "@graphiq/uml-model";
 import type { MessageSort, RelationshipType } from "@graphiq/uml-model";
 import { parse } from "@graphiq/uml-dsl";
-import { astToModel, print, synthesizeSequenceExecutionSpecs } from "@graphiq/uml-print";
+import { astToModel, print, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
@@ -204,6 +204,7 @@ type DocumentStoreState = {
   diagnostics: Diagnostic[];
   lastGoodModel: UmlModel;
   lastGoodOverlay: NotationOverlay;
+  lastParseSource: PrintSource | null;
   dslRevision: number;
   parseTimer: ReturnType<typeof setTimeout> | null;
   dslEditorFocused: boolean;
@@ -458,13 +459,32 @@ function findStateMachineContainerAtPoint(
   return { parentId: match.parentId, x: match.x, y: match.y };
 }
 
-function printDocumentDsl(document: GraphiqDocument, model: UmlModel): string {
+function printDocumentDsl(
+  document: GraphiqDocument,
+  model: UmlModel,
+  source: PrintSource | null,
+): string {
   const defaultTitle = DEFAULT_TITLE_BY_KIND[document.kind];
   const title =
     document.title.trim().length > 0 && document.title !== defaultTitle
       ? document.title
       : undefined;
-  return print(document.kind, model, { name: title });
+  return print(document.kind, model, { name: title, source: source ?? undefined });
+}
+
+function refreshParseSource(
+  kind: ImplementedDiagramKind,
+  dsl: string,
+): PrintSource | null {
+  const parseResult = parse(kind, dsl);
+  if (!parseResult.ok) {
+    return null;
+  }
+  return {
+    text: dsl,
+    ast: parseResult.value.ast,
+    comments: parseResult.value.comments,
+  };
 }
 
 function canApplyStructuralCommand(state: DocumentStoreState): boolean {
@@ -477,7 +497,7 @@ async function commitStructuralModelChange(
   nextModel: UmlModel,
   overlayPatch?: (overlay: NotationOverlay, model: UmlModel) => NotationOverlay,
 ): Promise<boolean> {
-  const { document, lastGoodOverlay } = get();
+  const { document, lastGoodOverlay, lastParseSource } = get();
   const modelForValidation =
     document.kind === "sequence"
       ? synthesizeSequenceExecutionSpecs(nextModel, get().lastGoodModel)
@@ -495,7 +515,8 @@ async function commitStructuralModelChange(
       ? "first-open-empty-overlay"
       : "topology-changed";
   const overlay = await layoutDocument(document.kind, modelForValidation, overlayBase, reason);
-  const dsl = printDocumentDsl(document, modelForValidation);
+  const dsl = printDocumentDsl(document, modelForValidation, lastParseSource);
+  const nextParseSource = refreshParseSource(document.kind, dsl);
 
   set((state) => ({
     document: {
@@ -506,6 +527,7 @@ async function commitStructuralModelChange(
     },
     lastGoodModel: modelForValidation,
     lastGoodOverlay: overlay,
+    lastParseSource: nextParseSource,
     diagnostics,
     dslRevision: state.dslRevision + 1,
   }));
@@ -646,12 +668,14 @@ function defaultOverlayNode(
 
 export const useDocumentStore = create<DocumentStoreState>((set, get) => {
   const initialDocument = createInitialDocument();
+  const initialParseSource = refreshParseSource(initialDocument.kind, initialDocument.dsl);
 
   return {
     document: initialDocument,
     diagnostics: [],
     lastGoodModel: initialDocument.model,
     lastGoodOverlay: initialDocument.overlay,
+    lastParseSource: initialParseSource,
     dslRevision: 0,
     parseTimer: null,
     dslEditorFocused: false,
@@ -681,6 +705,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         diagnostics: [],
         lastGoodModel: document.model,
         lastGoodOverlay: document.overlay,
+        lastParseSource: refreshParseSource(kind, document.dsl),
         dslRevision: 0,
         parseTimer: null,
         relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[kind],
@@ -718,7 +743,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         return;
       }
 
-      const { ast, diagnostics: parseDiagnostics } = parseResult.value;
+      const { ast, diagnostics: parseDiagnostics, comments } = parseResult.value;
 
       if (hasFatalErrors(parseDiagnostics)) {
         set({
@@ -751,6 +776,11 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         },
         lastGoodModel: model,
         lastGoodOverlay: overlay,
+        lastParseSource: {
+          text: document.dsl,
+          ast,
+          comments,
+        },
         diagnostics,
         parseTimer: null,
       });
@@ -1586,6 +1616,7 @@ export function resetDocumentStoreForTests(): void {
     diagnostics: [],
     lastGoodModel: initialDocument.model,
     lastGoodOverlay: initialDocument.overlay,
+    lastParseSource: refreshParseSource(initialDocument.kind, initialDocument.dsl),
     dslRevision: 0,
     parseTimer: null,
     dslEditorFocused: false,

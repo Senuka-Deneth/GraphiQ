@@ -4,7 +4,7 @@ export { componentAstToModel } from "./componentAstToModel.js";
 export { deploymentAstToModel } from "./deploymentAstToModel.js";
 export { objectAstToModel } from "./objectAstToModel.js";
 export { print } from "./print.js";
-export type { PrintOptions } from "./print.js";
+export type { PrintOptions, PrintSource } from "./print.js";
 export { printClass } from "./printClass.js";
 export { printComponent, structuralComponentModel } from "./printComponent.js";
 export { printDeployment, structuralDeploymentModel } from "./printDeployment.js";

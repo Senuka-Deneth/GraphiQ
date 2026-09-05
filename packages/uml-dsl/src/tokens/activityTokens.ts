@@ -9,13 +9,13 @@ export const WhiteSpace = createToken({
 export const LineComment = createToken({
   name: "LineComment",
   pattern: /\/\/[^\n\r]*/,
-  group: Lexer.SKIPPED,
+  group: "comments",
 });
 
 export const BlockComment = createToken({
   name: "BlockComment",
   pattern: /\/\*[\s\S]*?\*\//,
-  group: Lexer.SKIPPED,
+  group: "comments",
 });
 
 export const FlowArrow = createToken({

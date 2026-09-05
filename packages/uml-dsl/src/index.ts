@@ -73,7 +73,15 @@ export type {
   AstInteractionOverviewNodeKind,
   AstInteractionOverviewFlow,
   DslSpan,
+  DslComment,
 } from "./ast.js";
+export { commentsFromLexerGroups } from "./comments.js";
+export { buildClassSourceMap } from "./classSourceMap.js";
+export type {
+  ClassSourceClassifierChunk,
+  ClassSourceMap,
+  ClassSourceRelationshipChunk,
+} from "./classSourceMap.js";
 export {
   KIND_MISMATCH_RULE_ID,
   PARSE_RULE_ID,

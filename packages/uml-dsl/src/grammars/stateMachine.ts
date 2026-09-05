@@ -15,6 +15,7 @@ import type {
   DslSpan,
   StateMachineDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   BracketedGuard,
   ChoiceKeyword,
@@ -464,6 +465,7 @@ export function parseStateMachineCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = stateMachineLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -473,5 +475,6 @@ export function parseStateMachineCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

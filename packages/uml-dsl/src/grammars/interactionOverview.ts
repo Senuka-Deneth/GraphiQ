@@ -12,6 +12,7 @@ import type {
   DslSpan,
   InteractionOverviewDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   Colon,
   DecisionKeyword,
@@ -352,6 +353,7 @@ export function parseInteractionOverviewCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = interactionOverviewLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -361,5 +363,6 @@ export function parseInteractionOverviewCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

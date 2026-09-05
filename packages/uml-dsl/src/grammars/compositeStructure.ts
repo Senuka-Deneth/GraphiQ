@@ -6,6 +6,7 @@ import type {
   CompositeStructureDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   ClassKeyword,
   Colon,
@@ -285,6 +286,7 @@ export function parseCompositeStructureCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = compositeStructureLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -294,5 +296,6 @@ export function parseCompositeStructureCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }
