@@ -9,6 +9,11 @@ import { packageAstToModel } from "./packageAstToModel.js";
 import { profileAstToModel } from "./profileAstToModel.js";
 import { compositeStructureAstToModel } from "./compositeStructureAstToModel.js";
 import { communicationAstToModel } from "./communicationAstToModel.js";
+import { activityAstToModel } from "./activityAstToModel.js";
+import { stateMachineAstToModel } from "./stateMachineAstToModel.js";
+import { sequenceAstToModel } from "./sequenceAstToModel.js";
+import { timingAstToModel } from "./timingAstToModel.js";
+import { interactionOverviewAstToModel } from "./interactionOverviewAstToModel.js";
 import { useCaseAstToModel } from "./useCaseAstToModel.js";
 
 export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
@@ -36,6 +41,22 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
       return communicationAstToModel(
         ast,
         previous?.kind === "communication" ? previous : undefined,
+      );
+    case "activity":
+      return activityAstToModel(ast, previous?.kind === "activity" ? previous : undefined);
+    case "stateMachine":
+      return stateMachineAstToModel(
+        ast,
+        previous?.kind === "stateMachine" ? previous : undefined,
+      );
+    case "sequence":
+      return sequenceAstToModel(ast, previous?.kind === "sequence" ? previous : undefined);
+    case "timing":
+      return timingAstToModel(ast, previous?.kind === "timing" ? previous : undefined);
+    case "interactionOverview":
+      return interactionOverviewAstToModel(
+        ast,
+        previous?.kind === "interactionOverview" ? previous : undefined,
       );
     default:
       return assertNever(ast);

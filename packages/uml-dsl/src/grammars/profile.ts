@@ -9,6 +9,7 @@ import type {
   DslSpan,
   ProfileDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   Colon,
   DiagramKeyword,
@@ -274,6 +275,7 @@ export function parseProfileCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = profileLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -283,5 +285,6 @@ export function parseProfileCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

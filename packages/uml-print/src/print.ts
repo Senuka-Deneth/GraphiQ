@@ -2,6 +2,7 @@ import { assertNever } from "@graphiq/uml-core";
 import type { DiagramKind } from "@graphiq/uml-core";
 import type { UmlModel } from "@graphiq/uml-model";
 import { printClass } from "./printClass.js";
+import type { PrintSource } from "./printClassPreserving.js";
 import { printComponent } from "./printComponent.js";
 import { printDeployment } from "./printDeployment.js";
 import { printObject } from "./printObject.js";
@@ -10,16 +11,23 @@ import { printProfile } from "./printProfile.js";
 import { printUseCase } from "./printUseCase.js";
 import { printCompositeStructure } from "./printCompositeStructure.js";
 import { printCommunication } from "./printCommunication.js";
+import { printActivity } from "./printActivity.js";
+import { printStateMachine } from "./printStateMachine.js";
+import { printSequence } from "./printSequence.js";
+import { printTiming } from "./printTiming.js";
+import { printInteractionOverview } from "./printInteractionOverview.js";
+
+export type { PrintSource } from "./printClassPreserving.js";
 
 export type PrintOptions = {
-  cst?: unknown;
+  source?: PrintSource;
   name?: string;
 };
 
 export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions): string {
   switch (kind) {
     case "class":
-      return printClass(model, { name: options?.name });
+      return printClass(model, { name: options?.name, source: options?.source });
     case "object":
       return printObject(model, { name: options?.name });
     case "package":
@@ -37,12 +45,15 @@ export function print(kind: DiagramKind, model: UmlModel, options?: PrintOptions
     case "communication":
       return printCommunication(model, { name: options?.name });
     case "activity":
+      return printActivity(model, { name: options?.name });
     case "stateMachine":
+      return printStateMachine(model, { name: options?.name });
     case "sequence":
-    case "communication":
+      return printSequence(model, { name: options?.name });
     case "timing":
+      return printTiming(model, { name: options?.name });
     case "interactionOverview":
-      throw new Error(`not implemented`);
+      return printInteractionOverview(model, { name: options?.name });
     default:
       return assertNever(kind);
   }

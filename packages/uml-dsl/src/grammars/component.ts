@@ -6,6 +6,7 @@ import type {
   ComponentDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   ArtifactKeyword,
   AssemblyArrow,
@@ -294,6 +295,7 @@ export function parseComponentCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = componentLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -303,5 +305,6 @@ export function parseComponentCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

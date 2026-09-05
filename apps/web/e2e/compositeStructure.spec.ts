@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { expectStencilItem, openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const carFixture = readFileSync(
@@ -13,13 +14,14 @@ test("composite structure document renders frame, parts, border port, and connec
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("compositeStructure");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText(
     "compositeStructure",
   );
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Part");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Port");
+  await expectStencilItem(page, "part", "Part");
+  await expectStencilItem(page, "port", "Port");
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
@@ -57,6 +59,7 @@ test("composite structure document renders frame, parts, border port, and connec
 
 test("composite structure toolbar omits generalization", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("compositeStructure");
   await expect(page.locator('[data-testid="relationship-toolbar"]')).not.toContainText(

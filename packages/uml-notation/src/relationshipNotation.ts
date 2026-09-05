@@ -94,8 +94,9 @@ export function getRelationshipNotation(
       return dashedLine(null, "dep-open", "«extend»");
     case "controlFlow":
     case "objectFlow":
+      return solidLine(null, "assoc-open");
     case "transition":
-      return solidLine();
+      return solidLine(null, "assoc-open");
     case "message":
       return getMessageNotation("synchCall");
     default:

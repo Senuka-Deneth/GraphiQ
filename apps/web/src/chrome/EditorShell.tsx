@@ -1,21 +1,19 @@
-import { assertNever } from "@graphiq/uml-core";
-import { useRef, useState, type ReactElement, type RefObject } from "react";
-import { ClassCanvas } from "../canvas/class/ClassCanvas.js";
-import { ComponentCanvas } from "../canvas/component/ComponentCanvas.js";
-import { DeploymentCanvas } from "../canvas/deployment/DeploymentCanvas.js";
-import { ObjectCanvas } from "../canvas/object/ObjectCanvas.js";
-import { PackageCanvas } from "../canvas/package/PackageCanvas.js";
-import { ProfileCanvas } from "../canvas/profile/ProfileCanvas.js";
-import { CommunicationCanvas } from "../canvas/communication/CommunicationCanvas.js";
-import { CompositeStructureCanvas } from "../canvas/compositeStructure/CompositeStructureCanvas.js";
-import { UseCaseCanvas } from "../canvas/useCase/UseCaseCanvas.js";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   useDocumentStore,
   type ImplementedDiagramKind,
 } from "../store/documentStore.js";
+import { ChromePanel } from "./ChromePanel.js";
 import { DiagnosticsList } from "./DiagnosticsList.js";
 import { DslEditor } from "./DslEditor.js";
-import { RelationshipToolbar } from "./RelationshipToolbar.js";
+import { EdgeStyleToolbar } from "./EdgeStyleToolbar.js";
+import { confirmAndDownloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
+import type { ExportEntryState } from "../export/exportSettings.js";
+import { KindCanvas } from "../canvas/KindCanvas.js";
+import {
+  DiagnosticsIcon,
+  DslIcon,
+} from "./icons.js";
 import { Stencil } from "./Stencil.js";
 
 const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
@@ -28,9 +26,18 @@ const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
   "useCase",
   "compositeStructure",
   "communication",
+  "activity",
+  "stateMachine",
+  "sequence",
+  "timing",
+  "interactionOverview",
 ];
 
-export function EditorShell() {
+export function EditorShell({
+  onOpenExport,
+}: {
+  onOpenExport?: (entry: ExportEntryState) => void;
+} = {}) {
   const title = useDocumentStore((state) => state.document.title);
   const kind = useDocumentStore((state) => state.document.kind);
   const dsl = useDocumentStore((state) => state.document.dsl);
@@ -43,9 +50,27 @@ export function EditorShell() {
   const setDslEditorFocused = useDocumentStore((state) => state.setDslEditorFocused);
   const setRelationshipTool = useDocumentStore((state) => state.setRelationshipTool);
   const createDocument = useDocumentStore((state) => state.createDocument);
+  const importDsl = useDocumentStore((state) => state.importDsl);
+  const documentId = useDocumentStore((state) => state.document.id);
+
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const canvasPanelRef = useRef<HTMLDivElement>(null);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [dslOpen, setDslOpen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const hadErrorRef = useRef(false);
   const editMemberTriggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const hasError = diagnostics.some((diagnostic) => diagnostic.severity === "error");
+    if (hasError && !hadErrorRef.current) {
+      setDiagnosticsOpen(true);
+    }
+    hadErrorRef.current = hasError;
+  }, [diagnostics]);
 
   const selectedClassElement =
     selectedNodeId === null
@@ -54,126 +79,173 @@ export function EditorShell() {
           (element) => element.id === selectedNodeId && element.elementType === "class",
         );
 
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 items-center gap-4 border-b border-slate-300 bg-white px-4 py-2">
-        <h1 className="text-lg font-semibold tracking-tight text-slate-900">GraphiQ</h1>
-        <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-600">
-          <span className="shrink-0">Title</span>
-          <input
-            type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-slate-900"
-            aria-label="Diagram title"
-          />
-        </label>
-        <label className="flex shrink-0 items-center gap-2 text-sm text-slate-600">
-          <span className="shrink-0">New</span>
-          <select
-            value={kind}
-            onChange={(event) =>
-              createDocument(event.target.value as ImplementedDiagramKind)
-            }
-            className="rounded border border-slate-300 px-2 py-1 text-slate-900"
-            aria-label="Create diagram kind"
-            data-testid="new-document-kind"
-          >
-            {IMPLEMENTED_KINDS.map((diagramKind) => (
-              <option key={diagramKind} value={diagramKind}>
-                {diagramKind}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span
-          className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
-          data-testid="document-kind-badge"
-        >
-          {kind}
-        </span>
-      </header>
+  const handleImportDslClick = () => {
+    importInputRef.current?.click();
+  };
 
-      <div className="flex min-h-0 flex-1">
-        <Stencil kind={kind} />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <RelationshipToolbar
-            diagramKind={kind}
-            selectedTool={relationshipTool}
-            onSelectTool={setRelationshipTool}
-            canEditMember={kind === "class" && selectedClassElement !== null}
-            onEditMember={
-              kind === "class" ? () => editMemberTriggerRef.current?.click() : undefined
-            }
-          />
-          <div className="min-h-0 flex-1" data-testid="canvas-panel">
+  const handleImportDslFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file === undefined) {
+      return;
+    }
+    const text = await file.text();
+    importDsl(text);
+  };
+
+  const errorCount = diagnostics.filter(
+    (diagnostic) => diagnostic.severity === "error",
+  ).length;
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Backspace" && event.key !== "Delete") {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("input, textarea, select, [contenteditable='true']")
+      ) {
+        return;
+      }
+      if (
+        target instanceof HTMLElement &&
+        target.closest(".react-flow, [data-testid='sequence-canvas'], [data-testid='timing-canvas']")
+      ) {
+        return;
+      }
+      if (selectedNodeId !== null) {
+        event.preventDefault();
+        void useDocumentStore.getState().deleteElements([selectedNodeId]);
+        setSelectedNodeId(null);
+        return;
+      }
+      if (selectedEdgeId !== null) {
+        event.preventDefault();
+        void useDocumentStore.getState().deleteRelationships([selectedEdgeId]);
+        setSelectedEdgeId(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedEdgeId, selectedNodeId]);
+
+  return (
+    <div className="relative flex h-full min-h-0">
+      <Stencil
+        kind={kind}
+        implementedKinds={IMPLEMENTED_KINDS}
+        relationshipTool={relationshipTool}
+        onSelectTool={setRelationshipTool}
+        onCreateDocument={createDocument}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((open) => !open)}
+        canEditMember={kind === "class" && selectedClassElement !== null}
+        onEditMember={
+          kind === "class" ? () => editMemberTriggerRef.current?.click() : undefined
+        }
+        title={title}
+        onTitleChange={setTitle}
+        onDownloadGuide={() => {
+          confirmAndDownloadDslGuide();
+        }}
+        onImportClick={handleImportDslClick}
+        onOpenExport={
+          onOpenExport === undefined
+            ? undefined
+            : () => {
+                const box = canvasPanelRef.current?.getBoundingClientRect();
+                onOpenExport({
+                  panelWidth: Math.max(1, box?.width ?? 800),
+                  panelHeight: Math.max(1, box?.height ?? 600),
+                });
+              }
+        }
+      />
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".md,.dsl,.txt,text/markdown,text/plain"
+        className="hidden"
+        data-testid="import-dsl-input"
+        onChange={(event) => {
+          void handleImportDslFile(event);
+        }}
+      />
+      <div className="relative min-h-0 min-w-0 flex-1">
+          <div ref={canvasPanelRef} className="h-full min-h-0" data-testid="canvas-panel">
             <KindCanvas
+              key={documentId}
               kind={kind}
               onSelectedNodeChange={setSelectedNodeId}
+              onSelectedEdgeChange={setSelectedEdgeId}
               editMemberTriggerRef={editMemberTriggerRef}
               selectedNodeId={selectedNodeId}
             />
           </div>
-        </div>
-        <div className="flex w-80 shrink-0 flex-col border-l border-slate-300">
-          <div className="border-b border-slate-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            DSL
-          </div>
-          <DslEditor
-            value={dsl}
-            revision={dslRevision}
-            diagnostics={diagnostics}
-            onChange={setDsl}
-            onFocus={() => setDslEditorFocused(true)}
-            onBlur={() => setDslEditorFocused(false)}
-          />
-        </div>
-      </div>
 
-      <DiagnosticsList diagnostics={diagnostics} />
+          {selectedEdgeId !== null ? (
+            <EdgeStyleToolbar relationshipId={selectedEdgeId} diagramKind={kind} />
+          ) : null}
+
+          <div className="graphiq-island-controls absolute right-3 top-3 z-30 flex flex-col">
+            <button
+              type="button"
+              className="graphiq-icon-button"
+              data-testid="dsl-panel-toggle"
+              aria-expanded={dslOpen}
+              aria-pressed={dslOpen}
+              aria-label={dslOpen ? "Hide DSL" : "Show DSL"}
+              onClick={() => setDslOpen((open) => !open)}
+            >
+              <DslIcon />
+            </button>
+            <div className="h-px bg-[var(--graphiq-hairline)]" />
+            <button
+              type="button"
+              className="graphiq-icon-button relative"
+              data-testid="diagnostics-toggle"
+              aria-expanded={diagnosticsOpen}
+              aria-pressed={diagnosticsOpen}
+              aria-label={
+                diagnosticsOpen
+                  ? "Hide diagnostics"
+                  : errorCount > 0
+                    ? `Show diagnostics, ${errorCount} errors`
+                    : "Show diagnostics"
+              }
+              onClick={() => setDiagnosticsOpen((open) => !open)}
+            >
+              <DiagnosticsIcon />
+              {errorCount > 0 ? (
+                <span
+                  className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[var(--graphiq-error)]"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </button>
+          </div>
+
+          <ChromePanel
+            open={dslOpen}
+            panelTestId="dsl-editor-panel"
+            title="DSL"
+            openClassName="bottom-3 right-[calc(var(--graphiq-inset)+38px)] top-3 w-90"
+          >
+            <DslEditor
+              value={dsl}
+              revision={dslRevision}
+              diagnostics={diagnostics}
+              onChange={setDsl}
+              onFocus={() => setDslEditorFocused(true)}
+              onBlur={() => setDslEditorFocused(false)}
+            />
+          </ChromePanel>
+
+          <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} />
+        </div>
     </div>
   );
 }
 
-type KindCanvasProps = {
-  kind: ImplementedDiagramKind;
-  onSelectedNodeChange: (nodeId: string | null) => void;
-  editMemberTriggerRef: RefObject<HTMLButtonElement | null>;
-  selectedNodeId: string | null;
-};
-
-function KindCanvas({
-  kind,
-  onSelectedNodeChange,
-  editMemberTriggerRef,
-  selectedNodeId,
-}: KindCanvasProps): ReactElement {
-  switch (kind) {
-    case "class":
-      return (
-        <ClassCanvas
-          onSelectedNodeChange={onSelectedNodeChange}
-          editMemberTriggerRef={editMemberTriggerRef}
-          selectedNodeId={selectedNodeId}
-        />
-      );
-    case "object":
-      return <ObjectCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    case "package":
-      return <PackageCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    case "component":
-      return <ComponentCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    case "deployment":
-      return <DeploymentCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    case "profile":
-      return <ProfileCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    case "useCase":
-      return <UseCaseCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    case "compositeStructure":
-      return <CompositeStructureCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    case "communication":
-      return <CommunicationCanvas onSelectedNodeChange={onSelectedNodeChange} />;
-    default:
-      return assertNever(kind);
-  }
-}

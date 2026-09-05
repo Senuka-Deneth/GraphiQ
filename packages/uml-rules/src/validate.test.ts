@@ -131,12 +131,12 @@ describe("connector matrices", () => {
     expect(DEPLOYMENT_CONNECTORS).toHaveLength(21);
     expect(PROFILE_CONNECTORS).toHaveLength(2);
     expect(USE_CASE_CONNECTORS).toHaveLength(6);
-    expect(ACTIVITY_CONNECTORS).toHaveLength(0);
-    expect(STATE_MACHINE_CONNECTORS).toHaveLength(0);
-    expect(SEQUENCE_CONNECTORS).toHaveLength(0);
+    expect(ACTIVITY_CONNECTORS).toHaveLength(67);
+    expect(STATE_MACHINE_CONNECTORS).toHaveLength(9);
+    expect(SEQUENCE_CONNECTORS).toHaveLength(5);
     expect(COMMUNICATION_CONNECTORS).toHaveLength(8);
-    expect(TIMING_CONNECTORS).toHaveLength(0);
-    expect(INTERACTION_OVERVIEW_CONNECTORS).toHaveLength(0);
+    expect(TIMING_CONNECTORS).toHaveLength(1);
+    expect(INTERACTION_OVERVIEW_CONNECTORS).toHaveLength(49);
 
     for (const kind of DIAGRAM_KINDS) {
       if (kind === "class") {
@@ -157,6 +157,16 @@ describe("connector matrices", () => {
         expect(getConnectorMatrix(kind)).toHaveLength(33);
       } else if (kind === "communication") {
         expect(getConnectorMatrix(kind)).toHaveLength(8);
+      } else if (kind === "activity") {
+        expect(getConnectorMatrix(kind)).toHaveLength(67);
+      } else if (kind === "stateMachine") {
+        expect(getConnectorMatrix(kind)).toHaveLength(9);
+      } else if (kind === "sequence") {
+        expect(getConnectorMatrix(kind)).toHaveLength(5);
+      } else if (kind === "timing") {
+        expect(getConnectorMatrix(kind)).toHaveLength(1);
+      } else if (kind === "interactionOverview") {
+        expect(getConnectorMatrix(kind)).toHaveLength(49);
       } else {
         expect(getConnectorMatrix(kind)).toHaveLength(0);
       }

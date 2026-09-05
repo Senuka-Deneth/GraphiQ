@@ -8,6 +8,7 @@ import type {
   DslSpan,
   PackageDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   AbstractKeyword,
   AngleStereotype,
@@ -258,6 +259,7 @@ class PackageDslVisitor {
       return {
         classifierKind: "class",
         name: nameToken.image,
+        nameSpan: tokenSpan(nameToken),
         isAbstract: true,
         attributes: [],
         operations: [],
@@ -271,6 +273,7 @@ class PackageDslVisitor {
       return {
         classifierKind: "class",
         name: nameToken.image,
+        nameSpan: tokenSpan(nameToken),
         isAbstract: false,
         attributes: [],
         operations: [],
@@ -284,6 +287,7 @@ class PackageDslVisitor {
       return {
         classifierKind: "interface",
         name: nameToken.image,
+        nameSpan: tokenSpan(nameToken),
         attributes: [],
         operations: [],
         span: tokenSpan(nameToken, lastToken(declaration)),
@@ -295,6 +299,7 @@ class PackageDslVisitor {
     return {
       classifierKind: "enumeration",
       name: nameToken.image,
+      nameSpan: tokenSpan(nameToken),
       literals: [],
       span: tokenSpan(nameToken, lastToken(declaration)),
     };
@@ -335,6 +340,7 @@ export function parsePackageCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = packageLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -344,5 +350,6 @@ export function parsePackageCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

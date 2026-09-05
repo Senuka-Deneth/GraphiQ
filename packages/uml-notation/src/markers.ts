@@ -14,132 +14,43 @@ export const MARKER_IDS = [
   "msg-reply-open",
 ] as const satisfies readonly MarkerId[];
 
+export const UML_MARKER_SIZE = 10;
+
 const HOLLOW_CLOSED_TRIANGLE_PATH = "M 0 0 L 10 5 L 0 10 Z";
 const OPEN_V_PATH = "M 0 0 L 10 5 L 0 10";
 const HOLLOW_DIAMOND_PATH = "M 0 5 L 5 0 L 10 5 L 5 10 Z";
 const FILLED_DIAMOND_PATH = "M 0 5 L 5 0 L 10 5 L 5 10 Z";
 
+const MARKER_GEOMETRY = {
+  viewBox: "0 0 10 10",
+  markerWidth: UML_MARKER_SIZE,
+  markerHeight: UML_MARKER_SIZE,
+  refX: 10,
+  refY: 5,
+  orient: "auto",
+  markerUnits: "userSpaceOnUse",
+  stroke: "currentColor",
+} as const;
+
+function marker(
+  id: MarkerId,
+  pathD: string,
+  fill: SvgMarkerDef["fill"],
+): SvgMarkerDef {
+  return { id, pathD, fill, ...MARKER_GEOMETRY };
+}
+
 const SVG_MARKERS: Record<MarkerId, SvgMarkerDef> = {
-  "gen-hollow-triangle": {
-    id: "gen-hollow-triangle",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "none",
-    stroke: "currentColor",
-    pathD: HOLLOW_CLOSED_TRIANGLE_PATH,
-  },
-  "realize-hollow-triangle": {
-    id: "realize-hollow-triangle",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "none",
-    stroke: "currentColor",
-    pathD: HOLLOW_CLOSED_TRIANGLE_PATH,
-  },
-  "assoc-open": {
-    id: "assoc-open",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "none",
-    stroke: "currentColor",
-    pathD: OPEN_V_PATH,
-  },
-  "agg-hollow-diamond": {
-    id: "agg-hollow-diamond",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "none",
-    stroke: "currentColor",
-    pathD: HOLLOW_DIAMOND_PATH,
-  },
-  "comp-filled-diamond": {
-    id: "comp-filled-diamond",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "currentColor",
-    stroke: "currentColor",
-    pathD: FILLED_DIAMOND_PATH,
-  },
-  "dep-open": {
-    id: "dep-open",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "none",
-    stroke: "currentColor",
-    pathD: OPEN_V_PATH,
-  },
-  "ext-filled-triangle": {
-    id: "ext-filled-triangle",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "currentColor",
-    stroke: "currentColor",
-    pathD: HOLLOW_CLOSED_TRIANGLE_PATH,
-  },
-  "msg-sync-filled": {
-    id: "msg-sync-filled",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "currentColor",
-    stroke: "currentColor",
-    pathD: HOLLOW_CLOSED_TRIANGLE_PATH,
-  },
-  "msg-async-open": {
-    id: "msg-async-open",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "none",
-    stroke: "currentColor",
-    pathD: OPEN_V_PATH,
-  },
-  "msg-reply-open": {
-    id: "msg-reply-open",
-    viewBox: "0 0 10 10",
-    markerWidth: 10,
-    markerHeight: 10,
-    refX: 10,
-    refY: 5,
-    orient: "auto",
-    fill: "none",
-    stroke: "currentColor",
-    pathD: OPEN_V_PATH,
-  },
+  "gen-hollow-triangle": marker("gen-hollow-triangle", HOLLOW_CLOSED_TRIANGLE_PATH, "canvas"),
+  "realize-hollow-triangle": marker("realize-hollow-triangle", HOLLOW_CLOSED_TRIANGLE_PATH, "canvas"),
+  "assoc-open": marker("assoc-open", OPEN_V_PATH, "none"),
+  "agg-hollow-diamond": marker("agg-hollow-diamond", HOLLOW_DIAMOND_PATH, "canvas"),
+  "comp-filled-diamond": marker("comp-filled-diamond", FILLED_DIAMOND_PATH, "currentColor"),
+  "dep-open": marker("dep-open", OPEN_V_PATH, "none"),
+  "ext-filled-triangle": marker("ext-filled-triangle", HOLLOW_CLOSED_TRIANGLE_PATH, "currentColor"),
+  "msg-sync-filled": marker("msg-sync-filled", HOLLOW_CLOSED_TRIANGLE_PATH, "currentColor"),
+  "msg-async-open": marker("msg-async-open", OPEN_V_PATH, "none"),
+  "msg-reply-open": marker("msg-reply-open", OPEN_V_PATH, "none"),
 };
 
 export { SVG_MARKERS };

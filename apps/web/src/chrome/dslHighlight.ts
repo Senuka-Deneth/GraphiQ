@@ -2,7 +2,8 @@ import { HighlightStyle, StreamLanguage, syntaxHighlighting } from "@codemirror/
 import { tags } from "@lezer/highlight";
 
 const dslHighlightStyle = HighlightStyle.define([
-  { tag: tags.keyword, color: "#7c3aed", fontWeight: "600" },
+  { tag: tags.keyword, color: "var(--graphiq-syntax-keyword)", fontWeight: "600" },
+  { tag: tags.comment, color: "var(--graphiq-label-secondary)" },
 ]);
 
 const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
@@ -57,9 +58,41 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "subject",
       "compositeStructure",
       "communication",
+      "activity",
+      "stateMachine",
+      "sequence",
+      "timing",
+      "interactionOverview",
+      "lifeline",
+      "alt",
+      "opt",
+      "loop",
+      "gate",
+      "state",
+      "region",
+      "choice",
+      "junction",
+      "history",
+      "deepHistory",
+      "terminate",
+      "entry",
+      "exit",
+      "do",
       "connector",
       "part",
       "enum",
+      "partition",
+      "action",
+      "object",
+      "initial",
+      "final",
+      "decision",
+      "merge",
+      "fork",
+      "join",
+      "flowFinal",
+      "interruptible",
+      "ref",
     ] as const;
 
     for (const keyword of keywords) {

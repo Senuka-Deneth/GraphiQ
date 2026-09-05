@@ -3,6 +3,24 @@ import { addElement, emptyModel } from "@graphiq/uml-model";
 import { layoutDocument } from "./layoutDocument.js";
 import { layoutObject } from "./layoutObject.js";
 import { createClassFixtureModel, layoutClass, measureClassNode } from "./layoutClass.js";
+import { createActivityFixtureModel, layoutActivity } from "./layoutActivity.js";
+import {
+  createSequenceFixtureModel,
+  layoutSequence,
+} from "./layoutSequence.js";
+import {
+  createTimingFixtureModel,
+  layoutTiming,
+} from "./layoutTiming.js";
+import {
+  createStateMachineFixtureModel,
+  layoutStateMachine,
+} from "./layoutStateMachine.js";
+import {
+  createInteractionOverviewFixtureModel,
+  layoutInteractionOverview,
+  measureInteractionOverviewNode,
+} from "./layoutInteractionOverview.js";
 import { emptyOverlay } from "./overlay.js";
 
 describe("measureClassNode", () => {
@@ -397,11 +415,384 @@ describe("layoutCompositeStructure", () => {
   });
 });
 
+describe("layoutActivity", () => {
+  function overlaps(
+    a: { x: number; y: number; width: number; height: number },
+    b: { x: number; y: number; width: number; height: number },
+  ): boolean {
+    return (
+      a.x < b.x + b.width &&
+      b.x < a.x + a.width &&
+      a.y < b.y + b.height &&
+      b.y < a.y + a.height
+    );
+  }
+
+  it("lays out the section 5.9 fixture with swimlanes and no overlapping actions in a lane", async () => {
+    const model = createActivityFixtureModel();
+    const overlay = await layoutActivity(model, emptyOverlay(), "full");
+
+    const sales = overlay.nodes["part-sales"];
+    const warehouse = overlay.nodes["part-warehouse"];
+    const pack = overlay.nodes["action-pack"];
+    const ship = overlay.nodes["action-ship"];
+
+    expect(sales).toBeDefined();
+    expect(warehouse).toBeDefined();
+    expect(Number.isFinite(sales?.x)).toBe(true);
+    expect(Number.isFinite(warehouse?.x)).toBe(true);
+    expect(pack).toBeDefined();
+    expect(ship).toBeDefined();
+    if (pack === undefined || ship === undefined) {
+      throw new Error("expected Pack and Ship overlay nodes");
+    }
+    expect(overlaps(pack, ship)).toBe(false);
+  });
+
+  it("preserves a positioned action in incremental mode", async () => {
+    const model = createActivityFixtureModel();
+    const firstPass = await layoutActivity(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["action-receive"];
+    if (pinned === undefined) {
+      throw new Error("expected ReceiveOrder node");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "action-receive": { ...pinned, x: 12, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutActivity(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["action-receive"]).toEqual(pinnedOverlay.nodes["action-receive"]);
+    const noteId = withNote.value.elements.find((element) => element.name === "Reminder")?.id;
+    expect(noteId).toBeDefined();
+    if (noteId !== undefined) {
+      expect(Number.isFinite(incremental.nodes[noteId]?.x)).toBe(true);
+    }
+  });
+});
+
+describe("layoutStateMachine", () => {
+  it("lays out the section 5.10 fixture with finite coordinates and downward flow", async () => {
+    const model = createStateMachineFixtureModel();
+    const overlay = await layoutStateMachine(model, emptyOverlay(), "full");
+
+    const initial = overlay.nodes.initial;
+    const draft = overlay.nodes["state-draft"];
+    const paid = overlay.nodes["state-paid"];
+    const finalNode = overlay.nodes.final;
+
+    expect(initial).toBeDefined();
+    expect(draft).toBeDefined();
+    expect(paid).toBeDefined();
+    expect(finalNode).toBeDefined();
+
+    for (const node of [initial, draft, paid, finalNode]) {
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+    }
+
+    if (initial !== undefined && draft !== undefined && paid !== undefined) {
+      expect(draft.y).toBeGreaterThan(initial.y);
+      expect(paid.y).toBeGreaterThan(draft.y);
+    }
+  });
+
+  it("lays out nested composite states inside the parent bounds", async () => {
+    let model = emptyModel("stateMachine");
+    const checkout = addElement(model, { elementType: "state", name: "Checkout" });
+    if (!checkout.ok) {
+      throw new Error("failed to add checkout");
+    }
+    model = checkout.value;
+    const checkoutId = model.elements[0]?.id;
+    if (checkoutId === undefined) {
+      throw new Error("missing checkout id");
+    }
+
+    const region = addElement(model, {
+      elementType: "region",
+      name: "__region__",
+      parentId: checkoutId,
+    });
+    if (!region.ok) {
+      throw new Error("failed to add region");
+    }
+    model = region.value;
+    const regionId = model.elements.find((element) => element.elementType === "region")?.id;
+    if (regionId === undefined) {
+      throw new Error("missing region id");
+    }
+
+    const nested = addElement(model, {
+      elementType: "state",
+      name: "Nested",
+      parentId: regionId,
+    });
+    if (!nested.ok) {
+      throw new Error("failed to add nested");
+    }
+    model = nested.value;
+
+    const overlay = await layoutStateMachine(model, emptyOverlay(), "full");
+    const parent = overlay.nodes[checkoutId];
+    const child = overlay.nodes[
+      model.elements.find((element) => element.name === "Nested")?.id ?? ""
+    ];
+
+    expect(parent).toBeDefined();
+    expect(child).toBeDefined();
+    if (parent !== undefined && child !== undefined) {
+      expect(child.x).toBeGreaterThanOrEqual(0);
+      expect(child.y).toBeGreaterThanOrEqual(0);
+      expect(child.x + child.width).toBeLessThanOrEqual(parent.width + 1);
+      expect(child.y + child.height).toBeLessThanOrEqual(parent.height + 1);
+    }
+  });
+
+  it("preserves a positioned state in incremental mode", async () => {
+    const model = createStateMachineFixtureModel();
+    const firstPass = await layoutStateMachine(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["state-draft"];
+    if (pinned === undefined) {
+      throw new Error("expected Draft node");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "state-draft": { ...pinned, x: 12, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutStateMachine(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["state-draft"]).toEqual(pinnedOverlay.nodes["state-draft"]);
+    const noteId = withNote.value.elements.find((element) => element.name === "Reminder")?.id;
+    expect(noteId).toBeDefined();
+    if (noteId !== undefined) {
+      expect(Number.isFinite(incremental.nodes[noteId]?.x)).toBe(true);
+    }
+  });
+});
+
+describe("layoutSequence", () => {
+  it("lays out lifelines and messages with strictly increasing y coordinates", async () => {
+    const model = createSequenceFixtureModel();
+    const overlay = await layoutSequence(model, emptyOverlay(), "full");
+
+    for (const lifeline of model.elements.filter((element) => element.elementType === "lifeline")) {
+      const node = overlay.nodes[lifeline.id];
+      expect(node).toBeDefined();
+      expect(Number.isFinite(node?.x)).toBe(true);
+      expect(Number.isFinite(node?.y)).toBe(true);
+    }
+
+    const messageYs = model.relationships.map((relationship) => {
+      const edge = overlay.edges[relationship.id];
+      expect(edge?.waypoints).toBeDefined();
+      return edge?.waypoints?.[0]?.y;
+    });
+    expect(messageYs.every((value) => Number.isFinite(value))).toBe(true);
+    for (let index = 1; index < messageYs.length; index += 1) {
+      const previous = messageYs[index - 1];
+      const current = messageYs[index];
+      if (previous !== undefined && current !== undefined) {
+        expect(current).toBeGreaterThan(previous);
+      }
+    }
+
+    const execution = overlay.nodes["exec-charge"];
+    expect(execution).toBeDefined();
+    expect(Number.isFinite(execution?.height)).toBe(true);
+    expect((execution?.height ?? 0)).toBeGreaterThan(0);
+  });
+
+  it("preserves pinned lifeline x in incremental mode", async () => {
+    const model = createSequenceFixtureModel();
+    const firstPass = await layoutSequence(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["lifeline-customer"];
+    if (pinned === undefined) {
+      throw new Error("expected customer lifeline");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "lifeline-customer": { ...pinned, x: 24, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutSequence(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["lifeline-customer"]?.x).toBe(24);
+  });
+});
+
+describe("layoutTiming", () => {
+  it("lays out state bands with increasing x for the lamp fixture", async () => {
+    const model = createTimingFixtureModel();
+    const overlay = await layoutTiming(model, emptyOverlay(), "full");
+
+    const stateXs = ["state-off-0", "state-on-10", "state-off-40"].map((id) => overlay.nodes[id]?.x);
+    expect(stateXs.every((value) => Number.isFinite(value))).toBe(true);
+    for (let index = 1; index < stateXs.length; index += 1) {
+      const previous = stateXs[index - 1];
+      const current = stateXs[index];
+      if (previous !== undefined && current !== undefined) {
+        expect(current).toBeGreaterThan(previous);
+      }
+    }
+
+    const firstBand = overlay.nodes["state-off-0"];
+    const secondBand = overlay.nodes["state-on-10"];
+    if (firstBand !== undefined && secondBand !== undefined) {
+      expect(firstBand.x + firstBand.width).toBeLessThanOrEqual(secondBand.x + 1);
+    }
+  });
+
+  it("preserves pinned lifeline y in incremental mode", async () => {
+    const model = createTimingFixtureModel();
+    const firstPass = await layoutTiming(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["lifeline-lamp"];
+    if (pinned === undefined) {
+      throw new Error("expected lamp lifeline");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "lifeline-lamp": { ...pinned, x: 0, y: 120 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutTiming(withNote.value, pinnedOverlay, "incremental");
+    expect(incremental.nodes["lifeline-lamp"]?.y).toBe(120);
+  });
+});
+
+describe("layoutInteractionOverview", () => {
+  it("lays out the section 5.14 fixture as a directed activity", async () => {
+    const model = createInteractionOverviewFixtureModel();
+    const overlay = await layoutInteractionOverview(model, emptyOverlay(), "full");
+
+    const initial = overlay.nodes["initial"];
+    const checkout = overlay.nodes["ref-checkout"];
+    const fulfill = overlay.nodes["ref-fulfill"];
+    const activityFinal = overlay.nodes["final"];
+
+    expect(initial).toBeDefined();
+    expect(checkout).toBeDefined();
+    expect(fulfill).toBeDefined();
+    expect(activityFinal).toBeDefined();
+    if (
+      initial === undefined ||
+      checkout === undefined ||
+      fulfill === undefined ||
+      activityFinal === undefined
+    ) {
+      throw new Error("expected OrderFlow overlay nodes");
+    }
+
+    expect(checkout.y).toBeGreaterThan(initial.y);
+    expect(fulfill.y).toBeGreaterThan(checkout.y);
+    expect(activityFinal.y).toBeGreaterThan(fulfill.y);
+    expect(checkout.width).toBeGreaterThanOrEqual(160);
+    expect(checkout.height).toBeGreaterThanOrEqual(80);
+    expect(fulfill.width).toBeGreaterThanOrEqual(160);
+    expect(fulfill.height).toBeGreaterThanOrEqual(80);
+  });
+
+  it("measures interaction-use frames at notation minimums", () => {
+    const size = measureInteractionOverviewNode({
+      id: "ref-checkout",
+      elementType: "interactionUse",
+      name: "Checkout",
+    });
+    expect(size.width).toBeGreaterThanOrEqual(160);
+    expect(size.height).toBeGreaterThanOrEqual(80);
+  });
+
+  it("preserves a positioned interaction use in incremental mode", async () => {
+    const model = createInteractionOverviewFixtureModel();
+    const firstPass = await layoutInteractionOverview(model, emptyOverlay(), "full");
+    const pinned = firstPass.nodes["ref-checkout"];
+    if (pinned === undefined) {
+      throw new Error("expected Checkout node");
+    }
+
+    const pinnedOverlay = {
+      ...firstPass,
+      nodes: {
+        ...firstPass.nodes,
+        "ref-checkout": { ...pinned, x: 12, y: 40 },
+      },
+    };
+
+    const withNote = addElement(model, {
+      elementType: "note",
+      name: "Reminder",
+    });
+    if (!withNote.ok) {
+      throw new Error("expected addElement to succeed");
+    }
+
+    const incremental = await layoutInteractionOverview(
+      withNote.value,
+      pinnedOverlay,
+      "incremental",
+    );
+    expect(incremental.nodes["ref-checkout"]?.x).toBe(12);
+    expect(incremental.nodes["ref-checkout"]?.y).toBe(40);
+  });
+});
+
 describe("layoutDocument", () => {
-  it("throws for non-implemented diagram kinds", async () => {
-    const model = emptyModel("sequence");
-    await expect(
-      layoutDocument("sequence", model, emptyOverlay(), "first-open-empty-overlay"),
-    ).rejects.toThrow("layout not implemented for sequence");
+  it("routes interaction overview to the dedicated engine", async () => {
+    const model = createInteractionOverviewFixtureModel();
+    const overlay = await layoutDocument(
+      "interactionOverview",
+      model,
+      emptyOverlay(),
+      "first-open-empty-overlay",
+    );
+    expect(overlay.nodes["ref-checkout"]).toBeDefined();
+    expect(overlay.nodes["ref-checkout"]?.width).toBeGreaterThanOrEqual(160);
   });
 });

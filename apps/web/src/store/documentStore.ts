@@ -1,5 +1,5 @@
-import { createId, type Diagnostic } from "@graphiq/uml-core";
-import { emptyOverlay, layoutDocument, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureObjectNode, measurePackageNode, measureProfileNode, measureUseCaseNode, type NotationOverlay } from "@graphiq/uml-layout";
+import { createId, isDiagramKind, type Diagnostic } from "@graphiq/uml-core";
+import { emptyOverlay, layoutDocument, measureActivityNode, measureClassNode, measureCommunicationNode, measureComponentNode, measureCompositeStructureNode, measureDeploymentNode, measureInteractionOverviewNode, measureObjectNode, measurePackageNode, measureProfileNode, measureSequenceNode, measureStateMachineNode, measureTimingNode, measureUseCaseNode, type EdgeRouteStyle, type NotationOverlay } from "@graphiq/uml-layout";
 import {
   addElement,
   addRelationship,
@@ -7,19 +7,23 @@ import {
   removeElement,
   removeRelationship,
   renameElement,
+  reverseRelationship,
   setClassAttribute,
+  setMessageSort,
+  updateRelationshipType,
   type ModelCommandError,
   type UmlModel,
 } from "@graphiq/uml-model";
-import type { RelationshipType } from "@graphiq/uml-model";
+import type { MessageSort, RelationshipType } from "@graphiq/uml-model";
 import { parse } from "@graphiq/uml-dsl";
-import { astToModel, print } from "@graphiq/uml-print";
+import { astToModel, print, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
 import { bindDiagnosticSpans } from "../diagnostics/bindDiagnosticSpans.js";
+import { extractGraphiqDsl } from "../dsl-guide/extractGraphiqDsl.js";
 
-export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication";
+export type ImplementedDiagramKind = "class" | "object" | "package" | "component" | "deployment" | "profile" | "useCase" | "compositeStructure" | "communication" | "activity" | "stateMachine" | "sequence" | "timing" | "interactionOverview";
 
 export type GraphiqDocument = {
   id: string;
@@ -75,6 +79,19 @@ export type CompositeStructureRelationshipTool = Extract<
 
 export type CommunicationRelationshipTool = Extract<RelationshipType, "message" | "link">;
 
+export type ActivityRelationshipTool = Extract<RelationshipType, "controlFlow" | "objectFlow">;
+
+export type StateMachineRelationshipTool = Extract<RelationshipType, "transition">;
+
+export type SequenceRelationshipTool = Extract<
+  MessageSort,
+  "synchCall" | "asynchCall" | "reply" | "createMessage"
+>;
+
+export type TimingRelationshipTool = SequenceRelationshipTool;
+
+export type InteractionOverviewRelationshipTool = Extract<RelationshipType, "controlFlow">;
+
 export type RelationshipTool =
   | ClassRelationshipTool
   | ObjectRelationshipTool
@@ -84,7 +101,12 @@ export type RelationshipTool =
   | ProfileRelationshipTool
   | UseCaseRelationshipTool
   | CompositeStructureRelationshipTool
-  | CommunicationRelationshipTool;
+  | CommunicationRelationshipTool
+  | ActivityRelationshipTool
+  | StateMachineRelationshipTool
+  | SequenceRelationshipTool
+  | TimingRelationshipTool
+  | InteractionOverviewRelationshipTool;
 
 export type ClassStencilDropKind =
   | "class"
@@ -129,6 +151,42 @@ export type CompositeStructureStencilDropKind = "class" | "part" | "port" | "not
 
 export type CommunicationStencilDropKind = "instance" | "note";
 
+export type ActivityStencilDropKind =
+  | "action"
+  | "objectNode"
+  | "initialNode"
+  | "activityFinalNode"
+  | "flowFinalNode"
+  | "decisionNode"
+  | "mergeNode"
+  | "forkNode"
+  | "joinNode"
+  | "activityPartition"
+  | "note";
+
+export type StateMachineStencilDropKind =
+  | "state"
+  | "initial"
+  | "final"
+  | "choice"
+  | "fork"
+  | "join"
+  | "note";
+
+export type SequenceStencilDropKind = "lifeline" | "combined-fragment" | "note";
+
+export type TimingStencilDropKind = "lifeline" | "note";
+
+export type InteractionOverviewStencilDropKind =
+  | "interactionUse"
+  | "initialNode"
+  | "activityFinalNode"
+  | "decisionNode"
+  | "mergeNode"
+  | "forkNode"
+  | "joinNode"
+  | "note";
+
 export type StencilDropKind =
   | ClassStencilDropKind
   | ObjectStencilDropKind
@@ -138,30 +196,60 @@ export type StencilDropKind =
   | ProfileStencilDropKind
   | UseCaseStencilDropKind
   | CompositeStructureStencilDropKind
-  | CommunicationStencilDropKind;
+  | CommunicationStencilDropKind
+  | ActivityStencilDropKind
+  | StateMachineStencilDropKind
+  | SequenceStencilDropKind
+  | TimingStencilDropKind
+  | InteractionOverviewStencilDropKind
+  | "text";
+
+export type PersistState = "loading" | "saving" | "saved";
 
 type DocumentStoreState = {
   document: GraphiqDocument;
   diagnostics: Diagnostic[];
   lastGoodModel: UmlModel;
   lastGoodOverlay: NotationOverlay;
+  lastParseSource: PrintSource | null;
   dslRevision: number;
   parseTimer: ReturnType<typeof setTimeout> | null;
   dslEditorFocused: boolean;
   relationshipTool: RelationshipTool;
+  persistState: PersistState;
   setTitle: (title: string) => void;
   setDsl: (dsl: string) => void;
   setDslEditorFocused: (focused: boolean) => void;
   setRelationshipTool: (tool: RelationshipTool) => void;
   createDocument: (kind: ImplementedDiagramKind) => void;
+  importDsl: (text: string) => void;
   runParse: () => Promise<void>;
   updateNodePosition: (nodeId: string, x: number, y: number) => void;
+  updateNodeSize: (nodeId: string, width: number, height: number) => void;
   dropStencilElement: (kind: StencilDropKind, x: number, y: number) => Promise<void>;
-  connectElements: (sourceId: string, targetId: string) => Promise<void>;
+  connectElements: (
+    sourceId: string,
+    targetId: string,
+    options?: { time?: number },
+  ) => Promise<void>;
   deleteElements: (elementIds: readonly string[]) => Promise<void>;
   deleteRelationships: (relationshipIds: readonly string[]) => Promise<void>;
   renameSelectedElement: (elementId: string, name: string) => Promise<void>;
   editFirstAttribute: (elementId: string, value: string) => Promise<void>;
+  updateViewport: (viewport: { x: number; y: number; zoom: number }) => void;
+  updateEdgeOverlay: (
+    relationshipId: string,
+    patch: {
+      routeStyle?: EdgeRouteStyle;
+      strokeColor?: string;
+      strokeWidth?: number;
+    },
+  ) => void;
+  changeSelectedRelationshipType: (
+    relationshipId: string,
+    tool: RelationshipTool | undefined,
+  ) => Promise<void>;
+  reverseSelectedRelationship: (relationshipId: string) => Promise<void>;
 };
 
 const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -174,6 +262,11 @@ const INITIAL_DSL_BY_KIND: Record<ImplementedDiagramKind, string> = {
   useCase: "diagram useCase\n",
   compositeStructure: "diagram compositeStructure\n",
   communication: "diagram communication\n",
+  activity: "diagram activity\n",
+  stateMachine: "diagram stateMachine\n",
+  sequence: "diagram sequence\n",
+  timing: "diagram timing\n",
+  interactionOverview: "diagram interactionOverview\n",
 };
 
 const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
@@ -186,6 +279,11 @@ const DEFAULT_TITLE_BY_KIND: Record<ImplementedDiagramKind, string> = {
   useCase: "Untitled use case diagram",
   compositeStructure: "Untitled composite structure diagram",
   communication: "Untitled communication diagram",
+  activity: "Untitled activity diagram",
+  stateMachine: "Untitled state machine diagram",
+  sequence: "Untitled sequence diagram",
+  timing: "Untitled timing diagram",
+  interactionOverview: "Untitled interaction overview diagram",
 };
 
 const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, RelationshipTool> = {
@@ -198,11 +296,24 @@ const DEFAULT_RELATIONSHIP_TOOL_BY_KIND: Record<ImplementedDiagramKind, Relation
   useCase: "association",
   compositeStructure: "connector",
   communication: "message",
+  activity: "controlFlow",
+  stateMachine: "transition",
+  sequence: "synchCall",
+  timing: "synchCall",
+  interactionOverview: "controlFlow",
 };
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
+const IMPORT_NO_DIAGRAM_RULE_ID = "dsl.import-no-diagram";
 
-function createDocumentForKind(kind: ImplementedDiagramKind): GraphiqDocument {
+function isImplementedDiagramKind(kind: string): kind is ImplementedDiagramKind {
+  return isDiagramKind(kind);
+}
+
+function createDocumentForKind(
+  kind: ImplementedDiagramKind,
+  dsl?: string,
+): GraphiqDocument {
   const model = emptyModel(kind);
   return {
     id: createId(),
@@ -210,7 +321,7 @@ function createDocumentForKind(kind: ImplementedDiagramKind): GraphiqDocument {
     title: DEFAULT_TITLE_BY_KIND[kind],
     model,
     overlay: emptyOverlay(),
-    dsl: INITIAL_DSL_BY_KIND[kind],
+    dsl: dsl ?? INITIAL_DSL_BY_KIND[kind],
   };
 }
 
@@ -234,13 +345,178 @@ function uniqueElementName(model: UmlModel, base: string): string {
   return `${base}${counter}`;
 }
 
-function printDocumentDsl(document: GraphiqDocument, model: UmlModel): string {
+function findActivityPartitionAtPoint(
+  model: UmlModel,
+  overlay: NotationOverlay,
+  x: number,
+  y: number,
+): { parentId: string; x: number; y: number } | undefined {
+  let match: { parentId: string; x: number; y: number; area: number } | undefined;
+
+  for (const element of model.elements) {
+    if (element.elementType !== "activityPartition") {
+      continue;
+    }
+    const box = overlay.nodes[element.id];
+    if (box === undefined) {
+      continue;
+    }
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      const area = box.width * box.height;
+      if (match === undefined || area < match.area) {
+        match = {
+          parentId: element.id,
+          x: x - box.x,
+          y: y - box.y,
+          area,
+        };
+      }
+    }
+  }
+
+  if (match === undefined) {
+    return undefined;
+  }
+  return { parentId: match.parentId, x: match.x, y: match.y };
+}
+
+function absoluteOverlayBox(
+  model: UmlModel,
+  overlay: NotationOverlay,
+  elementId: string,
+): { x: number; y: number; width: number; height: number } | undefined {
+  const node = overlay.nodes[elementId];
+  if (node === undefined) {
+    return undefined;
+  }
+
+  const element = model.elements.find((item) => item.id === elementId);
+  if (element?.parentId === undefined) {
+    return node;
+  }
+
+  const parentBox = absoluteOverlayBox(model, overlay, element.parentId);
+  if (parentBox === undefined) {
+    return node;
+  }
+
+  return {
+    x: parentBox.x + node.x,
+    y: parentBox.y + node.y,
+    width: node.width,
+    height: node.height,
+  };
+}
+
+function findStateMachineContainerAtPoint(
+  model: UmlModel,
+  overlay: NotationOverlay,
+  x: number,
+  y: number,
+): { parentId: string; x: number; y: number } | undefined {
+  let match: { parentId: string; x: number; y: number; area: number } | undefined;
+
+  for (const element of model.elements) {
+    if (element.elementType !== "region") {
+      continue;
+    }
+
+    const box = absoluteOverlayBox(model, overlay, element.id);
+    if (box === undefined) {
+      continue;
+    }
+
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      const area = box.width * box.height;
+      if (match === undefined || area < match.area) {
+        match = {
+          parentId: element.id,
+          x: x - box.x,
+          y: y - box.y,
+          area,
+        };
+      }
+    }
+  }
+
+  if (match !== undefined) {
+    return { parentId: match.parentId, x: match.x, y: match.y };
+  }
+
+  for (const element of model.elements) {
+    if (element.elementType !== "state") {
+      continue;
+    }
+
+    const hasRegion = model.elements.some(
+      (child) => child.parentId === element.id && child.elementType === "region",
+    );
+    if (!hasRegion) {
+      continue;
+    }
+
+    const box = absoluteOverlayBox(model, overlay, element.id);
+    if (box === undefined) {
+      continue;
+    }
+
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      const region = model.elements.find(
+        (child) => child.parentId === element.id && child.elementType === "region",
+      );
+      if (region === undefined) {
+        continue;
+      }
+
+      const regionBox = absoluteOverlayBox(model, overlay, region.id);
+      if (regionBox === undefined) {
+        continue;
+      }
+
+      const area = box.width * box.height;
+      if (match === undefined || area < match.area) {
+        match = {
+          parentId: region.id,
+          x: x - regionBox.x,
+          y: y - regionBox.y,
+          area,
+        };
+      }
+    }
+  }
+
+  if (match === undefined) {
+    return undefined;
+  }
+  return { parentId: match.parentId, x: match.x, y: match.y };
+}
+
+function printDocumentDsl(
+  document: GraphiqDocument,
+  model: UmlModel,
+  source: PrintSource | null,
+): string {
   const defaultTitle = DEFAULT_TITLE_BY_KIND[document.kind];
   const title =
     document.title.trim().length > 0 && document.title !== defaultTitle
       ? document.title
       : undefined;
-  return print(document.kind, model, { name: title });
+  return print(document.kind, model, { name: title, source: source ?? undefined });
+}
+
+function refreshParseSource(
+  kind: ImplementedDiagramKind,
+  dsl: string,
+): PrintSource | null {
+  const parseResult = parse(kind, dsl);
+  if (!parseResult.ok) {
+    return null;
+  }
+  return {
+    text: dsl,
+    ast: parseResult.value.ast,
+    comments: parseResult.value.comments,
+  };
 }
 
 function canApplyStructuralCommand(state: DocumentStoreState): boolean {
@@ -253,31 +529,37 @@ async function commitStructuralModelChange(
   nextModel: UmlModel,
   overlayPatch?: (overlay: NotationOverlay, model: UmlModel) => NotationOverlay,
 ): Promise<boolean> {
-  const { document, lastGoodOverlay } = get();
-  const diagnostics = validate(document.kind, nextModel);
+  const { document, lastGoodOverlay, lastParseSource } = get();
+  const modelForValidation =
+    document.kind === "sequence"
+      ? synthesizeSequenceExecutionSpecs(nextModel, get().lastGoodModel)
+      : nextModel;
+  const diagnostics = validate(document.kind, modelForValidation);
 
   if (hasFatalErrors(diagnostics)) {
     set({ diagnostics });
     return false;
   }
 
-  const overlayBase = overlayPatch ? overlayPatch(lastGoodOverlay, nextModel) : lastGoodOverlay;
+  const overlayBase = overlayPatch ? overlayPatch(lastGoodOverlay, modelForValidation) : lastGoodOverlay;
   const reason =
     Object.keys(overlayBase.nodes).length === 0
       ? "first-open-empty-overlay"
       : "topology-changed";
-  const overlay = await layoutDocument(document.kind, nextModel, overlayBase, reason);
-  const dsl = printDocumentDsl(document, nextModel);
+  const overlay = await layoutDocument(document.kind, modelForValidation, overlayBase, reason);
+  const dsl = printDocumentDsl(document, modelForValidation, lastParseSource);
+  const nextParseSource = refreshParseSource(document.kind, dsl);
 
   set((state) => ({
     document: {
       ...state.document,
-      model: nextModel,
+      model: modelForValidation,
       overlay,
       dsl,
     },
-    lastGoodModel: nextModel,
+    lastGoodModel: modelForValidation,
     lastGoodOverlay: overlay,
+    lastParseSource: nextParseSource,
     diagnostics,
     dslRevision: state.dslRevision + 1,
   }));
@@ -378,6 +660,26 @@ function defaultOverlayNode(
     return { x, y, ...measureCommunicationNode(element) };
   }
 
+  if (model.kind === "activity") {
+    return { x, y, ...measureActivityNode(element) };
+  }
+
+  if (model.kind === "stateMachine") {
+    return { x, y, ...measureStateMachineNode(element) };
+  }
+
+  if (model.kind === "sequence") {
+    return { x, y, ...measureSequenceNode(element) };
+  }
+
+  if (model.kind === "timing") {
+    return { x, y, ...measureTimingNode(element) };
+  }
+
+  if (model.kind === "interactionOverview") {
+    return { x, y, ...measureInteractionOverviewNode(element) };
+  }
+
   if (element.elementType === "note") {
     return { x, y, width: 120, height: 60 };
   }
@@ -398,16 +700,19 @@ function defaultOverlayNode(
 
 export const useDocumentStore = create<DocumentStoreState>((set, get) => {
   const initialDocument = createInitialDocument();
+  const initialParseSource = refreshParseSource(initialDocument.kind, initialDocument.dsl);
 
   return {
     document: initialDocument,
     diagnostics: [],
     lastGoodModel: initialDocument.model,
     lastGoodOverlay: initialDocument.overlay,
+    lastParseSource: initialParseSource,
     dslRevision: 0,
     parseTimer: null,
     dslEditorFocused: false,
     relationshipTool: "generalization",
+    persistState: "loading",
 
     setTitle: (title) => {
       set((state) => ({
@@ -433,10 +738,84 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         diagnostics: [],
         lastGoodModel: document.model,
         lastGoodOverlay: document.overlay,
+        lastParseSource: refreshParseSource(kind, document.dsl),
         dslRevision: 0,
         parseTimer: null,
         relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[kind],
       });
+      void import("../persist/initDocumentPersistence.js").then(({ persistNewDocument }) =>
+        persistNewDocument(document),
+      );
+    },
+
+    importDsl: (text) => {
+      const { parseTimer } = get();
+      if (parseTimer !== null) {
+        clearTimeout(parseTimer);
+      }
+
+      const extracted = extractGraphiqDsl(text);
+      if (extracted === null) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: IMPORT_NO_DIAGRAM_RULE_ID,
+              severity: "error",
+              message:
+                "No GraphiQ DSL document found. Expected text starting with diagram <kind>.",
+              elementIds: [],
+            },
+          ],
+          parseTimer: null,
+        });
+        return;
+      }
+
+      if (!isImplementedDiagramKind(extracted.kind)) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: IMPORT_NO_DIAGRAM_RULE_ID,
+              severity: "error",
+              message: `Unsupported diagram kind "${extracted.kind}".`,
+              elementIds: [],
+            },
+          ],
+          parseTimer: null,
+        });
+        return;
+      }
+
+      const importedKind = extracted.kind;
+      const importedDsl = extracted.dsl;
+      const { document } = get();
+      const kindChanged = document.kind !== importedKind;
+      const nextDocument = kindChanged
+        ? createDocumentForKind(importedKind, importedDsl)
+        : { ...document, dsl: importedDsl };
+      const freshModel = emptyModel(importedKind);
+      const freshOverlay = emptyOverlay();
+
+      set((state) => ({
+        document: nextDocument,
+        diagnostics: [],
+        lastGoodModel: freshModel,
+        lastGoodOverlay: freshOverlay,
+        lastParseSource: refreshParseSource(importedKind, importedDsl),
+        dslRevision: state.dslRevision + 1,
+        parseTimer: null,
+        relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[importedKind],
+      }));
+
+      if (kindChanged) {
+        void import("../persist/initDocumentPersistence.js").then(({ persistNewDocument }) =>
+          persistNewDocument(nextDocument),
+        );
+      }
+
+      void get().runParse();
     },
 
     setDsl: (dsl) => {
@@ -470,7 +849,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         return;
       }
 
-      const { ast, diagnostics: parseDiagnostics } = parseResult.value;
+      const { ast, diagnostics: parseDiagnostics, comments } = parseResult.value;
 
       if (hasFatalErrors(parseDiagnostics)) {
         set({
@@ -503,6 +882,11 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         },
         lastGoodModel: model,
         lastGoodOverlay: overlay,
+        lastParseSource: {
+          text: document.dsl,
+          ast,
+          comments,
+        },
         diagnostics,
         parseTimer: null,
       });
@@ -545,15 +929,76 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       });
     },
 
+    updateNodeSize: (nodeId, width, height) => {
+      set((state) => {
+        const existing = state.document.overlay.nodes[nodeId];
+        if (existing === undefined) {
+          return state;
+        }
+
+        return {
+          document: {
+            ...state.document,
+            overlay: {
+              ...state.document.overlay,
+              nodes: {
+                ...state.document.overlay.nodes,
+                [nodeId]: {
+                  ...existing,
+                  width,
+                  height,
+                },
+              },
+            },
+          },
+          lastGoodOverlay: {
+            ...state.lastGoodOverlay,
+            nodes: {
+              ...state.lastGoodOverlay.nodes,
+              [nodeId]: {
+                ...existing,
+                width,
+                height,
+              },
+            },
+          },
+        };
+      });
+    },
+
     dropStencilElement: async (kind, x, y) => {
       const { document } = get();
+      const resolvedKind: Exclude<StencilDropKind, "text"> = kind === "text" ? "note" : kind;
+      const noteLabel = kind === "text" ? "Text" : "Note";
+      let dropX = x;
+      let dropY = y;
+      let activityParentId: string | undefined;
+      let stateMachineParentId: string | undefined;
+
+      if (document.kind === "activity" && resolvedKind !== "activityPartition") {
+        const hit = findActivityPartitionAtPoint(document.model, document.overlay, x, y);
+        if (hit !== undefined) {
+          activityParentId = hit.parentId;
+          dropX = hit.x;
+          dropY = hit.y;
+        }
+      }
+
+      if (document.kind === "stateMachine") {
+        const hit = findStateMachineContainerAtPoint(document.model, document.overlay, x, y);
+        if (hit !== undefined) {
+          stateMachineParentId = hit.parentId;
+          dropX = hit.x;
+          dropY = hit.y;
+        }
+      }
 
       await applyModelCommand(
         get,
         set,
         (model) => {
           if (document.kind === "object") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "instance":
                 return addElement(model, {
                   elementType: "instanceSpecification",
@@ -563,7 +1008,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -575,7 +1020,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "package") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "package":
                 return addElement(model, {
                   elementType: "package",
@@ -600,7 +1045,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -611,7 +1056,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "component") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "component":
                 return addElement(model, {
                   elementType: "component",
@@ -635,7 +1080,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -646,7 +1091,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "deployment") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "node":
                 return addElement(model, {
                   elementType: "node",
@@ -670,7 +1115,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -681,7 +1126,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "profile") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "stereotype":
                 return addElement(model, {
                   elementType: "stereotype",
@@ -706,7 +1151,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -721,7 +1166,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               (element) => element.elementType === "subject" && element.parentId === undefined,
             );
 
-            switch (kind) {
+            switch (resolvedKind) {
               case "actor":
                 return addElement(model, {
                   elementType: "actor",
@@ -741,7 +1186,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -758,7 +1203,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
                 element.parentId === undefined,
             );
 
-            switch (kind) {
+            switch (resolvedKind) {
               case "class":
                 return addElement(model, {
                   elementType: "class",
@@ -787,7 +1232,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -801,7 +1246,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           }
 
           if (document.kind === "communication") {
-            switch (kind) {
+            switch (resolvedKind) {
               case "instance":
                 return addElement(model, {
                   elementType: "instanceSpecification",
@@ -811,7 +1256,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               case "note":
                 return addElement(model, {
                   elementType: "note",
-                  name: uniqueElementName(model, "Note"),
+                  name: uniqueElementName(model, noteLabel),
                 });
               default:
                 return addElement(model, {
@@ -822,7 +1267,243 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             }
           }
 
-          switch (kind) {
+          if (document.kind === "activity") {
+            const parent =
+              activityParentId !== undefined ? { parentId: activityParentId } : {};
+            switch (resolvedKind) {
+              case "action":
+                return addElement(model, {
+                  elementType: "action",
+                  name: uniqueElementName(model, "Action"),
+                  ...parent,
+                });
+              case "objectNode":
+                return addElement(model, {
+                  elementType: "objectNode",
+                  name: uniqueElementName(model, "Object"),
+                  ...parent,
+                });
+              case "initialNode":
+                return addElement(model, {
+                  elementType: "initialNode",
+                  name: uniqueElementName(model, "initial"),
+                  ...parent,
+                });
+              case "activityFinalNode":
+                return addElement(model, {
+                  elementType: "activityFinalNode",
+                  name: uniqueElementName(model, "final"),
+                  ...parent,
+                });
+              case "flowFinalNode":
+                return addElement(model, {
+                  elementType: "flowFinalNode",
+                  name: uniqueElementName(model, "flowFinal"),
+                  ...parent,
+                });
+              case "decisionNode":
+                return addElement(model, {
+                  elementType: "decisionNode",
+                  name: uniqueElementName(model, "decision"),
+                  ...parent,
+                });
+              case "mergeNode":
+                return addElement(model, {
+                  elementType: "mergeNode",
+                  name: uniqueElementName(model, "merge"),
+                  ...parent,
+                });
+              case "forkNode":
+                return addElement(model, {
+                  elementType: "forkNode",
+                  name: uniqueElementName(model, "fork"),
+                  ...parent,
+                });
+              case "joinNode":
+                return addElement(model, {
+                  elementType: "joinNode",
+                  name: uniqueElementName(model, "join"),
+                  ...parent,
+                });
+              case "activityPartition":
+                return addElement(model, {
+                  elementType: "activityPartition",
+                  name: uniqueElementName(model, "Partition"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, noteLabel),
+                  ...parent,
+                });
+              default:
+                return addElement(model, {
+                  elementType: "action",
+                  name: uniqueElementName(model, "Action"),
+                  ...parent,
+                });
+            }
+          }
+
+          if (document.kind === "stateMachine") {
+            const parent =
+              stateMachineParentId !== undefined ? { parentId: stateMachineParentId } : {};
+            switch (resolvedKind) {
+              case "state":
+                return addElement(model, {
+                  elementType: "state",
+                  name: uniqueElementName(model, "State"),
+                  ...parent,
+                });
+              case "initial":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: "[*]",
+                  kind: "initial",
+                  ...parent,
+                });
+              case "final":
+                return addElement(model, {
+                  elementType: "finalState",
+                  name: "[*]",
+                  ...parent,
+                });
+              case "choice":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: uniqueElementName(model, "Choice"),
+                  kind: "choice",
+                  ...parent,
+                });
+              case "fork":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: uniqueElementName(model, "Fork"),
+                  kind: "fork",
+                  ...parent,
+                });
+              case "join":
+                return addElement(model, {
+                  elementType: "pseudostate",
+                  name: uniqueElementName(model, "Join"),
+                  kind: "join",
+                  ...parent,
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, noteLabel),
+                  ...parent,
+                });
+              default:
+                return addElement(model, {
+                  elementType: "state",
+                  name: uniqueElementName(model, "State"),
+                  ...parent,
+                });
+            }
+          }
+
+          if (document.kind === "sequence") {
+            switch (resolvedKind) {
+              case "lifeline":
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                  classifierName: "Type",
+                });
+              case "combined-fragment":
+                return addElement(model, {
+                  elementType: "combinedFragment",
+                  name: uniqueElementName(model, "alt"),
+                  operator: "alt",
+                  operands: [{ messageIds: [] }],
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, noteLabel),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                });
+            }
+          }
+
+          if (document.kind === "timing") {
+            switch (resolvedKind) {
+              case "lifeline":
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                  classifierName: "Type",
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, noteLabel),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "lifeline",
+                  name: uniqueElementName(model, "lifeline"),
+                });
+            }
+          }
+
+          if (document.kind === "interactionOverview") {
+            switch (resolvedKind) {
+              case "interactionUse":
+                return addElement(model, {
+                  elementType: "interactionUse",
+                  name: uniqueElementName(model, "Interaction"),
+                });
+              case "initialNode":
+                return addElement(model, {
+                  elementType: "initialNode",
+                  name: uniqueElementName(model, "initial"),
+                });
+              case "activityFinalNode":
+                return addElement(model, {
+                  elementType: "activityFinalNode",
+                  name: uniqueElementName(model, "final"),
+                });
+              case "decisionNode":
+                return addElement(model, {
+                  elementType: "decisionNode",
+                  name: uniqueElementName(model, "decision"),
+                });
+              case "mergeNode":
+                return addElement(model, {
+                  elementType: "mergeNode",
+                  name: uniqueElementName(model, "merge"),
+                });
+              case "forkNode":
+                return addElement(model, {
+                  elementType: "forkNode",
+                  name: uniqueElementName(model, "fork"),
+                });
+              case "joinNode":
+                return addElement(model, {
+                  elementType: "joinNode",
+                  name: uniqueElementName(model, "join"),
+                });
+              case "note":
+                return addElement(model, {
+                  elementType: "note",
+                  name: uniqueElementName(model, noteLabel),
+                });
+              default:
+                return addElement(model, {
+                  elementType: "interactionUse",
+                  name: uniqueElementName(model, "Interaction"),
+                });
+            }
+          }
+
+          switch (resolvedKind) {
             case "class":
               return addElement(model, {
                 elementType: "class",
@@ -848,7 +1529,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             case "note":
               return addElement(model, {
                 elementType: "note",
-                name: uniqueElementName(model, "Note"),
+                name: uniqueElementName(model, noteLabel),
               });
             default:
               return addElement(model, { elementType: "class", name: "Class" });
@@ -860,7 +1541,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
             return overlay;
           }
 
-          const measured = defaultOverlayNode(model, elementId, x, y);
+          const measured = defaultOverlayNode(model, elementId, dropX, dropY);
           return {
             ...overlay,
             nodes: {
@@ -875,7 +1556,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       );
     },
 
-    connectElements: async (sourceId, targetId) => {
+    connectElements: async (sourceId, targetId, options) => {
       if (!canApplyStructuralCommand(get())) {
         return;
       }
@@ -888,10 +1569,16 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         return;
       }
 
+      const connectorRelationship = (
+        document.kind === "sequence" || document.kind === "timing"
+          ? "message"
+          : relationshipTool
+      ) as RelationshipType;
+
       if (
         !isConnectorAllowed({
           kind: document.kind,
-          relationship: relationshipTool,
+          relationship: connectorRelationship,
           source: source.elementType,
           target: target.elementType,
         })
@@ -902,7 +1589,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
               id: createId(),
               ruleId: ILLEGAL_CONNECTOR_RULE_ID,
               severity: "error",
-              message: `Relationship "${relationshipTool}" from ${source.elementType} to ${target.elementType} is not allowed on a ${document.kind} diagram`,
+              message: `Relationship "${connectorRelationship}" from ${source.elementType} to ${target.elementType} is not allowed on a ${document.kind} diagram`,
               elementIds: [sourceId, targetId],
             },
           ],
@@ -921,8 +1608,30 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           });
         }
 
+        if (document.kind === "sequence") {
+          return addRelationship(model, {
+            relationshipType: "message",
+            sourceId,
+            targetId,
+            messageSort: relationshipTool as SequenceRelationshipTool,
+          });
+        }
+
+        if (document.kind === "timing") {
+          return addRelationship(model, {
+            relationshipType: "message",
+            sourceId,
+            targetId,
+            messageSort: relationshipTool as TimingRelationshipTool,
+            time: options?.time ?? 0,
+          });
+        }
+
         return addRelationship(model, {
-          relationshipType: relationshipTool as Exclude<RelationshipTool, "message">,
+          relationshipType: relationshipTool as Exclude<
+            RelationshipTool,
+            "message" | SequenceRelationshipTool
+          >,
           sourceId,
           targetId,
         });
@@ -1042,6 +1751,179 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         });
       });
     },
+
+    updateViewport: (viewport) => {
+      set((state) => ({
+        document: {
+          ...state.document,
+          overlay: {
+            ...state.document.overlay,
+            viewport,
+          },
+        },
+        lastGoodOverlay: {
+          ...state.lastGoodOverlay,
+          viewport,
+        },
+      }));
+    },
+
+    updateEdgeOverlay: (relationshipId, patch) => {
+      set((state) => {
+        const existing = state.document.overlay.edges[relationshipId] ?? { id: relationshipId };
+        const nextEdge = {
+          ...existing,
+          id: relationshipId,
+          ...patch,
+        };
+        return {
+          document: {
+            ...state.document,
+            overlay: {
+              ...state.document.overlay,
+              edges: {
+                ...state.document.overlay.edges,
+                [relationshipId]: nextEdge,
+              },
+            },
+          },
+          lastGoodOverlay: {
+            ...state.lastGoodOverlay,
+            edges: {
+              ...state.lastGoodOverlay.edges,
+              [relationshipId]: nextEdge,
+            },
+          },
+        };
+      });
+    },
+
+    changeSelectedRelationshipType: async (relationshipId, tool) => {
+      if (!canApplyStructuralCommand(get())) {
+        return;
+      }
+
+      if (tool === undefined) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: ILLEGAL_CONNECTOR_RULE_ID,
+              severity: "error",
+              message: "That connector style is not a legal UML relationship for this diagram",
+              elementIds: [relationshipId],
+            },
+          ],
+        });
+        return;
+      }
+
+      const { document } = get();
+      const relationship = document.model.relationships.find((item) => item.id === relationshipId);
+      if (relationship === undefined) {
+        return;
+      }
+
+      const source = document.model.elements.find((element) => element.id === relationship.sourceId);
+      const target = document.model.elements.find((element) => element.id === relationship.targetId);
+      if (source === undefined || target === undefined) {
+        return;
+      }
+
+      if (document.kind === "sequence" || document.kind === "timing") {
+        const result = setMessageSort(document.model, relationshipId, tool as SequenceRelationshipTool);
+        if (!result.ok) {
+          set({
+            diagnostics: [
+              {
+                id: createId(),
+                ruleId: result.error.code,
+                severity: "error",
+                message: result.error.message,
+                elementIds: [relationshipId],
+              },
+            ],
+          });
+          return;
+        }
+        await commitStructuralModelChange(get, set, result.value);
+        return;
+      }
+
+      const nextType = tool as RelationshipType;
+      if (
+        !isConnectorAllowed({
+          kind: document.kind,
+          relationship: nextType,
+          source: source.elementType,
+          target: target.elementType,
+        })
+      ) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: ILLEGAL_CONNECTOR_RULE_ID,
+              severity: "error",
+              message: `Relationship "${nextType}" from ${source.elementType} to ${target.elementType} is not allowed on a ${document.kind} diagram`,
+              elementIds: [relationship.sourceId, relationship.targetId],
+            },
+          ],
+        });
+        return;
+      }
+
+      await applyModelCommand(get, set, (model) =>
+        updateRelationshipType(model, relationshipId, nextType),
+      );
+    },
+
+    reverseSelectedRelationship: async (relationshipId) => {
+      if (!canApplyStructuralCommand(get())) {
+        return;
+      }
+
+      const { document } = get();
+      const relationship = document.model.relationships.find((item) => item.id === relationshipId);
+      if (relationship === undefined) {
+        return;
+      }
+
+      const source = document.model.elements.find((element) => element.id === relationship.targetId);
+      const target = document.model.elements.find((element) => element.id === relationship.sourceId);
+      if (source === undefined || target === undefined) {
+        return;
+      }
+
+      const connectorRelationship =
+        document.kind === "sequence" || document.kind === "timing"
+          ? "message"
+          : relationship.relationshipType;
+
+      if (
+        !isConnectorAllowed({
+          kind: document.kind,
+          relationship: connectorRelationship,
+          source: source.elementType,
+          target: target.elementType,
+        })
+      ) {
+        set({
+          diagnostics: [
+            {
+              id: createId(),
+              ruleId: ILLEGAL_CONNECTOR_RULE_ID,
+              severity: "error",
+              message: `Reversing this relationship is not allowed on a ${document.kind} diagram`,
+              elementIds: [relationship.sourceId, relationship.targetId],
+            },
+          ],
+        });
+        return;
+      }
+
+      await applyModelCommand(get, set, (model) => reverseRelationship(model, relationshipId));
+    },
   };
 });
 
@@ -1052,9 +1934,11 @@ export function resetDocumentStoreForTests(): void {
     diagnostics: [],
     lastGoodModel: initialDocument.model,
     lastGoodOverlay: initialDocument.overlay,
+    lastParseSource: refreshParseSource(initialDocument.kind, initialDocument.dsl),
     dslRevision: 0,
     parseTimer: null,
     dslEditorFocused: false,
     relationshipTool: "generalization",
+    persistState: "saved",
   });
 }

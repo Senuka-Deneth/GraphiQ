@@ -16,12 +16,39 @@ export {
   measureCompositeStructureNode,
 } from "./layoutCompositeStructure.js";
 export { layoutCommunication, measureCommunicationNode } from "./layoutCommunication.js";
+export { layoutActivity, measureActivityNode } from "./layoutActivity.js";
+export {
+  createStateMachineFixtureModel,
+  layoutStateMachine,
+  measureStateMachineNode,
+} from "./layoutStateMachine.js";
+export {
+  createSequenceFixtureModel,
+  layoutSequence,
+  measureSequenceNode,
+} from "./layoutSequence.js";
+export {
+  createTimingFixtureModel,
+  layoutTiming,
+  measureTimingNode,
+  timingAxisTicks,
+  timingCanvasHeight,
+  timingCanvasWidth,
+  TIMING_TIME_AXIS_Y,
+  timeToX,
+} from "./layoutTiming.js";
+export {
+  createInteractionOverviewFixtureModel,
+  layoutInteractionOverview,
+  measureInteractionOverviewNode,
+} from "./layoutInteractionOverview.js";
 export { layoutDocument } from "./layoutDocument.js";
 export type {
+  EdgeRouteStyle,
   LayoutMode,
   NotationOverlay,
   OverlayEdge,
   OverlayNode,
   RelayoutReason,
 } from "./overlay.js";
-export { emptyOverlay, reasonToLayoutMode } from "./overlay.js";
+export { emptyOverlay, mergeOverlayEdgePresentation, reasonToLayoutMode } from "./overlay.js";

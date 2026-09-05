@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const shopFixture = readFileSync(
@@ -26,10 +27,11 @@ test("component document renders assembly between provided and required interfac
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("component");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("component");
-  await expect(page.locator('[data-testid="stencil"]')).not.toContainText("Actor");
+  await expect(page.locator('[data-stencil-item="actor"]')).toHaveCount(0);
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
@@ -47,6 +49,7 @@ test("assembly between two provided interfaces shows cmp.assembly-provided-to-re
   page,
 }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("component");
   const editor = page.locator('[data-testid="dsl-editor"]');

@@ -1,10 +1,16 @@
-import { createId, err, ok } from "@graphiq/uml-core";
+import { assertNever, createId, err, ok } from "@graphiq/uml-core";
 import type { Result } from "@graphiq/uml-core";
 import { isElementAllowedOn, isRelationshipAllowedOn } from "./allowed.js";
 import type { NewUmlElement, UmlElement } from "./element.js";
-import type { Attribute, Operation } from "./members.js";
+import type { Attribute, MessageSort, Operation } from "./members.js";
 import type { UmlModel } from "./model.js";
 import type { NewUmlRelationship, UmlRelationship } from "./relationship.js";
+import {
+  isActivityFlowRelationship,
+  isAssociationFamilyRelationship,
+  isTransitionRelationship,
+} from "./relationship.js";
+import type { RelationshipType } from "./relationshipType.js";
 
 export type ModelCommandError = {
   code:
@@ -98,6 +104,24 @@ function createElement(spec: NewUmlElement): UmlElement {
         name: spec.name,
         parentId: spec.parentId,
         operator: spec.operator,
+        operands: spec.operands ?? [],
+      };
+    case "lifeline":
+      return {
+        id,
+        elementType: "lifeline",
+        name: spec.name,
+        parentId: spec.parentId,
+        classifierName: spec.classifierName,
+      };
+    case "executionSpecification":
+      return {
+        id,
+        elementType: "executionSpecification",
+        name: spec.name,
+        parentId: spec.parentId,
+        startMessageId: spec.startMessageId,
+        finishMessageId: spec.finishMessageId,
       };
     case "state":
       return {
@@ -134,6 +158,32 @@ function createElement(spec: NewUmlElement): UmlElement {
         parentId: spec.parentId,
         typeName: spec.typeName,
       };
+    case "timingState":
+      return {
+        id,
+        elementType: "timingState",
+        name: spec.name,
+        parentId: spec.parentId,
+        at: spec.at,
+        until: spec.until,
+      };
+    case "durationConstraint":
+      return {
+        id,
+        elementType: "durationConstraint",
+        name: spec.name,
+        parentId: spec.parentId,
+        min: spec.min,
+        max: spec.max,
+      };
+    case "timeConstraint":
+      return {
+        id,
+        elementType: "timeConstraint",
+        name: spec.name,
+        parentId: spec.parentId,
+        time: spec.time,
+      };
     default:
       return {
         id,
@@ -144,8 +194,7 @@ function createElement(spec: NewUmlElement): UmlElement {
   }
 }
 
-function createRelationship(spec: NewUmlRelationship): UmlRelationship {
-  const id = createId();
+function createRelationship(spec: NewUmlRelationship, id = createId()): UmlRelationship {
   const { sourceId, targetId, name } = spec;
 
   switch (spec.relationshipType) {
@@ -198,6 +247,7 @@ function createRelationship(spec: NewUmlRelationship): UmlRelationship {
         name,
         messageSort: spec.messageSort,
         sequenceNumber: spec.sequenceNumber,
+        time: spec.time,
       };
     case "transition":
       return {
@@ -209,6 +259,24 @@ function createRelationship(spec: NewUmlRelationship): UmlRelationship {
         trigger: spec.trigger,
         guard: spec.guard,
         effect: spec.effect,
+      };
+    case "controlFlow":
+      return {
+        id,
+        relationshipType: "controlFlow",
+        sourceId,
+        targetId,
+        name,
+        guard: spec.guard,
+      };
+    case "objectFlow":
+      return {
+        id,
+        relationshipType: "objectFlow",
+        sourceId,
+        targetId,
+        name,
+        guard: spec.guard,
       };
     default:
       return {
@@ -309,6 +377,206 @@ export function removeRelationship(
       (relationship) => relationship.id !== id,
     ),
   });
+}
+
+function flowGuard(relationship: UmlRelationship): string | undefined {
+  if (isActivityFlowRelationship(relationship) || isTransitionRelationship(relationship)) {
+    return relationship.guard;
+  }
+  return undefined;
+}
+
+function toNewRelationship(
+  existing: UmlRelationship,
+  relationshipType: RelationshipType,
+): NewUmlRelationship {
+  const sourceId = existing.sourceId;
+  const targetId = existing.targetId;
+  const name = existing.name;
+
+  switch (relationshipType) {
+    case "association":
+    case "navigableAssociation":
+    case "aggregation":
+    case "composition": {
+      const sourceMultiplicity = isAssociationFamilyRelationship(existing)
+        ? existing.sourceMultiplicity
+        : "1";
+      const targetMultiplicity = isAssociationFamilyRelationship(existing)
+        ? existing.targetMultiplicity
+        : "1";
+      return {
+        relationshipType,
+        sourceId,
+        targetId,
+        name,
+        sourceMultiplicity,
+        targetMultiplicity,
+      };
+    }
+    case "message":
+      return {
+        relationshipType: "message",
+        sourceId,
+        targetId,
+        name,
+        messageSort: existing.relationshipType === "message" ? existing.messageSort : "synchCall",
+        sequenceNumber:
+          existing.relationshipType === "message" ? existing.sequenceNumber : undefined,
+        time: existing.relationshipType === "message" ? existing.time : undefined,
+      };
+    case "transition":
+      return {
+        relationshipType: "transition",
+        sourceId,
+        targetId,
+        name,
+        trigger: existing.relationshipType === "transition" ? existing.trigger : undefined,
+        guard: flowGuard(existing),
+        effect: existing.relationshipType === "transition" ? existing.effect : undefined,
+      };
+    case "controlFlow":
+      return {
+        relationshipType: "controlFlow",
+        sourceId,
+        targetId,
+        name,
+        guard: flowGuard(existing),
+      };
+    case "objectFlow":
+      return {
+        relationshipType: "objectFlow",
+        sourceId,
+        targetId,
+        name,
+        guard: flowGuard(existing),
+      };
+    case "generalization":
+    case "realization":
+    case "interfaceRealization":
+    case "dependency":
+    case "usage":
+    case "nestedClassifier":
+    case "link":
+    case "packageImport":
+    case "packageMerge":
+    case "containment":
+    case "connector":
+    case "assemblyConnector":
+    case "delegationConnector":
+    case "componentRealization":
+    case "deployment":
+    case "communicationPath":
+    case "manifestation":
+    case "extension":
+    case "include":
+    case "extend":
+      return {
+        relationshipType,
+        sourceId,
+        targetId,
+        name,
+      };
+    default:
+      return assertNever(relationshipType);
+  }
+}
+
+function replaceRelationship(
+  model: UmlModel,
+  next: UmlRelationship,
+): UmlModel {
+  return {
+    ...model,
+    relationships: model.relationships.map((relationship) =>
+      relationship.id === next.id ? next : relationship,
+    ),
+  };
+}
+
+export function updateRelationshipType(
+  model: UmlModel,
+  id: string,
+  relationshipType: RelationshipType,
+): Result<UmlModel, ModelCommandError> {
+  const existing = model.relationships.find((relationship) => relationship.id === id);
+  if (existing === undefined) {
+    return err({
+      code: "unknown-relationship",
+      message: `Relationship "${id}" was not found`,
+    });
+  }
+
+  if (!isRelationshipAllowedOn(model.kind, relationshipType)) {
+    return err({
+      code: "illegal-relationship-on-diagram",
+      message: `Relationship type "${relationshipType}" is not allowed on a ${model.kind} diagram`,
+    });
+  }
+
+  const spec = toNewRelationship(existing, relationshipType);
+  return ok(replaceRelationship(model, createRelationship(spec, existing.id)));
+}
+
+export function reverseRelationship(
+  model: UmlModel,
+  id: string,
+): Result<UmlModel, ModelCommandError> {
+  const existing = model.relationships.find((relationship) => relationship.id === id);
+  if (existing === undefined) {
+    return err({
+      code: "unknown-relationship",
+      message: `Relationship "${id}" was not found`,
+    });
+  }
+
+  if (isAssociationFamilyRelationship(existing)) {
+    return ok(
+      replaceRelationship(model, {
+        ...existing,
+        sourceId: existing.targetId,
+        targetId: existing.sourceId,
+        sourceMultiplicity: existing.targetMultiplicity,
+        targetMultiplicity: existing.sourceMultiplicity,
+      }),
+    );
+  }
+
+  return ok(
+    replaceRelationship(model, {
+      ...existing,
+      sourceId: existing.targetId,
+      targetId: existing.sourceId,
+    }),
+  );
+}
+
+export function setMessageSort(
+  model: UmlModel,
+  id: string,
+  messageSort: MessageSort,
+): Result<UmlModel, ModelCommandError> {
+  const existing = model.relationships.find((relationship) => relationship.id === id);
+  if (existing === undefined) {
+    return err({
+      code: "unknown-relationship",
+      message: `Relationship "${id}" was not found`,
+    });
+  }
+
+  if (existing.relationshipType !== "message") {
+    return err({
+      code: "illegal-relationship-on-diagram",
+      message: "Only message relationships have a message sort",
+    });
+  }
+
+  return ok(
+    replaceRelationship(model, {
+      ...existing,
+      messageSort,
+    }),
+  );
 }
 
 export function renameElement(

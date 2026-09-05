@@ -56,9 +56,26 @@ export type PseudostateElement = NamedElementBase & {
   kind: PseudostateKind;
 };
 
+export type CombinedFragmentOperand = {
+  guard?: string;
+  messageIds: string[];
+};
+
 export type CombinedFragmentElement = NamedElementBase & {
   elementType: "combinedFragment";
   operator: CombinedFragmentOperator;
+  operands: CombinedFragmentOperand[];
+};
+
+export type LifelineElement = NamedElementBase & {
+  elementType: "lifeline";
+  classifierName?: string;
+};
+
+export type ExecutionSpecificationElement = NamedElementBase & {
+  elementType: "executionSpecification";
+  startMessageId?: string;
+  finishMessageId?: string;
 };
 
 export type StateElement = NamedElementBase & {
@@ -84,6 +101,23 @@ export type PortElement = NamedElementBase & {
   typeName?: string;
 };
 
+export type TimingStateElement = NamedElementBase & {
+  elementType: "timingState";
+  at: number;
+  until?: number;
+};
+
+export type DurationConstraintElement = NamedElementBase & {
+  elementType: "durationConstraint";
+  min: number;
+  max: number;
+};
+
+export type TimeConstraintElement = NamedElementBase & {
+  elementType: "timeConstraint";
+  time: number;
+};
+
 export type NamedElement = NamedElementBase & {
   elementType: Exclude<
     ElementType,
@@ -96,10 +130,15 @@ export type NamedElement = NamedElementBase & {
     | "instanceSpecification"
     | "pseudostate"
     | "combinedFragment"
+    | "lifeline"
+    | "executionSpecification"
     | "state"
     | "stereotype"
     | "part"
     | "port"
+    | "timingState"
+    | "durationConstraint"
+    | "timeConstraint"
   >;
 };
 
@@ -113,10 +152,15 @@ export type UmlElement =
   | InstanceSpecificationElement
   | PseudostateElement
   | CombinedFragmentElement
+  | LifelineElement
+  | ExecutionSpecificationElement
   | StateElement
   | StereotypeElement
   | PartElement
   | PortElement
+  | TimingStateElement
+  | DurationConstraintElement
+  | TimeConstraintElement
   | NamedElement;
 
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -133,11 +177,19 @@ export type NewUmlElement =
   | WithOptional<Omit<EnumerationElement, "id">, "literals">
   | WithOptional<Omit<InstanceSpecificationElement, "id">, "slots">
   | Omit<PseudostateElement, "id">
-  | Omit<CombinedFragmentElement, "id">
+  | WithOptional<Omit<CombinedFragmentElement, "id">, "operands">
+  | WithOptional<Omit<LifelineElement, "id">, "classifierName">
+  | WithOptional<
+      Omit<ExecutionSpecificationElement, "id">,
+      "startMessageId" | "finishMessageId"
+    >
   | WithOptional<Omit<StateElement, "id">, "entry" | "do" | "exit">
   | WithOptional<Omit<StereotypeElement, "id">, "attributes">
   | WithOptional<Omit<PartElement, "id">, "multiplicity">
   | Omit<PortElement, "id">
+  | WithOptional<Omit<TimingStateElement, "id">, "until">
+  | Omit<DurationConstraintElement, "id">
+  | Omit<TimeConstraintElement, "id">
   | Omit<NamedElement, "id">;
 
 export type ClassifierElement =

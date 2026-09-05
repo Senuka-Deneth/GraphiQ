@@ -1,49 +1,57 @@
 import type { Diagnostic } from "@graphiq/uml-core";
+import { ChromePanel } from "./ChromePanel.js";
 
 type DiagnosticsListProps = {
   diagnostics?: readonly Diagnostic[];
+  open: boolean;
 };
 
 function severityTextClass(severity: Diagnostic["severity"]): string {
   switch (severity) {
     case "error":
-      return "text-red-700";
+      return "text-[var(--graphiq-error)]";
     case "warning":
-      return "text-amber-700";
-    default:
-      return "text-slate-800";
+      return "text-[var(--graphiq-warning)]";
+    default: {
+      const unreachable: never = severity;
+      return unreachable;
+    }
   }
 }
 
-export function DiagnosticsList({ diagnostics = [] }: DiagnosticsListProps) {
+export function DiagnosticsList({ diagnostics = [], open }: DiagnosticsListProps) {
   return (
-    <section
-      className="flex max-h-36 min-h-24 shrink-0 flex-col border-t border-slate-300 bg-white"
-      data-testid="diagnostics-list"
-      aria-label="Diagnostics"
+    <ChromePanel
+      open={open}
+      panelTestId="diagnostics-list"
+      title="Diagnostics"
+      openClassName="bottom-3 left-3 max-h-48 w-fit max-w-[min(560px,calc(100%-1.5rem))] px-1 pb-1"
+      role="status"
+      ariaLive="polite"
     >
-      <div className="border-b border-slate-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Diagnostics
-      </div>
       {diagnostics.length === 0 ? (
-        <p className="px-3 py-2 text-sm text-slate-500">No issues</p>
+        <p className="graphiq-row text-[var(--graphiq-label-secondary)] hover:bg-transparent">
+          No issues
+        </p>
       ) : (
-        <ul className="overflow-y-auto px-3 py-2">
+        <ul className="min-h-0 overflow-y-auto">
           {diagnostics.map((diagnostic) => (
             <li
               key={diagnostic.id}
-              className="border-b border-slate-100 py-1 text-sm last:border-b-0"
+              className="graphiq-row items-start py-1 hover:bg-transparent"
               data-rule-id={diagnostic.ruleId}
               data-severity={diagnostic.severity}
             >
-              <span className="font-mono text-xs text-slate-500">{diagnostic.ruleId}</span>
-              <span className={`ml-2 ${severityTextClass(diagnostic.severity)}`}>
+              <span className="shrink-0 font-mono text-[11px] leading-5 text-[var(--graphiq-label-secondary)]">
+                {diagnostic.ruleId}
+              </span>
+              <span className={`leading-5 ${severityTextClass(diagnostic.severity)}`}>
                 {diagnostic.message}
               </span>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </ChromePanel>
   );
 }

@@ -12,8 +12,14 @@ import { PACKAGE_RULES } from "./rules/package/index.js";
 import { PROFILE_RULES } from "./rules/profile/index.js";
 import { USE_CASE_RULES } from "./rules/useCase/index.js";
 import { COMPOSITE_STRUCTURE_RULES } from "./rules/compositeStructure/index.js";
+import { ACTIVITY_RULES } from "./rules/activity/index.js";
+import { STATE_MACHINE_RULES } from "./rules/stateMachine/index.js";
 import { COMMUNICATION_RULES } from "./rules/communication/index.js";
+import { SEQUENCE_RULES } from "./rules/sequence/index.js";
+import { TIMING_RULES } from "./rules/timing/index.js";
+import { INTERACTION_OVERVIEW_RULES } from "./rules/interactionOverview/index.js";
 import type { UmlRule } from "./types.js";
+
 
 const ILLEGAL_CONNECTOR_RULE_ID = "rules.illegal-connector";
 const ILLEGAL_ELEMENT_RULE_ID = "rules.illegal-element-on-diagram";
@@ -39,11 +45,15 @@ function builtinRulesFor(kind: DiagramKind): readonly UmlRule[] {
     case "communication":
       return COMMUNICATION_RULES;
     case "activity":
+      return ACTIVITY_RULES;
     case "stateMachine":
+      return STATE_MACHINE_RULES;
     case "sequence":
+      return SEQUENCE_RULES;
     case "timing":
+      return TIMING_RULES;
     case "interactionOverview":
-      return [];
+      return INTERACTION_OVERVIEW_RULES;
     default:
       return assertNever(kind);
   }

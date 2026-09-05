@@ -183,7 +183,12 @@ describe("print class diagram", () => {
         kind === "profile" ||
         kind === "useCase" ||
         kind === "compositeStructure" ||
-        kind === "communication"
+        kind === "communication" ||
+        kind === "activity" ||
+        kind === "stateMachine" ||
+        kind === "sequence" ||
+        kind === "timing" ||
+        kind === "interactionOverview"
       ) {
         continue;
       }

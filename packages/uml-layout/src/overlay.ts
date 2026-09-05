@@ -6,9 +6,14 @@ export type OverlayNode = {
   height: number;
 };
 
+export type EdgeRouteStyle = "orthogonal" | "straight" | "bezier";
+
 export type OverlayEdge = {
   id: string;
   waypoints?: { x: number; y: number }[];
+  routeStyle?: EdgeRouteStyle;
+  strokeColor?: string;
+  strokeWidth?: number;
 };
 
 export type NotationOverlay = {
@@ -43,4 +48,26 @@ export function reasonToLayoutMode(reason: RelayoutReason): LayoutMode {
       throw new Error(`Unhandled relayout reason: ${String(unreachable)}`);
     }
   }
+}
+
+export function mergeOverlayEdgePresentation(
+  previous: NotationOverlay,
+  next: NotationOverlay,
+): NotationOverlay {
+  const edges: Record<string, OverlayEdge> = {};
+  for (const [id, edge] of Object.entries(next.edges)) {
+    const prior = previous.edges[id];
+    edges[id] = {
+      ...prior,
+      ...edge,
+      routeStyle: prior?.routeStyle ?? edge.routeStyle,
+      strokeColor: prior?.strokeColor ?? edge.strokeColor,
+      strokeWidth: prior?.strokeWidth ?? edge.strokeWidth,
+    };
+  }
+
+  return {
+    ...next,
+    edges,
+  };
 }

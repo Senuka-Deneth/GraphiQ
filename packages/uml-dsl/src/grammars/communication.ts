@@ -6,6 +6,7 @@ import type {
   CommunicationDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   Colon,
   CommunicationKeyword,
@@ -250,6 +251,7 @@ export function parseCommunicationCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = communicationLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -259,5 +261,6 @@ export function parseCommunicationCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

@@ -20,7 +20,10 @@ export type {
   ClassElement,
   ClassifierElement,
   CombinedFragmentElement,
+  CombinedFragmentOperand,
   DataTypeElement,
+  ExecutionSpecificationElement,
+  LifelineElement,
   EnumerationElement,
   InstanceSpecificationElement,
   InterfaceElement,
@@ -32,6 +35,9 @@ export type {
   StereotypeElement,
   PartElement,
   PortElement,
+  TimingStateElement,
+  DurationConstraintElement,
+  TimeConstraintElement,
   UmlElement,
 } from "./element.js";
 export { isClassifierElement } from "./element.js";
@@ -41,13 +47,19 @@ export type {
   AssociationRelationship,
   BinaryRelationship,
   CompositionRelationship,
+  ControlFlowRelationship,
   MessageRelationship,
   NavigableAssociationRelationship,
   NewUmlRelationship,
+  ObjectFlowRelationship,
   TransitionRelationship,
   UmlRelationship,
 } from "./relationship.js";
-export { isAssociationFamilyRelationship } from "./relationship.js";
+export {
+  isActivityFlowRelationship,
+  isAssociationFamilyRelationship,
+  isTransitionRelationship,
+} from "./relationship.js";
 
 export type { UmlModel } from "./model.js";
 export { emptyModel } from "./model.js";
@@ -66,6 +78,17 @@ export {
   removeElement,
   removeRelationship,
   renameElement,
+  reverseRelationship,
   setClassAttribute,
   setClassOperation,
+  setMessageSort,
+  updateRelationshipType,
 } from "./commands.js";
+
+export {
+  intervalCoversTime,
+  isTimingStateElement,
+  timingIntervals,
+  timingIntervalsForLifeline,
+} from "./timingIntervals.js";
+export type { TimingInterval } from "./timingIntervals.js";

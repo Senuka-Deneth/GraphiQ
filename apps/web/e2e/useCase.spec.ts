@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { expectStencilItem, openDslPanel } from "./helpers.js";
 
 const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const storefrontFixture = readFileSync(
@@ -19,11 +20,12 @@ Customer -- Clerk
 
 test("use case document renders actors, ellipses, and include label", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("useCase");
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("useCase");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Actor");
-  await expect(page.locator('[data-testid="stencil"]')).toContainText("Subject");
+  await expectStencilItem(page, "actor", "Actor");
+  await expectStencilItem(page, "subject", "Subject");
 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
@@ -38,8 +40,9 @@ test("use case document renders actors, ellipses, and include label", async ({ p
 
   await expect(page.locator(".react-flow__edge")).toHaveCount(4);
 
-  await expect(page.getByText("«include»")).toBeVisible();
-  await expect(page.getByText("«extend»")).toBeVisible();
+  const canvas = page.locator('[data-testid="use-case-canvas"]');
+  await expect(canvas.getByText("«include»")).toBeVisible();
+  await expect(canvas.getByText("«extend»")).toBeVisible();
 
   const edgePaths = page.locator(".react-flow__edge-path");
   const pathCount = await edgePaths.count();
@@ -64,6 +67,7 @@ test("use case document renders actors, ellipses, and include label", async ({ p
 
 test("actor-to-actor association shows uc.assoc.actor-to-usecase", async ({ page }) => {
   await page.goto("/");
+  await openDslPanel(page);
 
   await page.locator('[data-testid="new-document-kind"]').selectOption("useCase");
   const editor = page.locator('[data-testid="dsl-editor"]');

@@ -1,14 +1,13 @@
 import { assertNever, err, ok } from "@graphiq/uml-core";
 import type { DiagramKind, Diagnostic, Result } from "@graphiq/uml-core";
 import type { CstNode } from "chevrotain";
-import type { ClassDiagramAst, ComponentDiagramAst, DeploymentDiagramAst, DiagramAst, ObjectDiagramAst, PackageDiagramAst, ProfileDiagramAst, UseCaseDiagramAst } from "./ast.js";
+import type { ClassDiagramAst, ComponentDiagramAst, DeploymentDiagramAst, DiagramAst, DslComment, ObjectDiagramAst, PackageDiagramAst, ProfileDiagramAst, UseCaseDiagramAst } from "./ast.js";
 import {
   KIND_MISMATCH_RULE_ID,
   headerParseDiagnostic,
   kindMismatchDiagnostic,
   lexerErrorToDiagnostic,
   parserErrorToDiagnostic,
-  unsupportedKindDiagnostic,
 } from "./diagnostics.js";
 import { parseClassCst, parseClassDocument } from "./grammars/class.js";
 import { parseComponentCst, parseComponentDocument } from "./grammars/component.js";
@@ -25,10 +24,19 @@ import {
   parseCommunicationCst,
   parseCommunicationDocument,
 } from "./grammars/communication.js";
+import { parseActivityCst, parseActivityDocument } from "./grammars/activity.js";
+import { parseStateMachineCst, parseStateMachineDocument } from "./grammars/stateMachine.js";
+import { parseSequenceCst, parseSequenceDocument } from "./grammars/sequence.js";
+import { parseTimingCst, parseTimingDocument } from "./grammars/timing.js";
+import {
+  parseInteractionOverviewCst,
+  parseInteractionOverviewDocument,
+} from "./grammars/interactionOverview.js";
 
 export type ParseSuccess = {
   ast: DiagramAst;
   cst: CstNode;
+  comments: DslComment[];
   diagnostics: Diagnostic[];
 };
 
@@ -60,13 +68,15 @@ export function parse(
     case "communication":
       return parseCommunication(kind, text);
     case "activity":
+      return parseActivity(kind, text);
     case "stateMachine":
+      return parseStateMachine(kind, text);
     case "sequence":
+      return parseSequence(kind, text);
     case "timing":
+      return parseTiming(kind, text);
     case "interactionOverview":
-      return err({
-        diagnostics: [unsupportedKindDiagnostic(kind)],
-      });
+      return parseInteractionOverview(kind, text);
     default:
       return assertNever(kind);
   }
@@ -81,7 +91,7 @@ function parseClass(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseClassCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseClassCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -102,6 +112,7 @@ function parseClass(
   return ok({
     ast,
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -115,7 +126,7 @@ function parseObject(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseObjectCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseObjectCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -142,6 +153,7 @@ function parseObject(
       instances: completeInstances,
     },
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -160,7 +172,7 @@ function parsePackage(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parsePackageCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parsePackageCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -181,6 +193,7 @@ function parsePackage(
   return ok({
     ast,
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -194,7 +207,7 @@ function parseComponent(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseComponentCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseComponentCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -215,6 +228,7 @@ function parseComponent(
   return ok({
     ast,
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -228,7 +242,7 @@ function parseDeployment(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseDeploymentCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseDeploymentCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -249,6 +263,7 @@ function parseDeployment(
   return ok({
     ast,
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -262,7 +277,7 @@ function parseProfile(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseProfileCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseProfileCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -283,6 +298,7 @@ function parseProfile(
   return ok({
     ast,
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -296,7 +312,7 @@ function parseUseCase(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseUseCaseCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseUseCaseCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -317,6 +333,7 @@ function parseUseCase(
   return ok({
     ast,
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -330,7 +347,7 @@ function parseCompositeStructure(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseCompositeStructureCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseCompositeStructureCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -351,6 +368,7 @@ function parseCompositeStructure(
   return ok({
     ast,
     cst,
+    comments,
     diagnostics,
   });
 }
@@ -364,7 +382,7 @@ function parseCommunication(
     return err({ diagnostics: [headerMismatch] });
   }
 
-  const { cst, lexerErrors, parserErrors } = parseCommunicationCst(text);
+  const { cst, lexerErrors, parserErrors, comments } = parseCommunicationCst(text);
   const diagnostics: Diagnostic[] = [
     ...lexerErrors.map(lexerErrorToDiagnostic),
     ...parserErrors.map(parserErrorToDiagnostic),
@@ -385,6 +403,182 @@ function parseCommunication(
   return ok({
     ast,
     cst,
+    comments,
+    diagnostics,
+  });
+}
+
+function parseActivity(
+  expectedKind: "activity",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors, comments } = parseActivityCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseActivityDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    comments,
+    diagnostics,
+  });
+}
+
+function parseStateMachine(
+  expectedKind: "stateMachine",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors, comments } = parseStateMachineCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseStateMachineDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    comments,
+    diagnostics,
+  });
+}
+
+function parseSequence(
+  expectedKind: "sequence",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors, comments } = parseSequenceCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseSequenceDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    comments,
+    diagnostics,
+  });
+}
+
+function parseTiming(
+  expectedKind: "timing",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors, comments } = parseTimingCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseTimingDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    comments,
+    diagnostics,
+  });
+}
+
+function parseInteractionOverview(
+  expectedKind: "interactionOverview",
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
+  const headerMismatch = detectHeaderKindMismatch(text, expectedKind);
+  if (headerMismatch) {
+    return err({ diagnostics: [headerMismatch] });
+  }
+
+  const { cst, lexerErrors, parserErrors, comments } = parseInteractionOverviewCst(text);
+  const diagnostics: Diagnostic[] = [
+    ...lexerErrors.map(lexerErrorToDiagnostic),
+    ...parserErrors.map(parserErrorToDiagnostic),
+  ];
+
+  const hasHeader = cst.children.DiagramKeyword !== undefined;
+  if (!hasHeader) {
+    return err({
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [headerParseDiagnostic("Expected diagram header")],
+    });
+  }
+
+  const ast = parseInteractionOverviewDocument(cst);
+
+  return ok({
+    ast,
+    cst,
+    comments,
     diagnostics,
   });
 }

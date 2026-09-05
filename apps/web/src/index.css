@@ -2,11 +2,347 @@
 
 /* Editor chrome tokens only. UML notation colors are Step 5 (uml-notation). */
 :root {
+  color-scheme: light;
+
+  /* The diagram surface stays light: UML notation is black on white. */
   --color-canvas: #f8fafc;
-  --color-ink: #0f172a;
+
+  /* Radii measured from the macOS Apple Maps chrome. */
+  --graphiq-radius-island: 12px;
+  --graphiq-radius-control: 8px;
+  --graphiq-radius-row: 6px;
+  --graphiq-radius-pill: 999px;
+
+  --graphiq-inset: 12px;
+  /* Height of the DSL/diagnostics toggle stack plus the top inset. Shared so
+     the zoom island inside the canvas cannot drift away from it. */
+  --graphiq-right-stack-offset: 84px;
+
+  /* What the vibrancy surfaces blend against where no canvas sits behind them. */
+  --graphiq-backdrop: #f2f2f7;
+  --graphiq-vibrancy: rgba(255, 255, 255, 0.72);
+  --graphiq-island: rgba(255, 255, 255, 0.8);
+  --graphiq-island-hover: rgba(0, 0, 0, 0.05);
+  --graphiq-island-active: rgba(0, 0, 0, 0.09);
+  --graphiq-hairline: rgba(0, 0, 0, 0.08);
+  --graphiq-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  --graphiq-label: #1c1c1e;
+  --graphiq-label-secondary: rgba(60, 60, 67, 0.6);
+  --graphiq-accent: #007aff;
+  --graphiq-accent-ink: #ffffff;
+  --graphiq-field: rgba(255, 255, 255, 0.75);
+  --graphiq-syntax-keyword: #7c3aed;
+  --graphiq-error: #d70015;
+  --graphiq-warning: #a1560a;
 }
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  font-size: 15px;
+  color: var(--graphiq-label);
+  background-color: var(--graphiq-backdrop);
+}
+
+@layer components {
+  .graphiq-sidebar {
+    background-color: var(--graphiq-vibrancy);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border-right: 1px solid var(--graphiq-hairline);
+  }
+
+  .graphiq-island {
+    background-color: var(--graphiq-island);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-island);
+    box-shadow: var(--graphiq-shadow);
+    color: var(--graphiq-label);
+  }
+
+  /* A single 36px corner button, or a group of them stacked in one island. */
+  .graphiq-island-controls {
+    background-color: var(--graphiq-island);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-control);
+    box-shadow: var(--graphiq-shadow);
+    color: var(--graphiq-label);
+    overflow: hidden;
+  }
+
+  .graphiq-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: var(--graphiq-radius-control);
+    color: var(--graphiq-label);
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .graphiq-control:hover:not(:disabled) {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-control:active:not(:disabled) {
+    background-color: var(--graphiq-island-active);
+  }
+
+  .graphiq-control:disabled {
+    opacity: 0.4;
+  }
+
+  .graphiq-control[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  .graphiq-icon-button {
+    display: inline-flex;
+    height: 36px;
+    width: 36px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--graphiq-radius-control);
+    color: var(--graphiq-label);
+  }
+
+  .graphiq-icon-button:hover:not(:disabled) {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-icon-button:active:not(:disabled) {
+    background-color: var(--graphiq-island-active);
+  }
+
+  .graphiq-icon-button[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  .graphiq-icon-tile {
+    display: flex;
+    height: 36px;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--graphiq-radius-control);
+    color: var(--graphiq-label);
+  }
+
+  .graphiq-icon-tile:hover {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-icon-tile:active {
+    background-color: var(--graphiq-island-active);
+  }
+
+  .graphiq-icon-tile[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  /* Sidebar list row kept for any remaining labeled chrome. */
+  .graphiq-row {
+    display: flex;
+    min-height: 36px;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    border-radius: var(--graphiq-radius-row);
+    padding: 0 8px;
+    font-size: 15px;
+    color: var(--graphiq-label);
+    text-align: left;
+  }
+
+  .graphiq-row:hover {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-row[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  .graphiq-section-label {
+    padding: 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--graphiq-label-secondary);
+  }
+
+  .graphiq-field {
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-row);
+    background-color: var(--graphiq-field);
+    color: var(--graphiq-label);
+    font-size: 15px;
+  }
+
+  .graphiq-title-pill {
+    display: block;
+    width: 100%;
+    height: 36px;
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-pill);
+    background-color: rgba(255, 255, 255, 0.82);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    padding: 0 14px;
+    font-size: 15px;
+    line-height: 36px;
+    color: var(--graphiq-label);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  }
+
+  .graphiq-title-pill::placeholder {
+    color: var(--graphiq-label-secondary);
+  }
+
+  .graphiq-primary-pill {
+    display: inline-flex;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--graphiq-radius-pill);
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+    padding: 0 14px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .graphiq-primary-pill:hover:not(:disabled) {
+    filter: brightness(0.96);
+  }
+
+  .graphiq-primary-pill:disabled {
+    opacity: 0.5;
+  }
+
+  .graphiq-segment {
+    display: flex;
+    overflow: hidden;
+    border: 1px solid var(--graphiq-hairline);
+    border-radius: var(--graphiq-radius-control);
+    background-color: var(--graphiq-field);
+  }
+
+  .graphiq-segment-item {
+    flex: 1;
+    height: 32px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--graphiq-label);
+  }
+
+  .graphiq-segment-item:hover:not([aria-pressed="true"]) {
+    background-color: var(--graphiq-island-hover);
+  }
+
+  .graphiq-segment-item[aria-pressed="true"] {
+    background-color: var(--graphiq-accent);
+    color: var(--graphiq-accent-ink);
+  }
+
+  .graphiq-switch {
+    position: relative;
+    width: 42px;
+    height: 26px;
+    flex: none;
+    border-radius: var(--graphiq-radius-pill);
+    background-color: rgba(120, 120, 128, 0.2);
+    transition: background-color 160ms ease;
+  }
+
+  .graphiq-switch[aria-checked="true"] {
+    background-color: var(--graphiq-accent);
+  }
+
+  .graphiq-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 160ms ease;
+  }
+
+  .graphiq-switch[aria-checked="true"] .graphiq-switch-knob {
+    transform: translateX(16px);
+  }
+}
+
+.graphiq-chrome-transition {
+  transition-property: width, min-width, max-height, min-height, border-width, opacity;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+@keyframes graphiq-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.graphiq-blink {
+  animation: graphiq-blink 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graphiq-chrome-transition {
+    transition: none;
+  }
+
+  .graphiq-blink {
+    animation: none;
+  }
+}
+
+.graphiq-flow-canvas[data-canvas-mode="preview"] .react-flow__handle {
+  pointer-events: none !important;
+}
+
+.graphiq-flow-canvas .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.graphiq-flow-canvas .react-flow__node.selected .react-flow__handle,
+.graphiq-flow-canvas:has([data-connecting="true"]) .react-flow__handle,
+.graphiq-flow-canvas .react-flow:has(.react-flow__connectionline) .react-flow__handle,
+.graphiq-flow-canvas .react-flow:has(.react-flow__connection) .react-flow__handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.graphiq-resize-handle {
+  width: 8px !important;
+  height: 8px !important;
+  border: 1.5px solid var(--graphiq-accent) !important;
+  border-radius: 1px !important;
+  background: #ffffff !important;
+}
+
+.graphiq-resize-line {
+  border-color: var(--graphiq-accent) !important;
 }

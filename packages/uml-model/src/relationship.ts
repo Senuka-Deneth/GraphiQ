@@ -36,6 +36,7 @@ export type MessageRelationship = RelationshipBase & {
   relationshipType: "message";
   messageSort: MessageSort;
   sequenceNumber?: string;
+  time?: number;
 };
 
 export type TransitionRelationship = RelationshipBase & {
@@ -43,6 +44,16 @@ export type TransitionRelationship = RelationshipBase & {
   trigger?: string;
   guard?: string;
   effect?: string;
+};
+
+export type ControlFlowRelationship = RelationshipBase & {
+  relationshipType: "controlFlow";
+  guard?: string;
+};
+
+export type ObjectFlowRelationship = RelationshipBase & {
+  relationshipType: "objectFlow";
+  guard?: string;
 };
 
 export type BinaryRelationship = RelationshipBase & {
@@ -54,6 +65,8 @@ export type BinaryRelationship = RelationshipBase & {
     | "composition"
     | "message"
     | "transition"
+    | "controlFlow"
+    | "objectFlow"
   >;
 };
 
@@ -64,6 +77,8 @@ export type UmlRelationship =
   | CompositionRelationship
   | MessageRelationship
   | TransitionRelationship
+  | ControlFlowRelationship
+  | ObjectFlowRelationship
   | BinaryRelationship;
 
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -85,8 +100,10 @@ export type NewUmlRelationship =
       Omit<CompositionRelationship, "id">,
       "sourceMultiplicity" | "targetMultiplicity"
     >
-  | WithOptional<Omit<MessageRelationship, "id">, "sequenceNumber">
+  | WithOptional<Omit<MessageRelationship, "id">, "sequenceNumber" | "time">
   | WithOptional<Omit<TransitionRelationship, "id">, "trigger" | "guard" | "effect">
+  | WithOptional<Omit<ControlFlowRelationship, "id">, "guard">
+  | WithOptional<Omit<ObjectFlowRelationship, "id">, "guard">
   | Omit<BinaryRelationship, "id">;
 
 export function isAssociationFamilyRelationship(
@@ -102,4 +119,19 @@ export function isAssociationFamilyRelationship(
     relationship.relationshipType === "aggregation" ||
     relationship.relationshipType === "composition"
   );
+}
+
+export function isActivityFlowRelationship(
+  relationship: UmlRelationship,
+): relationship is ControlFlowRelationship | ObjectFlowRelationship {
+  return (
+    relationship.relationshipType === "controlFlow" ||
+    relationship.relationshipType === "objectFlow"
+  );
+}
+
+export function isTransitionRelationship(
+  relationship: UmlRelationship,
+): relationship is TransitionRelationship {
+  return relationship.relationshipType === "transition";
 }

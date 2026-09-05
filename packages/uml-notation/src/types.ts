@@ -20,7 +20,8 @@ export type SvgMarkerDef = {
   refX: number;
   refY: number;
   orient: "auto";
-  fill: "none" | "currentColor";
+  markerUnits: "userSpaceOnUse";
+  fill: "none" | "currentColor" | "canvas";
   stroke: "currentColor";
   pathD: string;
 };

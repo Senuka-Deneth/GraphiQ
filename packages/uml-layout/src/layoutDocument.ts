@@ -10,8 +10,13 @@ import { layoutProfile } from "./layoutProfile.js";
 import { layoutUseCase } from "./layoutUseCase.js";
 import { layoutCompositeStructure } from "./layoutCompositeStructure.js";
 import { layoutCommunication } from "./layoutCommunication.js";
+import { layoutActivity } from "./layoutActivity.js";
+import { layoutStateMachine } from "./layoutStateMachine.js";
+import { layoutSequence } from "./layoutSequence.js";
+import { layoutTiming } from "./layoutTiming.js";
+import { layoutInteractionOverview } from "./layoutInteractionOverview.js";
 import type { NotationOverlay, RelayoutReason } from "./overlay.js";
-import { reasonToLayoutMode } from "./overlay.js";
+import { mergeOverlayEdgePresentation, reasonToLayoutMode } from "./overlay.js";
 
 export async function layoutDocument(
   kind: DiagramKind,
@@ -20,7 +25,16 @@ export async function layoutDocument(
   reason: RelayoutReason,
 ): Promise<NotationOverlay> {
   const mode = reasonToLayoutMode(reason);
+  const next = await layoutKind(kind, model, overlay, mode);
+  return mergeOverlayEdgePresentation(overlay, next);
+}
 
+async function layoutKind(
+  kind: DiagramKind,
+  model: UmlModel,
+  overlay: NotationOverlay,
+  mode: ReturnType<typeof reasonToLayoutMode>,
+): Promise<NotationOverlay> {
   switch (kind) {
     case "class":
       return layoutClass(model, overlay, mode);
@@ -41,11 +55,15 @@ export async function layoutDocument(
     case "communication":
       return layoutCommunication(model, overlay, mode);
     case "activity":
+      return layoutActivity(model, overlay, mode);
     case "stateMachine":
+      return layoutStateMachine(model, overlay, mode);
     case "sequence":
+      return layoutSequence(model, overlay, mode);
     case "timing":
+      return layoutTiming(model, overlay, mode);
     case "interactionOverview":
-      throw new Error(`layout not implemented for ${kind}`);
+      return layoutInteractionOverview(model, overlay, mode);
     default:
       return assertNever(kind);
   }

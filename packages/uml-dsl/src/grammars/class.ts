@@ -9,6 +9,7 @@ import type {
   ClassDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   AbstractKeyword,
   AggregationArrow,
@@ -363,6 +364,7 @@ export class ClassDslVisitor {
     return {
       classifierKind: "class",
       name: nameToken.image,
+      nameSpan: tokenSpan(nameToken),
       isAbstract: true,
       attributes: members.attributes,
       operations: members.operations,
@@ -381,6 +383,7 @@ export class ClassDslVisitor {
     return {
       classifierKind: "class",
       name: nameToken.image,
+      nameSpan: tokenSpan(nameToken),
       isAbstract: false,
       attributes: members.attributes,
       operations: members.operations,
@@ -399,6 +402,7 @@ export class ClassDslVisitor {
     return {
       classifierKind: "interface",
       name: nameToken.image,
+      nameSpan: tokenSpan(nameToken),
       attributes: members.attributes,
       operations: members.operations,
       span: tokenSpan(
@@ -416,6 +420,7 @@ export class ClassDslVisitor {
     return {
       classifierKind: "enumeration",
       name: nameToken.image,
+      nameSpan: tokenSpan(nameToken),
       literals: literalTokens.map((token) => token.image),
       span: tokenSpan(
         node.children.EnumKeyword?.[0] as IToken,
@@ -511,7 +516,9 @@ export class ClassDslVisitor {
 
     return {
       sourceName: sourceToken.image,
+      sourceNameSpan: tokenSpan(sourceToken),
       targetName: targetToken.image,
+      targetNameSpan: tokenSpan(targetToken),
       relationshipType: relationshipTypeFromArrow(arrowNode),
       sourceMultiplicity: this.readRelationshipMultiplicity(sourceMultiplicityNode),
       targetMultiplicity: this.readRelationshipMultiplicity(targetMultiplicityNode),
@@ -542,6 +549,7 @@ export function parseClassCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = classLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -551,5 +559,6 @@ export function parseClassCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }

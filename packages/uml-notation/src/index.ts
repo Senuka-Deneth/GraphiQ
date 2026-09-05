@@ -4,7 +4,7 @@ export type { ElementType } from "./elementTypes.js";
 export { getElementNotation } from "./elementNotation.js";
 export { MESSAGE_SORTS } from "./messageSort.js";
 export type { MessageSort } from "./messageSort.js";
-export { getMarker, MARKER_IDS, SVG_MARKERS } from "./markers.js";
+export { getMarker, MARKER_IDS, SVG_MARKERS, UML_MARKER_SIZE } from "./markers.js";
 export { RELATIONSHIP_TYPES } from "./relationshipTypes.js";
 export type { RelationshipType } from "./relationshipTypes.js";
 export {

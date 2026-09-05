@@ -7,6 +7,7 @@ import type {
   DslSpan,
   ObjectDiagramAst,
 } from "../ast.js";
+import { commentsFromLexerGroups } from "../comments.js";
 import {
   Colon,
   DependencyArrow,
@@ -239,6 +240,7 @@ export function parseObjectCst(text: string): {
   cst: CstNode;
   lexerErrors: ILexingError[];
   parserErrors: IRecognitionException[];
+  comments: ReturnType<typeof commentsFromLexerGroups>;
 } {
   const lexResult = objectLexer.tokenize(text);
   parser.input = lexResult.tokens;
@@ -248,5 +250,6 @@ export function parseObjectCst(text: string): {
     cst,
     lexerErrors: lexResult.errors,
     parserErrors: parser.errors,
+    comments: commentsFromLexerGroups(lexResult.groups),
   };
 }
