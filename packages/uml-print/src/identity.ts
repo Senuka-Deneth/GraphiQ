@@ -303,7 +303,9 @@ export class IdentityTable {
     const counts = new Map<string, number>();
     for (const relationship of model.relationships) {
       const discriminator =
-        relationship.relationshipType === "message" ? relationship.messageSort : "";
+        relationship.relationshipType === "message" ? relationship.messageSort :
+        relationship.relationshipType === "controlFlow" || relationship.relationshipType === "objectFlow"
+          ? relationship.guard ?? "" : "";
       const base = [
         relationship.sourceId,
         relationship.targetId,

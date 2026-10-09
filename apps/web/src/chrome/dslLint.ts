@@ -1,6 +1,7 @@
 import { linter, type Diagnostic as LintDiagnostic } from "@codemirror/lint";
 import { Compartment, type Extension } from "@codemirror/state";
 import type { Diagnostic } from "@graphiq/uml-core";
+import { sourceLocation } from "../diagnostics/sourceLocation.js";
 
 function expandSpanToLine(text: string, span: { start: number; end: number }): {
   from: number;
@@ -16,27 +17,27 @@ function expandSpanToLine(text: string, span: { start: number; end: number }): {
   return { from: lineStart, to: lineEnd };
 }
 
-function diagnosticsToLint(
+export function diagnosticsToLint(
   text: string,
   diagnostics: readonly Diagnostic[],
 ): LintDiagnostic[] {
   const results: LintDiagnostic[] = [];
 
   for (const diagnostic of diagnostics) {
-    if (diagnostic.dslSpan === undefined) {
+    const location = sourceLocation(text, diagnostic.dslSpan);
+    if (location === undefined) {
       continue;
     }
 
-    const { from, to } = expandSpanToLine(text, diagnostic.dslSpan);
-    if (from >= text.length) {
-      continue;
-    }
+    const { from, to } = location.start === text.length
+      ? { from: text.length, to: text.length }
+      : expandSpanToLine(text, location);
 
     results.push({
       from,
-      to: Math.max(from + 1, Math.min(to, text.length)),
+      to: Math.min(text.length, Math.max(from, to)),
       severity: diagnostic.severity,
-      message: `${diagnostic.ruleId}: ${diagnostic.message}`,
+      message: `Line ${location.line}, column ${location.column}: ${diagnostic.message}`,
     });
   }
 

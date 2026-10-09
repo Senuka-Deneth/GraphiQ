@@ -287,12 +287,13 @@ export function Stencil({
       ) : null}
       <aside
         className={`graphiq-chrome-transition relative flex shrink-0 flex-col overflow-hidden ${
-          open ? "graphiq-sidebar" : "pointer-events-none w-0 min-w-0"
+          open ? "graphiq-sidebar max-sm:absolute max-sm:inset-y-0 max-sm:left-0 max-sm:z-40" : "pointer-events-none w-0 min-w-0"
         }`}
         style={open ? { width, minWidth: width } : undefined}
         data-testid="stencil"
         aria-label="Element stencil"
         aria-hidden={!open}
+        inert={!open}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-3">
           <h1 className="text-[15px] font-semibold tracking-tight">GraphiQ</h1>

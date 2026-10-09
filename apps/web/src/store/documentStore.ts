@@ -523,6 +523,31 @@ function canApplyStructuralCommand(state: DocumentStoreState): boolean {
   return !state.dslEditorFocused && state.parseTimer === null;
 }
 
+function sameDocumentContent(current: GraphiqDocument, snapshot: GraphiqDocument): boolean {
+  return current.id === snapshot.id && current.kind === snapshot.kind &&
+    current.dsl === snapshot.dsl && current.model === snapshot.model;
+}
+
+function layoutFailureDiagnostic(): Diagnostic {
+  return {
+    id: createId(), ruleId: "layout.failed", severity: "error",
+    message: "The diagram could not be arranged. Try editing again or reload the page.",
+    elementIds: [],
+  };
+}
+
+function preserveNewerPresentation(layout: NotationOverlay, snapshot: NotationOverlay, current: NotationOverlay): NotationOverlay {
+  const nodes = { ...layout.nodes };
+  for (const [id, node] of Object.entries(current.nodes)) {
+    const before = snapshot.nodes[id];
+    const laidOut = nodes[id];
+    if (before !== undefined && laidOut !== undefined && (node.x !== before.x || node.y !== before.y)) {
+      nodes[id] = { ...laidOut, x: node.x, y: node.y };
+    }
+  }
+  return { ...layout, nodes, viewport: current.viewport ?? layout.viewport };
+}
+
 async function commitStructuralModelChange(
   get: () => DocumentStoreState,
   set: (partial: Partial<DocumentStoreState> | ((state: DocumentStoreState) => Partial<DocumentStoreState>)) => void,
@@ -546,7 +571,19 @@ async function commitStructuralModelChange(
     Object.keys(overlayBase.nodes).length === 0
       ? "first-open-empty-overlay"
       : "topology-changed";
-  const overlay = await layoutDocument(document.kind, modelForValidation, overlayBase, reason);
+  let laidOut: NotationOverlay;
+  try {
+    laidOut = await layoutDocument(document.kind, modelForValidation, overlayBase, reason);
+  } catch {
+    if (sameDocumentContent(get().document, document)) {
+      set({ diagnostics: [layoutFailureDiagnostic()] });
+    }
+    return false;
+  }
+  if (!sameDocumentContent(get().document, document)) {
+    return false;
+  }
+  const overlay = preserveNewerPresentation(laidOut, document.overlay, get().document.overlay);
   const dsl = printDocumentDsl(document, modelForValidation, lastParseSource);
   const nextParseSource = refreshParseSource(document.kind, dsl);
 
@@ -873,14 +910,29 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       const diagnostics = bindDiagnosticSpans(ast, model, [
         ...parseDiagnostics,
         ...modelDiagnostics,
-      ]);
+      ], compiled.sourceMap);
 
       const overlayBase = lastGoodOverlay;
       const reason =
         Object.keys(overlayBase.nodes).length === 0
           ? "first-open-empty-overlay"
           : "topology-changed";
-      const overlay = await layoutDocument(document.kind, model, overlayBase, reason);
+      let laidOut: NotationOverlay;
+      try {
+        laidOut = await layoutDocument(document.kind, model, overlayBase, reason);
+      } catch {
+        if (sameDocumentContent(get().document, document)) {
+          set({ diagnostics: [...diagnostics, layoutFailureDiagnostic()], parseTimer: null });
+        }
+        return;
+      }
+
+      // Layout can finish after another edit, import, or document switch.
+      // Only publish a result for the document snapshot that was parsed.
+      if (!sameDocumentContent(get().document, document)) {
+        return;
+      }
+      const overlay = preserveNewerPresentation(laidOut, document.overlay, get().document.overlay);
 
       set({
         document: {

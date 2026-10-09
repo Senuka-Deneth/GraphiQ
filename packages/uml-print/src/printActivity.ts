@@ -6,12 +6,6 @@ function needsDeclaration(element: UmlElement): boolean {
   switch (element.elementType) {
     case "note":
       return false;
-    case "initialNode":
-      return element.name !== "initial";
-    case "activityFinalNode":
-      return element.name !== "final";
-    case "flowFinalNode":
-      return element.name !== "flowFinal";
     default:
       return true;
   }
@@ -47,9 +41,9 @@ function printNodeLine(element: UmlElement): string | undefined {
     case "flowFinalNode":
       return element.name === "flowFinal" ? "flowFinal" : `flowFinal ${element.name}`;
     case "initialNode":
-      return element.name === "initial" ? undefined : `initial ${element.name}`;
+      return element.name === "initial" ? "initial" : `initial ${element.name}`;
     case "activityFinalNode":
-      return element.name === "final" ? undefined : `final ${element.name}`;
+      return element.name === "final" ? "final" : `final ${element.name}`;
     case "activityPartition":
     case "interruptibleActivityRegion":
     case "activity":

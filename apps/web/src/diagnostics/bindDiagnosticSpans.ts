@@ -18,6 +18,7 @@ import type {
   UseCaseDiagramAst,
 } from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
+import type { CompilationSourceMap } from "@graphiq/uml-print";
 
 function findClassRelationshipSpan(
   ast: ClassDiagramAst,
@@ -723,8 +724,18 @@ export function bindDiagnosticSpans(
   ast: DiagramAst,
   model: UmlModel,
   diagnostics: readonly Diagnostic[],
+  sourceMap?: CompilationSourceMap,
 ): Diagnostic[] {
-  return diagnostics.map((diagnostic) => bindOneDiagnostic(ast, model, diagnostic));
+  return diagnostics.map((diagnostic) => {
+    if (diagnostic.dslSpan !== undefined) return diagnostic;
+    // Compilation IDs distinguish same-named nodes and parallel flows.
+    // Prefer the affected flow's source over its connected nodes.
+    for (const kind of ["relationship", "element", "reference"] as const) {
+      const entry = sourceMap?.entries.find((item) => item.kind === kind && item.id !== undefined && diagnostic.elementIds.includes(item.id) && item.span !== undefined);
+      if (entry?.span !== undefined) return { ...diagnostic, dslSpan: entry.span };
+    }
+    return bindOneDiagnostic(ast, model, diagnostic);
+  });
 }
 
 export type DiagnosticSeverity = "error" | "warning";

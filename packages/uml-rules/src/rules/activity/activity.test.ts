@@ -23,6 +23,44 @@ function findId(model: UmlModel, name: string): string {
 }
 
 describe("activity diagram rules", () => {
+  it("warns when alternative decision paths have the same guard", () => {
+    const model: UmlModel = {
+      ...emptyModel("activity"),
+      elements: [
+        { id: "choice", elementType: "decisionNode", name: "PaymentStatus" },
+        { id: "retry", elementType: "action", name: "Retry" },
+        { id: "cancel", elementType: "action", name: "Cancel" },
+      ],
+      relationships: [
+        { id: "retry-flow", relationshipType: "controlFlow", sourceId: "choice", targetId: "retry", guard: "Failed" },
+        { id: "cancel-flow", relationshipType: "controlFlow", sourceId: "choice", targetId: "cancel", guard: "Failed" },
+      ],
+    };
+    expect(validate("activity", model)).toContainEqual(expect.objectContaining({
+      ruleId: "act.branch-choices", severity: "warning", message: expect.stringContaining("[Failed]"),
+      elementIds: ["cancel-flow", "choice"],
+    }));
+  });
+
+  it("suggests an explicit choice or fork for an action with multiple unguarded paths", () => {
+    const model: UmlModel = {
+      ...emptyModel("activity"),
+      elements: [
+        { id: "a", elementType: "action", name: "SelectDoctor" },
+        { id: "b", elementType: "action", name: "Retry" },
+        { id: "c", elementType: "action", name: "Cancel" },
+      ],
+      relationships: [
+        { id: "ab", relationshipType: "controlFlow", sourceId: "a", targetId: "b" },
+        { id: "ac", relationshipType: "controlFlow", sourceId: "a", targetId: "c" },
+      ],
+    };
+    expect(validate("activity", model)).toContainEqual(expect.objectContaining({
+      ruleId: "act.branch-choices", severity: "warning", message: expect.stringContaining("decision for alternatives"),
+    }));
+    const guarded: UmlModel = { ...model, relationships: model.relationships.map((flow) => ({ ...flow, guard: flow.id })) };
+    expect(validate("activity", guarded).some((item) => item.ruleId === "act.branch-choices")).toBe(false);
+  });
   it("allows control flow between actions in the matrix", () => {
     expect(
       isConnectorAllowed({

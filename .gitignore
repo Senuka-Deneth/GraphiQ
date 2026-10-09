@@ -8,3 +8,6 @@ coverage
 *.tsbuildinfo
 .DS_Store
 .idea
+graphify-out/
+apps/web/test-results/
+apps/web/playwright-report/

@@ -443,6 +443,8 @@ export type AstActivityBodyItem =
   | { itemKind: "interruptible"; region: AstActivityInterruptible };
 
 export type AstActivityFlow = {
+  sourceSpan?: DslSpan;
+  targetSpan?: DslSpan;
   sourceName: string;
   targetName: string;
   guard?: string;

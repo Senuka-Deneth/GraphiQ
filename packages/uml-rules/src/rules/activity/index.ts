@@ -5,6 +5,7 @@ import { activityFlowFromExecutableOrControlNodeRule } from "./flow-from-executa
 import { activityForkJoinBalanceRule } from "./fork-join-balance.js";
 import { activityInitialNoIncomingRule } from "./initial-no-incoming.js";
 import { activityNoClassesAsActionsRule } from "./no-classes-as-actions.js";
+import { activityBranchChoicesRule } from "./branch-choices.js";
 
 export const ACTIVITY_RULES: readonly UmlRule[] = [
   activityFlowFromExecutableOrControlNodeRule,
@@ -13,4 +14,5 @@ export const ACTIVITY_RULES: readonly UmlRule[] = [
   activityDecisionHasGuardsOnOutgoingRule,
   activityForkJoinBalanceRule,
   activityNoClassesAsActionsRule,
+  activityBranchChoicesRule,
 ];

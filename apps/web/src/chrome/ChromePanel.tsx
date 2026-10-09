@@ -37,6 +37,7 @@ export function ChromePanel({
       }`}
       data-testid={panelTestId}
       aria-hidden={!open}
+      inert={!open}
       role={role}
       aria-live={ariaLive}
     >

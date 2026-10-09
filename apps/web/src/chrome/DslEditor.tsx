@@ -6,6 +6,7 @@ import type { Diagnostic } from "@graphiq/uml-core";
 import { useEffect, useRef } from "react";
 import { createInitialDslLintExtension, reconfigureDslLint } from "./dslLint.js";
 import { dslHighlightExtension } from "./dslHighlight.js";
+import { sourceLocation } from "../diagnostics/sourceLocation.js";
 
 type DslEditorProps = {
   value?: string;
@@ -15,6 +16,7 @@ type DslEditorProps = {
   readOnly?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  selectionRequest?: { start: number; end: number; request: number } | null;
 };
 
 const editorTheme = EditorView.theme({
@@ -72,6 +74,7 @@ export function DslEditor({
   readOnly = false,
   onFocus,
   onBlur,
+  selectionRequest,
 }: DslEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -117,7 +120,7 @@ export function DslEditor({
         EditorView.lineWrapping,
         updateListener,
         EditorState.readOnly.of(readOnly),
-        EditorView.contentAttributes.of({ "data-testid": "dsl-editor" }),
+        EditorView.contentAttributes.of({ "data-testid": "dsl-editor", "aria-label": "Diagram source code" }),
       ],
     });
 
@@ -164,6 +167,18 @@ export function DslEditor({
       suppressOnChangeRef.current = false;
     }
   }, [revision, value]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (view === null || selectionRequest == null) return;
+    const span = sourceLocation(view.state.doc.toString(), selectionRequest);
+    if (span === undefined) return;
+    view.dispatch({
+      selection: { anchor: span.start, head: span.end },
+      effects: EditorView.scrollIntoView(span.start, { y: "center" }),
+    });
+    view.focus();
+  }, [selectionRequest]);
 
   return (
     <div className="min-h-0 flex-1 overflow-hidden">

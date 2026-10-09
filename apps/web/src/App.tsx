@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { EditorShell } from "./chrome/EditorShell.js";
-import { ExportPage } from "./export/ExportPage.js";
 import type { ExportEntryState } from "./export/exportSettings.js";
 import { useDocumentStore } from "./store/documentStore.js";
+
+const ExportPage = lazy(() => import("./export/ExportPage.js").then((module) => ({ default: module.ExportPage })));
 
 export function App() {
   const persistState = useDocumentStore((state) => state.persistState);
@@ -33,7 +34,9 @@ export function App() {
       {exportEntry === null ? (
         <EditorShell onOpenExport={setExportEntry} />
       ) : (
-        <ExportPage entry={exportEntry} onClose={() => setExportEntry(null)} />
+        <Suspense fallback={<p role="status" className="m-auto">Preparing export…</p>}>
+          <ExportPage entry={exportEntry} onClose={() => setExportEntry(null)} />
+        </Suspense>
       )}
     </div>
   );
