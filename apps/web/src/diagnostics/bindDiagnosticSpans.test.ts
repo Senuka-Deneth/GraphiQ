@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Diagnostic } from "@graphiq/uml-core";
 import type { ObjectDiagramAst } from "@graphiq/uml-dsl";
+import { compileDiagram } from "@graphiq/uml-print";
+import { validate } from "@graphiq/uml-rules";
 import { bindDiagnosticSpans, buildDiagnosticSeverityMap } from "./bindDiagnosticSpans.js";
 
 const sampleObjectAst: ObjectDiagramAst = {
@@ -71,6 +73,13 @@ describe("bindDiagnosticSpans", () => {
 });
 
 describe("buildDiagnosticSeverityMap", () => {
+  it("locates a repeated decision guard at the second flow using compilation identity", () => {
+    const source = "diagram activity\ndecision Choice\naction A\nChoice --> A : [Failed]\nChoice --> A : [Failed]";
+    const compiled = compileDiagram("activity", source);
+    const diagnostics = bindDiagnosticSpans(compiled.ast!, compiled.model!, validate("activity", compiled.model!), compiled.sourceMap);
+    const warning = diagnostics.find((item) => item.ruleId === "act.branch-choices");
+    expect(warning?.dslSpan?.start).toBe(source.lastIndexOf("Choice -->"));
+  });
   it("prefers error over warning for the same id", () => {
     const map = buildDiagnosticSeverityMap([
       {

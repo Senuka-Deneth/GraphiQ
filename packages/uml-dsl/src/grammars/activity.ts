@@ -27,16 +27,15 @@ import {
   FlowArrow,
   FlowFinalKeyword,
   ForkKeyword,
+  Guard,
   Identifier,
   InitialKeyword,
   InterruptibleKeyword,
   JoinKeyword,
-  LBracket,
   LCurly,
   MergeKeyword,
   ObjectKeyword,
   PartitionKeyword,
-  RBracket,
   RCurly,
   activityLexer,
   activityTokens,
@@ -55,6 +54,10 @@ export class ActivityDslParser extends CstParser {
     optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
+        {
+          GATE: () => this.isFlowStart(),
+          ALT: () => this.SUBRULE(this.flowDeclaration),
+        },
         { ALT: () => this.SUBRULE(this.partitionDeclaration) },
         { ALT: () => this.SUBRULE(this.interruptibleDeclaration) },
         { ALT: () => this.SUBRULE(this.actionDeclaration) },
@@ -63,10 +66,6 @@ export class ActivityDslParser extends CstParser {
         { ALT: () => this.SUBRULE(this.mergeDeclaration) },
         { ALT: () => this.SUBRULE(this.forkDeclaration) },
         { ALT: () => this.SUBRULE(this.joinDeclaration) },
-        {
-          GATE: () => this.isFlowStart(),
-          ALT: () => this.SUBRULE(this.flowDeclaration),
-        },
         { ALT: () => this.SUBRULE(this.flowFinalDeclaration) },
         { ALT: () => this.SUBRULE(this.initialDeclaration) },
         { ALT: () => this.SUBRULE(this.finalDeclaration) },
@@ -148,50 +147,71 @@ export class ActivityDslParser extends CstParser {
 
   private decisionDeclaration = this.RULE("decisionDeclaration", () => {
     this.CONSUME(DecisionKeyword);
-    this.OPTION2(() => {
-      this.CONSUME6(Identifier, { LABEL: "decisionName" });
+    this.OPTION2({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME6(Identifier, { LABEL: "decisionName" });
+      },
     });
   });
 
   private mergeDeclaration = this.RULE("mergeDeclaration", () => {
     this.CONSUME(MergeKeyword);
-    this.OPTION3(() => {
-      this.CONSUME7(Identifier, { LABEL: "mergeName" });
+    this.OPTION3({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME7(Identifier, { LABEL: "mergeName" });
+      },
     });
   });
 
   private forkDeclaration = this.RULE("forkDeclaration", () => {
     this.CONSUME(ForkKeyword);
-    this.OPTION4(() => {
-      this.CONSUME8(Identifier, { LABEL: "forkName" });
+    this.OPTION4({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME8(Identifier, { LABEL: "forkName" });
+      },
     });
   });
 
   private joinDeclaration = this.RULE("joinDeclaration", () => {
     this.CONSUME(JoinKeyword);
-    this.OPTION5(() => {
-      this.CONSUME9(Identifier, { LABEL: "joinName" });
+    this.OPTION5({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME9(Identifier, { LABEL: "joinName" });
+      },
     });
   });
 
   private flowFinalDeclaration = this.RULE("flowFinalDeclaration", () => {
     this.CONSUME(FlowFinalKeyword);
-    this.OPTION6(() => {
-      this.CONSUME1(Identifier, { LABEL: "flowFinalName" });
+    this.OPTION6({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME1(Identifier, { LABEL: "flowFinalName" });
+      },
     });
   });
 
   private initialDeclaration = this.RULE("initialDeclaration", () => {
     this.CONSUME(InitialKeyword);
-    this.OPTION7(() => {
-      this.CONSUME1(Identifier, { LABEL: "initialName" });
+    this.OPTION7({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME1(Identifier, { LABEL: "initialName" });
+      },
     });
   });
 
   private finalDeclaration = this.RULE("finalDeclaration", () => {
     this.CONSUME(FinalKeyword);
-    this.OPTION8(() => {
-      this.CONSUME1(Identifier, { LABEL: "finalName" });
+    this.OPTION8({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME1(Identifier, { LABEL: "finalName" });
+      },
     });
   });
 
@@ -201,14 +221,13 @@ export class ActivityDslParser extends CstParser {
     this.SUBRULE1(this.flowEndpoint, { LABEL: "targetEndpoint" });
     this.OPTION9(() => {
       this.CONSUME1(Colon);
-      this.CONSUME2(LBracket);
-      this.CONSUME3(Identifier, { LABEL: "guardName" });
-      this.CONSUME4(RBracket);
+      this.CONSUME(Guard, { LABEL: "guardName" });
     });
   });
 
   private flowEndpoint = this.RULE("flowEndpoint", () => {
     this.OR2([
+      { ALT: () => this.SUBRULE(this.inlineControlNode) },
       { ALT: () => this.CONSUME(InitialKeyword, { LABEL: "endpoint" }) },
       { ALT: () => this.CONSUME(FinalKeyword, { LABEL: "endpoint" }) },
       { ALT: () => this.CONSUME(FlowFinalKeyword, { LABEL: "endpoint" }) },
@@ -216,16 +235,30 @@ export class ActivityDslParser extends CstParser {
     ]);
   });
 
+  private inlineControlNode = this.RULE("inlineControlNode", () => {
+    this.OR5([
+      { ALT: () => this.CONSUME(DecisionKeyword, { LABEL: "nodeKeyword" }) },
+      { ALT: () => this.CONSUME(MergeKeyword, { LABEL: "nodeKeyword" }) },
+      { ALT: () => this.CONSUME(ForkKeyword, { LABEL: "nodeKeyword" }) },
+      { ALT: () => this.CONSUME(JoinKeyword, { LABEL: "nodeKeyword" }) },
+    ]);
+    this.OPTION({
+      GATE: () => this.LA(1).startLine === this.LA(0).endLine,
+      DEF: () => {
+        this.CONSUME(Identifier, { LABEL: "endpoint" });
+      },
+    });
+  });
+
   private isFlowStart(): boolean {
     const first = this.LA(1).tokenType;
     const second = this.LA(2).tokenType;
-    return (
-      (first === Identifier ||
-        first === InitialKeyword ||
-        first === FinalKeyword ||
-        first === FlowFinalKeyword) &&
-      second === FlowArrow
-    );
+    const ordinaryEndpoint = [Identifier, InitialKeyword, FinalKeyword, FlowFinalKeyword].includes(first);
+    const controlEndpoint = [DecisionKeyword, MergeKeyword, ForkKeyword, JoinKeyword].includes(first);
+    const namedControl = second === Identifier && this.LA(3).tokenType === FlowArrow &&
+      this.LA(1).startLine === this.LA(2).startLine;
+    return (ordinaryEndpoint && second === FlowArrow) ||
+      (controlEndpoint && (second === FlowArrow || namedControl));
   }
 }
 
@@ -309,6 +342,17 @@ class ActivityDslVisitor {
 
     this.collectNodes(cst, nodes);
     for (const node of cst.children.flowDeclaration ?? []) {
+      for (const endpoint of ["sourceEndpoint", "targetEndpoint"]) {
+        const endpointNode = (node as CstNode).children[endpoint]?.[0] as CstNode | undefined;
+        const inline = endpointNode?.children.inlineControlNode?.[0] as CstNode | undefined;
+        if (inline !== undefined) {
+          const keyword = inline.children.nodeKeyword?.[0] as IToken;
+          const name = inline.children.endpoint?.[0] as IToken | undefined;
+          if (name === undefined) continue;
+          const nodeKind = `${keyword.image}Node` as AstActivityNodeKind;
+          nodes.push({ nodeKind, name: name.image, span: tokenSpan(keyword, name) });
+        }
+      }
       const flow = this.visitFlow(node as CstNode);
       if (flow !== null) {
         flows.push(flow);
@@ -502,18 +546,24 @@ class ActivityDslVisitor {
   private visitFlow(node: CstNode): AstActivityFlow | null {
     const sourceNode = node.children.sourceEndpoint?.[0] as CstNode | undefined;
     const targetNode = node.children.targetEndpoint?.[0] as CstNode | undefined;
-    const sourceToken = sourceNode?.children.endpoint?.[0] as IToken | undefined;
-    const targetToken = targetNode?.children.endpoint?.[0] as IToken | undefined;
+    const endpointToken = (endpoint: CstNode | undefined): IToken | undefined => {
+      const inline = endpoint?.children.inlineControlNode?.[0] as CstNode | undefined;
+      return ((inline ?? endpoint)?.children.endpoint?.[0] ?? inline?.children.nodeKeyword?.[0]) as IToken | undefined;
+    };
+    const sourceToken = endpointToken(sourceNode);
+    const targetToken = endpointToken(targetNode);
     if (sourceToken === undefined || targetToken === undefined) {
       return null;
     }
 
     const guardToken = node.children.guardName?.[0] as IToken | undefined;
     return {
-      sourceName: sourceToken.image,
-      targetName: targetToken.image,
-      ...(guardToken !== undefined ? { guard: guardToken.image } : {}),
-      span: tokenSpan(sourceToken, lastToken(node)),
+      sourceSpan: tokenSpan(sourceToken),
+      targetSpan: tokenSpan(targetToken),
+      sourceName: sourceToken.tokenType === FlowFinalKeyword ? "flowFinal" : sourceToken.image,
+      targetName: targetToken.tokenType === FlowFinalKeyword ? "flowFinal" : targetToken.image,
+      ...(guardToken !== undefined ? { guard: guardToken.image.slice(1, -1).trim() } : {}),
+      span: tokenSpan(firstToken(sourceNode) ?? sourceToken, lastToken(node)),
     };
   }
 }

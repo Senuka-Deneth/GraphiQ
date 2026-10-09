@@ -58,9 +58,10 @@ export function EditorShell({
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 640);
   const [dslOpen, setDslOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [selectionRequest, setSelectionRequest] = useState<{ start: number; end: number; request: number } | null>(null);
   const hadErrorRef = useRef(false);
   const editMemberTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -91,6 +92,7 @@ export function EditorShell({
     }
     const text = await file.text();
     importDsl(text);
+    if (window.innerWidth < 640) setSidebarOpen(false);
   };
 
   const errorCount = diagnostics.filter(
@@ -138,7 +140,10 @@ export function EditorShell({
         implementedKinds={IMPLEMENTED_KINDS}
         relationshipTool={relationshipTool}
         onSelectTool={setRelationshipTool}
-        onCreateDocument={createDocument}
+        onCreateDocument={(nextKind) => {
+          createDocument(nextKind);
+          if (window.innerWidth < 640) setSidebarOpen(false);
+        }}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((open) => !open)}
         canEditMember={kind === "class" && selectedClassElement !== null}
@@ -231,19 +236,24 @@ export function EditorShell({
             open={dslOpen}
             panelTestId="dsl-editor-panel"
             title="DSL"
-            openClassName="bottom-3 right-[calc(var(--graphiq-inset)+38px)] top-3 w-90"
+            openClassName="bottom-3 right-[calc(var(--graphiq-inset)+38px)] top-3 w-90 max-w-[calc(100%-4rem)]"
           >
             <DslEditor
               value={dsl}
               revision={dslRevision}
               diagnostics={diagnostics}
+              selectionRequest={selectionRequest}
               onChange={setDsl}
               onFocus={() => setDslEditorFocused(true)}
               onBlur={() => setDslEditorFocused(false)}
             />
           </ChromePanel>
 
-          <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} />
+          <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} source={dsl}
+            onNavigate={(span) => {
+              setDslOpen(true);
+              setSelectionRequest((previous) => ({ ...span, request: (previous?.request ?? 0) + 1 }));
+            }} />
         </div>
     </div>
   );

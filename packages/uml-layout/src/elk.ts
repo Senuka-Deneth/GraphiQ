@@ -1,6 +1,6 @@
-import ELK from "elkjs/lib/elk.bundled.js";
+import type ELK from "elkjs/lib/elk.bundled.js";
 
-const elk = new ELK();
+let elkPromise: Promise<InstanceType<typeof ELK>> | undefined;
 
 export type ElkGraphInput = {
   id: string;
@@ -33,5 +33,9 @@ export type ElkGraphOutput = ElkGraphInput & {
 };
 
 export async function layoutWithElk(graph: ElkGraphInput): Promise<ElkGraphOutput> {
+  elkPromise ??= import("elkjs/lib/elk.bundled.js")
+    .then(({ default: Elk }) => new Elk())
+    .catch((error) => { elkPromise = undefined; throw error; });
+  const elk = await elkPromise;
   return (await elk.layout(graph)) as ElkGraphOutput;
 }

@@ -49,7 +49,7 @@ export function astToModel(
         previous?.kind === "communication" ? previous : undefined,
       );
     case "activity":
-      return activityAstToModel(ast, previous?.kind === "activity" ? previous : undefined);
+      return activityAstToModel(ast, previous?.kind === "activity" ? previous : undefined, active);
     case "stateMachine":
       return stateMachineAstToModel(
         ast,

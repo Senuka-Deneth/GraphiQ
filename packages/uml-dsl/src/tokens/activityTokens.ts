@@ -78,7 +78,7 @@ export const JoinKeyword = createToken({
 
 export const FlowFinalKeyword = createToken({
   name: "FlowFinalKeyword",
-  pattern: /flowFinal/,
+  pattern: /flowFinal|flow[ \t]+final\b/,
 });
 
 export const InitialKeyword = createToken({
@@ -101,6 +101,10 @@ export const RCurly = createToken({ name: "RCurly", pattern: /}/ });
 export const LBracket = createToken({ name: "LBracket", pattern: /\[/ });
 export const RBracket = createToken({ name: "RBracket", pattern: /\]/ });
 export const Colon = createToken({ name: "Colon", pattern: /:/ });
+
+// Keep the full guard as one token so spaces, punctuation, and expressions
+// survive parsing and printing. A guard must end on the same source line.
+export const Guard = createToken({ name: "Guard", pattern: /\[[^\]\r\n]+\]/ });
 
 DiagramKeyword.LABEL = "DiagramKeyword";
 ActivityKeyword.LABEL = "ActivityKeyword";
@@ -152,6 +156,7 @@ export const activityTokens = [
   Identifier,
   LCurly,
   RCurly,
+  Guard,
   LBracket,
   RBracket,
   Colon,

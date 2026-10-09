@@ -49,38 +49,59 @@ export function headerParseDiagnostic(message: string, span?: { start: number; e
   };
 }
 
-export function lexerErrorToDiagnostic(error: ILexingError): Diagnostic {
+export function lexerErrorToDiagnostic(error: ILexingError, text = ""): Diagnostic {
   return {
     id: createId(),
     ruleId: PARSE_RULE_ID,
     severity: "error",
-    message: error.message,
+    message: `Unrecognized text ${JSON.stringify(text.slice(error.offset, error.offset + error.length).slice(0, 30))}. Remove it or check the DSL syntax.`,
     elementIds: [],
     dslSpan: finiteSpan(error.offset, error.offset + error.length),
   };
 }
 
-export function unexpectedParseDiagnostic(error: unknown): Diagnostic {
-  const message = error instanceof Error ? error.message : "Unexpected parser failure";
+export function unexpectedParseDiagnostic(_error: unknown): Diagnostic {
   return {
     id: createId(),
     ruleId: PARSER_FAILURE_RULE_ID,
     severity: "error",
-    message,
+    message: "This document could not be read. Check the diagram header and incomplete statements.",
     elementIds: [],
   };
 }
 
-export function parserErrorToDiagnostic(error: IRecognitionException): Diagnostic {
+function friendlyToken(name: string): string {
+  const labels: Record<string, string> = {
+    Identifier: "a name (letters, numbers, or underscores)",
+    LCurly: "\"{\"", RCurly: "\"}\"", LBracket: "\"[\"", RBracket: "\"]\"",
+    Colon: "\":\"", Guard: "a guard such as [Available]", EOF: "the end of the document",
+    FlowArrow: "\"-->\"", DiagramKeyword: "\"diagram\"",
+  };
+  return labels[name] ?? JSON.stringify(name.replace(/Keyword$/, "").replace(/^./, (letter) => letter.toLowerCase()));
+}
+
+export function parserErrorToDiagnostic(error: IRecognitionException, text = ""): Diagnostic {
   const token = error.token;
-  const start = token.startOffset;
-  const end = token.endOffset !== undefined ? token.endOffset + 1 : start + 1;
+  const located = Number.isFinite(token.startOffset) && token.startOffset >= 0;
+  const start = located ? token.startOffset : text.length;
+  const end = located && Number.isFinite(token.endOffset) ? token.endOffset! + 1 : start;
+  const found = token.image ? JSON.stringify(token.image.slice(0, 40)) : "the end of the document";
+  const expected = /Expecting token of type --> (.*?) <--/.exec(error.message)?.[1];
+  const rule = error.context.ruleStack.at(-1) ?? "document";
+  let message = expected
+    ? `Expected ${friendlyToken(expected)} before ${found}.`
+    : `Unexpected ${found}. Check this statement's syntax.`;
+  if (!expected && rule === "document") {
+    message = `Unexpected ${found}. Start a declaration with a supported keyword, or connect declared names with an arrow.`;
+  } else if (!expected && rule === "flowEndpoint") {
+    message = `Expected a node name after the arrow. Declare it first, then use its name in the flow.`;
+  }
 
   return {
     id: createId(),
     ruleId: PARSE_RULE_ID,
     severity: "error",
-    message: error.message,
+    message,
     elementIds: [],
     dslSpan: finiteSpan(start, end),
   };

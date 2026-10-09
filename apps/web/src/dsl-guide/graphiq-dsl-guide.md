@@ -1,6 +1,6 @@
 # GraphiQ DSL Guide
 
-GraphiQ DSL is a text notation for UML 2.5.1 diagrams. You type or paste a document; GraphiQ parses it into a semantic model and renders a standards-correct canvas. The DSL is **not** Mermaid, **not** PlantUML, **not** JSON, and **not** a drawing format — there are **no coordinates** (`x`, `y`, width, height) in the source.
+GraphiQ DSL is a text notation for supported UML 2.5.1 diagram features. You type or paste a document; GraphiQ parses it into a semantic model and renders a diagram. The DSL is **not** Mermaid, **not** PlantUML, **not** JSON, and **not** a drawing format — there are **no coordinates** (`x`, `y`, width, height) in the source. This guide describes the implemented syntax; it does not claim full UML validation.
 
 Every document starts with a header:
 
@@ -34,7 +34,21 @@ diagram <kind> <OptionalName>
 1. Give this entire file to a person or an LLM.
 2. Ask them to return **only** a GraphiQ DSL document (or a fenced code block) whose first line is `diagram <kind>`.
 3. In GraphiQ, type the result into the DSL pane, or use **Import DSL** to load a `.md`, `.dsl`, or `.txt` file.
-4. GraphiQ parses, validates, and lays out the diagram. Illegal UML is diagnosed, not silently drawn.
+4. GraphiQ parses, validates, and lays out the diagram. Syntax errors and supported UML validation issues appear in the diagnostics panel.
+
+## Rules for reliable generated code
+
+- Use the exact keywords and arrows for the selected diagram kind. These examples describe the implemented GraphiQ syntax, not every feature of UML.
+- Use identifiers such as `RequestAppointment` for node names: start with a letter or underscore, then use letters, digits, or underscores. Names are case-sensitive. Avoid keywords as identifiers.
+- Keep the header and its optional title on one line. Quote a title containing spaces: `diagram activity "Hospital Appointments"`.
+- Declare nodes before connecting them. Activity `initial`, `final`, and `flowFinal` endpoints can be created automatically; state machine states can also be introduced by transitions.
+- Give every connected activity node a unique name across the diagram, including across partitions. Duplicate names make a reference ambiguous.
+- Put declarations and flows on separate lines. A declaration keyword is not generally valid after an arrow; activity inline `decision`, `merge`, `fork`, and `join` are the documented exceptions below.
+- `//` introduces a line comment; `/* ... */` introduces a block comment.
+- Keep the complete document in one code block when using **Import DSL**. When typing or pasting into the DSL editor, paste the code itself without Markdown fences or explanatory prose.
+- Errors show the source line and column. Click that location to open the editor and select the affected code. A syntax error leaves the previous diagram visible until the code is corrected.
+
+Suggested instruction to an AI: "Generate one GraphiQ DSL document using only the syntax in this guide. Declare nodes explicitly, use unique identifiers, and preserve all branches and their guards. Return only the code. Check each arrow endpoint against the declarations."
 
 ## Forbidden output
 
@@ -265,6 +279,37 @@ Clerk -- Refund
 **Element keywords:** `partition`, `action`, `object`, `initial`, `final`, `flow final`, `decision`, `merge`, `fork`, `join`
 
 **Relationship arrow:** `-->` (control flow or object flow)
+
+`flowFinal` is the canonical spelling; `flow final` is also accepted for declarations and endpoints. `final` stops the whole activity. `flowFinal` stops only that path.
+
+Declare named control nodes explicitly, then connect their names:
+
+```text
+diagram activity AppointmentChoices
+action CheckDoctorAvailability
+decision DoctorAvailable
+action AssignAppointmentSlot
+decision NoSlotChoice
+action SelectAnotherDoctor
+action CancelBookingRequest
+flowFinal cancelled
+
+initial --> CheckDoctorAvailability
+CheckDoctorAvailability --> DoctorAvailable
+DoctorAvailable --> AssignAppointmentSlot : [Available]
+DoctorAvailable --> NoSlotChoice : [No Slots Available]
+NoSlotChoice --> SelectAnotherDoctor : [Choose another doctor]
+NoSlotChoice --> CancelBookingRequest : [Cancel]
+SelectAnotherDoctor --> CheckDoctorAvailability
+CancelBookingRequest --> cancelled
+AssignAppointmentSlot --> final
+```
+
+- Named declarations: `initial start`, `final done`, `flowFinal cancelled`, `decision Choice`, `merge Merge`, `fork Split`, `join Together`.
+- Put nodes inside `partition Name { ... }` to assign them to a swimlane. Put flows outside the partition blocks. Partition names cannot be flow endpoints.
+- Guards use `: [text]`, for example `: [Existing Patient]` or `: [amount > 0]`. Guard text must fit on one source line and cannot contain a closing `]`.
+- Inline control-node declarations are also supported: `Check --> decision Choice`, `Confirm --> fork Split`, `Split --> join Together`. Each declares a node; later flows use `Choice`, `Split`, or `Together` alone. Do not also declare the same node separately.
+- Use a decision with different guards for alternative choices; use a fork and join for concurrent work. An action with two outgoing arrows does not express a user choice. Two branches with the same guard do not identify which alternative should be chosen.
 
 **Example:**
 

@@ -1,325 +1,86 @@
-import { createId } from "@graphiq/uml-core";
-import type {
-  ActivityDiagramAst,
-  AstActivityBodyItem,
-  AstActivityNode,
-} from "@graphiq/uml-dsl";
-import {
-  emptyModel,
-  type ElementType,
-  type UmlElement,
-  type UmlModel,
-  type UmlRelationship,
-} from "@graphiq/uml-model";
-
-function findPreviousElement(
-  previous: UmlModel | undefined,
-  name: string,
-  elementType: ElementType,
-): UmlElement | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.elements.find(
-    (element) => element.name === name && element.elementType === elementType,
-  );
-}
-
-function findPreviousFlow(
-  previous: UmlModel | undefined,
-  sourceId: string,
-  targetId: string,
-  relationshipType: "controlFlow" | "objectFlow",
-  guard?: string,
-): UmlRelationship | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.relationships.find((relationship) => {
-    if (
-      relationship.sourceId !== sourceId ||
-      relationship.targetId !== targetId ||
-      relationship.relationshipType !== relationshipType
-    ) {
-      return false;
-    }
-    if (relationshipType === "controlFlow" || relationshipType === "objectFlow") {
-      return (relationship.guard ?? undefined) === guard;
-    }
-    return true;
-  });
-}
-
-function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
-  if (!previous) {
-    return [];
-  }
-
-  return previous.elements.filter((element) => element.elementType === "note");
-}
-
-function addNamedElement(
-  model: UmlModel,
-  elementType: ElementType,
-  name: string,
-  parentId: string | undefined,
-  previous?: UmlModel,
-): UmlModel {
-  const existing = model.elements.find(
-    (element) => element.name === name && element.elementType === elementType,
-  );
-  if (existing !== undefined) {
-    if (parentId !== undefined && existing.parentId !== parentId) {
-      return {
-        ...model,
-        elements: model.elements.map((element) =>
-          element.id === existing.id ? { ...element, parentId } : element,
-        ),
-      };
-    }
-    return model;
-  }
-
-  const previousElement = findPreviousElement(previous, name, elementType);
-  const element: UmlElement = {
-    id: previousElement?.id ?? createId(),
-    elementType,
-    name,
-    ...(parentId !== undefined ? { parentId } : {}),
-  } as UmlElement;
-
-  return {
-    ...model,
-    elements: [...model.elements, element],
-  };
-}
+import type { DslSpan } from "@graphiq/uml-core";
+import type { ActivityDiagramAst, AstActivityBodyItem, AstActivityNode } from "@graphiq/uml-dsl";
+import { emptyModel, type ElementType, type UmlElement, type UmlModel, type UmlRelationship } from "@graphiq/uml-model";
+import { createBuildContext, type BuildContext } from "./identity.js";
 
 function nodeKindToElementType(nodeKind: AstActivityNode["nodeKind"]): ElementType {
-  switch (nodeKind) {
-    case "action":
-      return "action";
-    case "objectNode":
-      return "objectNode";
-    case "initialNode":
-      return "initialNode";
-    case "activityFinalNode":
-      return "activityFinalNode";
-    case "flowFinalNode":
-      return "flowFinalNode";
-    case "decisionNode":
-      return "decisionNode";
-    case "mergeNode":
-      return "mergeNode";
-    case "forkNode":
-      return "forkNode";
-    case "joinNode":
-      return "joinNode";
-    default: {
-      const unreachable: never = nodeKind;
-      throw new Error(`Unhandled activity node kind: ${String(unreachable)}`);
-    }
-  }
+  // Activity AST node kinds use the same names as semantic element types.
+  return nodeKind;
 }
 
-function addBodyItems(
-  model: UmlModel,
-  items: readonly AstActivityBodyItem[],
-  parentId: string,
+export function activityAstToModel(
+  ast: ActivityDiagramAst,
   previous?: UmlModel,
+  context?: BuildContext,
 ): UmlModel {
-  let nextModel = model;
+  const active = context ?? createBuildContext(previous);
+  const identity = active.identity;
+  const elements: UmlElement[] = previous?.elements.filter((element) => element.elementType === "note") ?? [];
+  const relationships: UmlRelationship[] = [];
+  const model: UmlModel = {
+    id: previous?.id ?? emptyModel("activity").id,
+    kind: "activity",
+    elements,
+    relationships,
+  };
 
-  for (const item of items) {
-    switch (item.itemKind) {
-      case "node":
-        nextModel = addNamedElement(
-          nextModel,
-          nodeKindToElementType(item.node.nodeKind),
-          item.node.name,
-          parentId,
-          previous,
-        );
-        break;
-      case "partition":
-        nextModel = addNamedElement(
-          nextModel,
-          "activityPartition",
-          item.partition.name,
-          parentId,
-          previous,
-        );
-        {
-          const nestedId = nextModel.elements.find(
-            (element) =>
-              element.name === item.partition.name && element.elementType === "activityPartition",
-          )?.id;
-          if (nestedId !== undefined) {
-            nextModel = addBodyItems(nextModel, item.partition.items, nestedId, previous);
-          }
-        }
-        break;
-      case "interruptible":
-        nextModel = addNamedElement(
-          nextModel,
-          "interruptibleActivityRegion",
-          item.region.name,
-          parentId,
-          previous,
-        );
-        {
-          const nestedId = nextModel.elements.find(
-            (element) =>
-              element.name === item.region.name &&
-              element.elementType === "interruptibleActivityRegion",
-          )?.id;
-          if (nestedId !== undefined) {
-            nextModel = addBodyItems(nextModel, item.region.items, nestedId, previous);
-          }
-        }
-        break;
-      default: {
-        const unreachable: never = item;
-        throw new Error(`Unhandled activity body item: ${String(unreachable)}`);
+  function declare(elementType: ElementType, name: string, span?: DslSpan, parentId?: string): string {
+    const claim = identity.allocateElement({ elementType, name, span, parentId });
+    elements.push({
+      id: claim.id, elementType, name,
+      ...(parentId !== undefined ? { parentId } : {}),
+    } as UmlElement);
+    return claim.id;
+  }
+
+  function addBody(items: readonly AstActivityBodyItem[], parentId: string): void {
+    for (const item of items) {
+      if (item.itemKind === "node") {
+        declare(nodeKindToElementType(item.node.nodeKind), item.node.name, item.node.span, parentId);
+      } else if (item.itemKind === "partition") {
+        const childId = declare("activityPartition", item.partition.name, item.partition.span, parentId);
+        addBody(item.partition.items, childId);
+      } else {
+        const childId = declare("interruptibleActivityRegion", item.region.name, item.region.span, parentId);
+        addBody(item.region.items, childId);
       }
     }
   }
 
-  return nextModel;
-}
-
-function implicitTypeForEndpoint(name: string): ElementType | undefined {
-  switch (name) {
-    case "initial":
-      return "initialNode";
-    case "final":
-      return "activityFinalNode";
-    case "flowFinal":
-      return "flowFinalNode";
-    default:
-      return undefined;
-  }
-}
-
-function ensureEndpoint(
-  model: UmlModel,
-  name: string,
-  previous?: UmlModel,
-): UmlModel {
-  if (model.elements.some((element) => element.name === name)) {
-    return model;
-  }
-
-  const implicitType = implicitTypeForEndpoint(name);
-  if (implicitType === undefined) {
-    return model;
-  }
-
-  return addNamedElement(model, implicitType, name, undefined, previous);
-}
-
-function elementByName(model: UmlModel, name: string): UmlElement | undefined {
-  return model.elements.find((element) => element.name === name);
-}
-
-function flowTypeForEndpoints(
-  source: UmlElement,
-  target: UmlElement,
-): "controlFlow" | "objectFlow" {
-  if (source.elementType === "objectNode" || target.elementType === "objectNode") {
-    return "objectFlow";
-  }
-  return "controlFlow";
-}
-
-export function activityAstToModel(ast: ActivityDiagramAst, previous?: UmlModel): UmlModel {
-  const base = previous ?? emptyModel("activity");
-  let model: UmlModel = {
-    id: base.id,
-    kind: "activity",
-    elements: preservedNonDslElements(previous),
-    relationships: [],
-  };
-
   for (const partition of ast.partitions) {
-    model = addNamedElement(model, "activityPartition", partition.name, undefined, previous);
-    const partitionId = model.elements.find(
-      (element) => element.name === partition.name && element.elementType === "activityPartition",
-    )?.id;
-    if (partitionId !== undefined) {
-      model = addBodyItems(model, partition.items, partitionId, previous);
-    }
+    addBody(partition.items, declare("activityPartition", partition.name, partition.span));
   }
-
   for (const region of ast.interruptibles) {
-    model = addNamedElement(
-      model,
-      "interruptibleActivityRegion",
-      region.name,
-      undefined,
-      previous,
-    );
-    const regionId = model.elements.find(
-      (element) =>
-        element.name === region.name && element.elementType === "interruptibleActivityRegion",
-    )?.id;
-    if (regionId !== undefined) {
-      model = addBodyItems(model, region.items, regionId, previous);
-    }
+    addBody(region.items, declare("interruptibleActivityRegion", region.name, region.span));
   }
-
   for (const node of ast.nodes) {
-    model = addNamedElement(
-      model,
-      nodeKindToElementType(node.nodeKind),
-      node.name,
-      undefined,
-      previous,
-    );
+    declare(nodeKindToElementType(node.nodeKind), node.name, node.span);
   }
 
+  const implicitTypes = new Map<string, ElementType>([
+    ["initial", "initialNode"], ["final", "activityFinalNode"], ["flowFinal", "flowFinalNode"],
+  ]);
   for (const flow of ast.flows) {
-    model = ensureEndpoint(model, flow.sourceName, previous);
-    model = ensureEndpoint(model, flow.targetName, previous);
-
-    const source = elementByName(model, flow.sourceName);
-    const target = elementByName(model, flow.targetName);
-    if (source === undefined || target === undefined) {
-      continue;
+    for (const name of [flow.sourceName, flow.targetName]) {
+      const implicitType = implicitTypes.get(name);
+      if (implicitType !== undefined && !model.elements.some((element) => element.name === name)) {
+        declare(implicitType, name);
+      }
     }
+    const sourceId = identity.resolve(model, flow.sourceName, flow.sourceSpan ?? flow.span);
+    const targetId = identity.resolve(model, flow.targetName, flow.targetSpan ?? flow.span);
+    if (sourceId === undefined || targetId === undefined) continue;
 
-    const relationshipType = flowTypeForEndpoints(source, target);
-    const previousRelationship = findPreviousFlow(
-      previous,
-      source.id,
-      target.id,
-      relationshipType,
-      flow.guard,
-    );
-
-    const nextRelationship: UmlRelationship =
-      relationshipType === "objectFlow"
-        ? {
-            id: previousRelationship?.id ?? createId(),
-            relationshipType: "objectFlow",
-            sourceId: source.id,
-            targetId: target.id,
-            guard: flow.guard,
-          }
-        : {
-            id: previousRelationship?.id ?? createId(),
-            relationshipType: "controlFlow",
-            sourceId: source.id,
-            targetId: target.id,
-            guard: flow.guard,
-          };
-
-    model = {
-      ...model,
-      relationships: [...model.relationships, nextRelationship],
-    };
+    const source = model.elements.find((element) => element.id === sourceId)!;
+    const target = model.elements.find((element) => element.id === targetId)!;
+    const relationshipType = source.elementType === "objectNode" || target.elementType === "objectNode"
+      ? "objectFlow" : "controlFlow";
+    const claim = identity.allocateRelationship({
+      sourceId, targetId, relationshipType, discriminator: flow.guard, span: flow.span,
+    });
+    relationships.push({
+      id: claim.id, relationshipType, sourceId, targetId, guard: flow.guard,
+    });
   }
-
   return model;
 }

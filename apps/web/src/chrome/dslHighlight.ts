@@ -91,6 +91,7 @@ const dslLanguage = StreamLanguage.define<{ inBlock: boolean }>({
       "fork",
       "join",
       "flowFinal",
+      "flow",
       "interruptible",
       "ref",
     ] as const;

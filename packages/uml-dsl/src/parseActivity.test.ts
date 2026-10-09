@@ -11,6 +11,38 @@ const fulfillOrderFixture = readFileSync(
 );
 
 describe("parse activity diagram", () => {
+  it("keeps unnamed control declarations from consuming the following line", () => {
+    const result = parse("activity", "diagram activity\naction A\ninitial\nA --> final");
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.value.ast.kind !== "activity") throw new Error("expected activity");
+    expect(result.value.diagnostics).toEqual([]);
+    expect(result.value.ast.nodes.some((node) => node.nodeKind === "initialNode" && node.name === "initial")).toBe(true);
+    expect(result.value.ast.flows).toHaveLength(1);
+  });
+
+  it("preserves guard expressions and keyword-prefixed identifiers", () => {
+    const result = parse("activity", "diagram activity\naction flowFinalization\naction decisionResult\nflowFinalization --> decisionResult : [amount > 0 && status == paid]");
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.value.ast.kind !== "activity") throw new Error("expected activity");
+    expect(result.value.diagnostics).toEqual([]);
+    expect(result.value.ast.flows[0]?.guard).toBe("amount > 0 && status == paid");
+  });
+
+  it.each(["A --> merge Merge", "merge Merge --> A", "A --> join Join"])("supports inline control endpoints: %s", (flow) => {
+    const result = parse("activity", `diagram activity\naction A\n${flow}`);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected parse");
+    expect(result.value.diagnostics).toEqual([]);
+  });
+
+  it("reports a concise missing-name error at the end of the source", () => {
+    const source = "diagram activity\naction";
+    const result = parse("activity", source);
+    const diagnostics = result.ok ? result.value.diagnostics : result.error.diagnostics;
+    expect(diagnostics[0]).toMatchObject({ dslSpan: { start: source.length, end: source.length } });
+    expect(diagnostics[0]?.message).toContain("Expected a name");
+    expect(diagnostics[0]?.message.length).toBeLessThan(150);
+  });
   it("parses the section 5.9 fixture into partitions, actions, and flows", () => {
     const result = parse("activity", fulfillOrderFixture);
     expect(result.ok).toBe(true);

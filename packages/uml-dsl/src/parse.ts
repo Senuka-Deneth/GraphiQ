@@ -131,8 +131,8 @@ function parseClass(
 
   const { cst, lexerErrors, parserErrors, comments } = parseClassCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -170,8 +170,8 @@ function parseObject(
 
   const { cst, lexerErrors, parserErrors, comments } = parseObjectCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -220,8 +220,8 @@ function parsePackage(
 
   const { cst, lexerErrors, parserErrors, comments } = parsePackageCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -259,8 +259,8 @@ function parseComponent(
 
   const { cst, lexerErrors, parserErrors, comments } = parseComponentCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -298,8 +298,8 @@ function parseDeployment(
 
   const { cst, lexerErrors, parserErrors, comments } = parseDeploymentCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -337,8 +337,8 @@ function parseProfile(
 
   const { cst, lexerErrors, parserErrors, comments } = parseProfileCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -376,8 +376,8 @@ function parseUseCase(
 
   const { cst, lexerErrors, parserErrors, comments } = parseUseCaseCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -415,8 +415,8 @@ function parseCompositeStructure(
 
   const { cst, lexerErrors, parserErrors, comments } = parseCompositeStructureCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -454,8 +454,8 @@ function parseCommunication(
 
   const { cst, lexerErrors, parserErrors, comments } = parseCommunicationCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -493,8 +493,8 @@ function parseActivity(
 
   const { cst, lexerErrors, parserErrors, comments } = parseActivityCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -532,8 +532,8 @@ function parseStateMachine(
 
   const { cst, lexerErrors, parserErrors, comments } = parseStateMachineCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -571,8 +571,8 @@ function parseSequence(
 
   const { cst, lexerErrors, parserErrors, comments } = parseSequenceCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -610,8 +610,8 @@ function parseTiming(
 
   const { cst, lexerErrors, parserErrors, comments } = parseTimingCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
@@ -649,8 +649,8 @@ function parseInteractionOverview(
 
   const { cst, lexerErrors, parserErrors, comments } = parseInteractionOverviewCst(text);
   const diagnostics: Diagnostic[] = [
-    ...lexerErrors.map(lexerErrorToDiagnostic),
-    ...parserErrors.map(parserErrorToDiagnostic),
+    ...lexerErrors.map((error) => lexerErrorToDiagnostic(error, text)),
+    ...parserErrors.map((error) => parserErrorToDiagnostic(error, text)),
   ];
 
   const hasHeader = cst.children.DiagramKeyword !== undefined;
