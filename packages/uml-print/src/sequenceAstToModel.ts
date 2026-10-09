@@ -7,8 +7,9 @@ import {
   type MessageRelationship,
   type UmlElement,
   type UmlModel,
-  type UmlRelationship,
 } from "@graphiq/uml-model";
+import type { BuildContext } from "./identity.js";
+import { createBuildContext } from "./identity.js";
 
 function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
   if (!previous) {
@@ -18,142 +19,69 @@ function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
   return previous.elements.filter((element) => element.elementType === "note");
 }
 
-function findPreviousLifeline(
-  previous: UmlModel | undefined,
-  name: string,
-): LifelineElement | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  const element = previous.elements.find(
-    (item) => item.elementType === "lifeline" && item.name === name,
-  );
-  return element?.elementType === "lifeline" ? element : undefined;
-}
-
-function findPreviousFragment(
-  previous: UmlModel | undefined,
-  operator: CombinedFragmentElement["operator"],
-  operandCount: number,
-): CombinedFragmentElement | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.elements.find(
-    (item) =>
-      item.elementType === "combinedFragment" &&
-      item.operator === operator &&
-      item.operands.length === operandCount,
-  ) as CombinedFragmentElement | undefined;
-}
-
-function findPreviousMessage(
-  previous: UmlModel | undefined,
-  sourceId: string,
-  targetId: string,
-  messageSort: MessageRelationship["messageSort"],
-  name?: string,
-): UmlRelationship | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.relationships.find((relationship) => {
-    if (relationship.relationshipType !== "message") {
-      return false;
-    }
-    return (
-      relationship.sourceId === sourceId &&
-      relationship.targetId === targetId &&
-      relationship.messageSort === messageSort &&
-      relationship.name === name
-    );
-  });
-}
-
-function elementIdByName(model: UmlModel, name: string): string {
-  const element = model.elements.find((item) => item.name === name);
-  if (element === undefined) {
-    throw new Error(`Element "${name}" was not found`);
-  }
-  return element.id;
-}
-
-function ensureLifelineByName(
+function addDeclaredLifeline(
   model: UmlModel,
-  name: string,
-  classifierName: string | undefined,
-  previous?: UmlModel,
+  lifeline: SequenceDiagramAst["lifelines"][number],
+  identity: BuildContext["identity"],
 ): UmlModel {
-  const existing = model.elements.find((element) => element.name === name);
-  if (existing !== undefined) {
-    if (
-      existing.elementType === "lifeline" &&
-      classifierName !== undefined &&
-      existing.classifierName !== classifierName
-    ) {
-      return {
-        ...model,
-        elements: model.elements.map((element) =>
-          element.id === existing.id && element.elementType === "lifeline"
-            ? { ...element, classifierName }
-            : element,
-        ),
-      };
-    }
-    return model;
-  }
-
-  const previousLifeline = findPreviousLifeline(previous, name);
-  const element: LifelineElement = {
-    id: previousLifeline?.id ?? createId(),
+  const claim = identity.allocateElement({
     elementType: "lifeline",
-    name,
+    name: lifeline.name,
+    span: lifeline.span,
+  });
+  const previous = claim.previous?.elementType === "lifeline" ? claim.previous : undefined;
+  const classifierName = lifeline.classifierName ?? previous?.classifierName;
+  const element: LifelineElement = {
+    id: claim.id,
+    elementType: "lifeline",
+    name: lifeline.name,
     ...(classifierName !== undefined ? { classifierName } : {}),
   };
 
   return {
     ...model,
-    elements: [...model.elements, element],
+    elements: [...model.elements.filter((item) => item.id !== element.id), element],
   };
 }
 
 function addMessageToModel(
   model: UmlModel,
-  sourceName: string,
-  targetName: string,
-  messageSort: MessageRelationship["messageSort"],
-  name: string | undefined,
-  previous?: UmlModel,
-): { model: UmlModel; messageId: string } {
-  const working = ensureLifelineByName(model, sourceName, undefined, previous);
-  const withTarget = ensureLifelineByName(working, targetName, undefined, previous);
-  const sourceId = elementIdByName(withTarget, sourceName);
-  const targetId = elementIdByName(withTarget, targetName);
+  message: SequenceDiagramAst["messages"][number],
+  identity: BuildContext["identity"],
+  interactionIndex?: number,
+): { model: UmlModel; messageId?: string } {
+  const sourceId = identity.resolve(model, message.sourceName, message.sourceNameSpan, {
+    elementType: "lifeline",
+  });
+  const targetId = identity.resolve(model, message.targetName, message.targetNameSpan, {
+    elementType: "lifeline",
+  });
+  if (sourceId === undefined || targetId === undefined) {
+    return { model };
+  }
 
-  const previousMessage = findPreviousMessage(
-    previous,
+  const claim = identity.allocateRelationship({
     sourceId,
     targetId,
-    messageSort,
-    name,
-  );
-
+    relationshipType: "message",
+    name: message.name,
+    discriminator: message.messageSort,
+    span: message.span,
+  });
   const nextRelationship: MessageRelationship = {
-    id: previousMessage?.id ?? createId(),
+    id: claim.id,
     relationshipType: "message",
     sourceId,
     targetId,
-    messageSort,
-    ...(name !== undefined ? { name } : {}),
+    messageSort: message.messageSort,
+    ...(message.name !== undefined ? { name: message.name } : {}),
+    ...(interactionIndex !== undefined ? { interactionIndex } : {}),
   };
 
   return {
     model: {
-      ...withTarget,
-      relationships: [...withTarget.relationships, nextRelationship],
+      ...model,
+      relationships: [...model.relationships, nextRelationship],
     },
     messageId: nextRelationship.id,
   };
@@ -232,7 +160,9 @@ export function synthesizeSequenceExecutionSpecs(
 export function sequenceAstToModel(
   ast: SequenceDiagramAst,
   previous?: UmlModel,
+  context?: BuildContext,
 ): UmlModel {
+  const identity = context?.identity ?? createBuildContext(previous).identity;
   const base = previous ?? emptyModel("sequence");
   let model: UmlModel = {
     id: base.id,
@@ -242,37 +172,28 @@ export function sequenceAstToModel(
   };
 
   for (const lifeline of ast.lifelines) {
-    model = ensureLifelineByName(model, lifeline.name, lifeline.classifierName, previous);
+    model = addDeclaredLifeline(model, lifeline, identity);
   }
 
-  for (const message of ast.messages) {
-    const result = addMessageToModel(
-      model,
-      message.sourceName,
-      message.targetName,
-      message.messageSort,
-      message.name,
-      previous,
-    );
-    model = result.model;
-  }
+  let interactionIndex = 0;
+  for (const interaction of ast.interactions) {
+    if (interaction.interactionKind === "message") {
+      const result = addMessageToModel(model, interaction.message, identity, interactionIndex);
+      model = result.model;
+      interactionIndex += 1;
+      continue;
+    }
 
-  for (const fragment of ast.combinedFragments) {
+    const fragment = interaction.fragment;
     const operandMessageIds: { guard?: string; messageIds: string[] }[] = [];
-
     for (const operand of fragment.operands) {
       const messageIds: string[] = [];
       for (const message of operand.messages) {
-        const result = addMessageToModel(
-          model,
-          message.sourceName,
-          message.targetName,
-          message.messageSort,
-          message.name,
-          previous,
-        );
+        const result = addMessageToModel(model, message, identity);
         model = result.model;
-        messageIds.push(result.messageId);
+        if (result.messageId !== undefined) {
+          messageIds.push(result.messageId);
+        }
       }
       operandMessageIds.push({
         ...(operand.guard !== undefined ? { guard: operand.guard } : {}),
@@ -280,23 +201,27 @@ export function sequenceAstToModel(
       });
     }
 
-    const previousFragment = findPreviousFragment(
-      previous,
-      fragment.operator,
-      operandMessageIds.length,
-    );
-    const element: CombinedFragmentElement = {
-      id: previousFragment?.id ?? createId(),
+    const claim = identity.allocateElement({
       elementType: "combinedFragment",
-      name: previousFragment?.name ?? `${fragment.operator}-${createId().slice(0, 8)}`,
+      name: fragment.operator,
+      anonymous: true,
+      span: fragment.span,
+    });
+    const previousFragment =
+      claim.previous?.elementType === "combinedFragment" ? claim.previous : undefined;
+    const element: CombinedFragmentElement = {
+      id: claim.id,
+      elementType: "combinedFragment",
+      name: previousFragment?.name ?? `${fragment.operator}-${claim.id.slice(0, 8)}`,
       operator: fragment.operator,
       operands: operandMessageIds,
+      interactionIndex,
     };
-
     model = {
       ...model,
-      elements: [...model.elements.filter((item) => item.id !== element.id), element],
+      elements: [...model.elements, element],
     };
+    interactionIndex += 1;
   }
 
   return synthesizeSequenceExecutionSpecs(model, previous);

@@ -7,6 +7,7 @@ import type {
   DeploymentDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   AngleStereotype,
@@ -36,9 +37,7 @@ export class DeploymentDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(DeploymentKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.SUBRULE(this.name, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, StringLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.nodeDeclaration) },
@@ -153,14 +152,11 @@ function lastToken(node: CstNode | undefined): IToken | undefined {
 }
 
 function unquote(image: string): string {
-  if (image.startsWith('"') && image.endsWith('"') && image.length >= 2) {
-    return image.slice(1, -1);
-  }
-  return image;
+  return readDiagramTitle({ image }) ?? image;
 }
 
 function nameFromNode(node: CstNode | undefined): IToken | undefined {
-  if (!node) {
+  if (!node || !("children" in node)) {
     return undefined;
   }
   return (node.children.StringLiteral?.[0] ?? node.children.Identifier?.[0]) as IToken | undefined;
@@ -192,8 +188,6 @@ function nodeKindFromStereotype(image: string | undefined): AstDeploymentNodeKin
 
 class DeploymentDslVisitor {
   visit(cst: CstNode): DeploymentDiagramAst {
-    const nameNode = cst.children.diagramName?.[0] as CstNode | undefined;
-    const nameToken = nameFromNode(nameNode);
     const nodes: AstDeploymentNode[] = [];
     const relationships: AstDeploymentRelationship[] = [];
 
@@ -211,7 +205,7 @@ class DeploymentDslVisitor {
 
     return {
       kind: "deployment",
-      name: nameToken === undefined ? undefined : unquote(nameToken.image),
+      name: readDiagramTitle(cst.children.diagramName?.[0]),
       nodes,
       relationships,
       span,

@@ -6,6 +6,7 @@ import type {
   ComponentDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   ArtifactKeyword,
@@ -23,6 +24,7 @@ import {
   RequiresKeyword,
   componentLexer,
   componentTokens,
+  QuotedLiteral,
 } from "../tokens/componentTokens.js";
 
 export class ComponentDslParser extends CstParser {
@@ -34,9 +36,7 @@ export class ComponentDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(ComponentKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.componentDeclaration) },
@@ -181,7 +181,7 @@ class ComponentDslVisitor {
 
     return {
       kind: "component",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       components,
       relationships,
       span,

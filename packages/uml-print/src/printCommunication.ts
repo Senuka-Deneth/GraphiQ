@@ -1,3 +1,4 @@
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import type {
   InstanceSpecificationElement,
   MessageRelationship,
@@ -60,10 +61,7 @@ function printLink(relationship: UmlRelationship, nameById: ReadonlyMap<string, 
 }
 
 export function printCommunication(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram communication"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram communication ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("communication", options?.name)];
 
   const instances = model.elements.filter(isPrintableInstance);
   for (const instance of instances) {

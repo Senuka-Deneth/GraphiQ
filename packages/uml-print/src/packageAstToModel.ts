@@ -1,57 +1,11 @@
-import { createId } from "@graphiq/uml-core";
 import type {
   AstClassifier,
   AstPackageBodyItem,
   AstPackageDeclaration,
   PackageDiagramAst,
 } from "@graphiq/uml-dsl";
-import {
-  addElement,
-  emptyModel,
-  type UmlElement,
-  type UmlModel,
-  type UmlRelationship,
-} from "@graphiq/uml-model";
-
-function findPreviousElement(
-  previous: UmlModel | undefined,
-  name: string,
-  elementType: UmlElement["elementType"],
-): UmlElement | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.elements.find(
-    (element) => element.name === name && element.elementType === elementType,
-  );
-}
-
-function findPreviousRelationship(
-  previous: UmlModel | undefined,
-  sourceId: string,
-  targetId: string,
-  relationshipType: UmlRelationship["relationshipType"],
-): UmlRelationship | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.relationships.find(
-    (relationship) =>
-      relationship.sourceId === sourceId &&
-      relationship.targetId === targetId &&
-      relationship.relationshipType === relationshipType,
-  );
-}
-
-function elementIdByName(model: UmlModel, name: string): string {
-  const element = model.elements.find((item) => item.name === name);
-  if (element === undefined) {
-    throw new Error(`Element "${name}" was not found`);
-  }
-  return element.id;
-}
+import { emptyModel, type UmlElement, type UmlModel, type UmlRelationship } from "@graphiq/uml-model";
+import { createBuildContext, type BuildContext, type IdentityTable } from "./identity.js";
 
 function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
   if (!previous) {
@@ -61,11 +15,11 @@ function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
   return previous.elements.filter((element) => element.elementType === "note");
 }
 
-function classifierFromAst(classifier: AstClassifier, previous?: UmlElement): UmlElement {
+function classifierFromAst(classifier: AstClassifier, id: string): UmlElement {
   switch (classifier.classifierKind) {
     case "class":
       return {
-        id: previous?.id ?? createId(),
+        id,
         elementType: "class",
         name: classifier.name,
         isAbstract: classifier.isAbstract,
@@ -74,7 +28,7 @@ function classifierFromAst(classifier: AstClassifier, previous?: UmlElement): Um
       };
     case "interface":
       return {
-        id: previous?.id ?? createId(),
+        id,
         elementType: "interface",
         name: classifier.name,
         attributes: [],
@@ -82,7 +36,7 @@ function classifierFromAst(classifier: AstClassifier, previous?: UmlElement): Um
       };
     case "enumeration":
       return {
-        id: previous?.id ?? createId(),
+        id,
         elementType: "enumeration",
         name: classifier.name,
         literals: [...classifier.literals],
@@ -96,19 +50,28 @@ function addPackageElement(
   model: UmlModel,
   name: string,
   parentId: string | undefined,
-  previous?: UmlModel,
-): UmlModel {
-  const previousPackage = findPreviousElement(previous, name, "package");
+  span: AstPackageDeclaration["span"] | undefined,
+  identity: IdentityTable,
+): { model: UmlModel; id: string } {
+  const claim = identity.allocateElement({
+    elementType: "package",
+    name,
+    parentId,
+    span,
+  });
   const element = {
-    id: previousPackage?.id ?? createId(),
+    id: claim.id,
     elementType: "package" as const,
     name,
     ...(parentId !== undefined ? { parentId } : {}),
   };
 
   return {
-    ...model,
-    elements: [...model.elements.filter((item) => item.id !== element.id), element],
+    model: {
+      ...model,
+      elements: [...model.elements.filter((item) => item.id !== element.id), element],
+    },
+    id: claim.id,
   };
 }
 
@@ -116,14 +79,22 @@ function addClassifierElement(
   model: UmlModel,
   classifier: AstClassifier,
   parentId: string | undefined,
-  previous?: UmlModel,
+  identity: IdentityTable,
 ): UmlModel {
-  const previousClassifier = previous?.elements.find(
-    (element) => element.name === classifier.name,
-  );
-  const element = classifierFromAst(classifier, previousClassifier);
-  const withParent =
-    parentId !== undefined ? { ...element, parentId } : element;
+  const elementType =
+    classifier.classifierKind === "class"
+      ? "class"
+      : classifier.classifierKind === "interface"
+        ? "interface"
+        : "enumeration";
+  const claim = identity.allocateElement({
+    elementType,
+    name: classifier.name,
+    parentId,
+    span: classifier.nameSpan,
+  });
+  const element = classifierFromAst(classifier, claim.id);
+  const withParent = parentId !== undefined ? { ...element, parentId } : element;
 
   return {
     ...model,
@@ -135,19 +106,18 @@ function addBodyItems(
   model: UmlModel,
   items: readonly AstPackageBodyItem[],
   parentId: string,
-  previous?: UmlModel,
+  identity: IdentityTable,
 ): UmlModel {
   let nextModel = model;
 
   for (const item of items) {
     if (item.itemKind === "nestedPackage") {
-      nextModel = addPackageElement(nextModel, item.name, parentId, previous);
-      const nestedId = elementIdByName(nextModel, item.name);
-      nextModel = addBodyItems(nextModel, item.items, nestedId, previous);
+      const added = addPackageElement(nextModel, item.name, parentId, item.span, identity);
+      nextModel = addBodyItems(added.model, item.items, added.id, identity);
       continue;
     }
 
-    nextModel = addClassifierElement(nextModel, item.classifier, parentId, previous);
+    nextModel = addClassifierElement(nextModel, item.classifier, parentId, identity);
   }
 
   return nextModel;
@@ -156,41 +126,56 @@ function addBodyItems(
 function addPackageTree(
   model: UmlModel,
   pkg: AstPackageDeclaration,
-  previous?: UmlModel,
+  identity: IdentityTable,
 ): UmlModel {
-  let nextModel = addPackageElement(model, pkg.name, undefined, previous);
-  const packageId = elementIdByName(nextModel, pkg.name);
-  return addBodyItems(nextModel, pkg.items, packageId, previous);
+  const added = addPackageElement(model, pkg.name, undefined, pkg.span, identity);
+  return addBodyItems(added.model, pkg.items, added.id, identity);
 }
 
-function ensurePackageByName(
+function packageIdByName(
   model: UmlModel,
   name: string,
-  previous?: UmlModel,
-): UmlModel {
-  if (model.elements.some((element) => element.name === name)) {
-    return model;
+  span: PackageDiagramAst["relationships"][number]["span"] | undefined,
+  identity: IdentityTable,
+): { model: UmlModel; id?: string } {
+  const matches = model.elements.filter(
+    (element) => element.elementType === "package" && element.name === name,
+  );
+  if (matches.length === 1) {
+    return { model, id: matches[0]?.id };
   }
-
-  const previousPackage = findPreviousElement(previous, name, "package");
-  if (previousPackage !== undefined) {
+  if (matches.length > 1) {
     return {
-      ...model,
-      elements: [...model.elements, previousPackage],
+      model,
+      id: identity.resolve(model, name, span, { elementType: "package" }),
     };
   }
 
-  const result = addElement(model, {
+  const claim = identity.allocateElement({
     elementType: "package",
     name,
+    span,
   });
-  if (!result.ok) {
-    throw new Error(result.error.message);
-  }
-  return result.value;
+  const element = {
+    id: claim.id,
+    elementType: "package" as const,
+    name,
+  };
+  return {
+    model: {
+      ...model,
+      elements: [...model.elements, element],
+    },
+    id: claim.id,
+  };
 }
 
-export function packageAstToModel(ast: PackageDiagramAst, previous?: UmlModel): UmlModel {
+export function packageAstToModel(
+  ast: PackageDiagramAst,
+  previous?: UmlModel,
+  context?: BuildContext,
+): UmlModel {
+  const identity = context?.identity ?? createBuildContext(previous).identity;
   const base = previous ?? emptyModel("package");
   let model: UmlModel = {
     id: base.id,
@@ -200,27 +185,39 @@ export function packageAstToModel(ast: PackageDiagramAst, previous?: UmlModel): 
   };
 
   for (const pkg of ast.packages) {
-    model = addPackageTree(model, pkg, previous);
+    model = addPackageTree(model, pkg, identity);
   }
 
   for (const relationship of ast.relationships) {
-    model = ensurePackageByName(model, relationship.sourceName, previous);
-    model = ensurePackageByName(model, relationship.targetName, previous);
-
-    const sourceId = elementIdByName(model, relationship.sourceName);
-    const targetId = elementIdByName(model, relationship.targetName);
-    const previousRelationship = findPreviousRelationship(
-      previous,
-      sourceId,
-      targetId,
-      relationship.relationshipType,
+    const source = packageIdByName(
+      model,
+      relationship.sourceName,
+      relationship.sourceNameSpan ?? relationship.span,
+      identity,
     );
+    model = source.model;
+    const target = packageIdByName(
+      model,
+      relationship.targetName,
+      relationship.targetNameSpan ?? relationship.span,
+      identity,
+    );
+    model = target.model;
+    if (source.id === undefined || target.id === undefined) {
+      continue;
+    }
 
-    const nextRelationship: UmlRelationship = {
-      id: previousRelationship?.id ?? createId(),
+    const claim = identity.allocateRelationship({
+      sourceId: source.id,
+      targetId: target.id,
       relationshipType: relationship.relationshipType,
-      sourceId,
-      targetId,
+      span: relationship.span,
+    });
+    const nextRelationship: UmlRelationship = {
+      id: claim.id,
+      relationshipType: relationship.relationshipType,
+      sourceId: source.id,
+      targetId: target.id,
     };
 
     model = {

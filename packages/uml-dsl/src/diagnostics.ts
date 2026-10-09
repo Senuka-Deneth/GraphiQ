@@ -5,6 +5,18 @@ import type { IRecognitionException, ILexingError } from "chevrotain";
 export const PARSE_RULE_ID = "dsl.parse";
 export const UNSUPPORTED_KIND_RULE_ID = "dsl.unsupported-kind";
 export const KIND_MISMATCH_RULE_ID = "dsl.kind-mismatch";
+export const PARSER_FAILURE_RULE_ID = "dsl.parser-failure";
+
+export function finiteSpan(
+  start: number | undefined,
+  end: number | undefined,
+): { start: number; end: number } | undefined {
+  if (start === undefined || !Number.isFinite(start) || start < 0) {
+    return undefined;
+  }
+  const safeEnd = end !== undefined && Number.isFinite(end) && end >= start ? end : start;
+  return { start, end: safeEnd };
+}
 
 export function unsupportedKindDiagnostic(kind: string): Diagnostic {
   return {
@@ -44,10 +56,18 @@ export function lexerErrorToDiagnostic(error: ILexingError): Diagnostic {
     severity: "error",
     message: error.message,
     elementIds: [],
-    dslSpan: {
-      start: error.offset,
-      end: error.offset + error.length,
-    },
+    dslSpan: finiteSpan(error.offset, error.offset + error.length),
+  };
+}
+
+export function unexpectedParseDiagnostic(error: unknown): Diagnostic {
+  const message = error instanceof Error ? error.message : "Unexpected parser failure";
+  return {
+    id: createId(),
+    ruleId: PARSER_FAILURE_RULE_ID,
+    severity: "error",
+    message,
+    elementIds: [],
   };
 }
 
@@ -62,9 +82,6 @@ export function parserErrorToDiagnostic(error: IRecognitionException): Diagnosti
     severity: "error",
     message: error.message,
     elementIds: [],
-    dslSpan: {
-      start,
-      end,
-    },
+    dslSpan: finiteSpan(start, end),
   };
 }

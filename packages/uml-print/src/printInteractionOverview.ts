@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
 
 function needsDeclaration(element: UmlElement, referencedRefNames: ReadonlySet<string>): boolean {
@@ -124,10 +125,7 @@ function printFlow(
 }
 
 export function printInteractionOverview(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram interactionOverview"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram interactionOverview ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("interactionOverview", options?.name)];
 
   const elementById = new Map(model.elements.map((element) => [element.id, element]));
   const flows = model.relationships.filter(

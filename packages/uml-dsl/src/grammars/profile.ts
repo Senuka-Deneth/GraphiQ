@@ -9,6 +9,7 @@ import type {
   DslSpan,
   ProfileDiagramAst,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   Colon,
@@ -25,6 +26,7 @@ import {
   StereotypeKeyword,
   profileLexer,
   profileTokens,
+  QuotedLiteral,
 } from "../tokens/profileTokens.js";
 
 export class ProfileDslParser extends CstParser {
@@ -36,9 +38,7 @@ export class ProfileDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(ProfileKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.stereotypeDeclaration) },
@@ -182,7 +182,7 @@ class ProfileDslVisitor {
 
     return {
       kind: "profile",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       stereotypes,
       metaclasses,
       profiles,

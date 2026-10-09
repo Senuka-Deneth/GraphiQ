@@ -8,7 +8,7 @@ import type {
   DslComment,
   DslSpan,
 } from "@graphiq/uml-dsl";
-import { buildClassSourceMap } from "@graphiq/uml-dsl";
+import { buildClassSourceMap, formatDiagramHeader } from "@graphiq/uml-dsl";
 import type {
   Attribute,
   Operation,
@@ -438,8 +438,8 @@ function updateHeaderName(headerText: string, ast: ClassDiagramAst, name?: strin
   if (name === undefined || name === ast.name) {
     return headerText;
   }
-  const headerLine = ast.name !== undefined ? `diagram class ${ast.name}` : "diagram class";
-  const replacement = `diagram class ${name}`;
+  const headerLine = formatDiagramHeader("class", ast.name);
+  const replacement = formatDiagramHeader("class", name);
   const headerLineIndex = headerText.indexOf(headerLine);
   if (headerLineIndex === -1) {
     return headerText.replace(/diagram\s+class(?:\s+[^\n\r]+)?/, replacement);

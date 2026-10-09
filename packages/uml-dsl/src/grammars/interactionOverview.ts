@@ -12,6 +12,7 @@ import type {
   DslSpan,
   InteractionOverviewDiagramAst,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   Colon,
@@ -30,6 +31,7 @@ import {
   RefKeyword,
   interactionOverviewLexer,
   interactionOverviewTokens,
+  QuotedLiteral,
 } from "../tokens/interactionOverviewTokens.js";
 
 export class InteractionOverviewDslParser extends CstParser {
@@ -41,9 +43,7 @@ export class InteractionOverviewDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(InteractionOverviewKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         {
@@ -231,7 +231,7 @@ class InteractionOverviewDslVisitor {
 
     return {
       kind: "interactionOverview",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       nodes,
       flows,
       span,

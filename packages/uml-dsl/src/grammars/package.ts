@@ -8,6 +8,7 @@ import type {
   DslSpan,
   PackageDiagramAst,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   AbstractKeyword,
@@ -25,6 +26,7 @@ import {
   RCurly,
   packageLexer,
   packageTokens,
+  QuotedLiteral,
 } from "../tokens/packageTokens.js";
 
 export class PackageDslParser extends CstParser {
@@ -36,9 +38,7 @@ export class PackageDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(PackageKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.packageDeclaration) },
@@ -206,7 +206,7 @@ class PackageDslVisitor {
 
     return {
       kind: "package",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       packages,
       relationships,
       span,
@@ -322,7 +322,9 @@ class PackageDslVisitor {
 
     return {
       sourceName: sourceToken.image,
+      sourceNameSpan: tokenSpan(sourceToken),
       targetName: targetToken.image,
+      targetNameSpan: tokenSpan(targetToken),
       relationshipType,
       span: tokenSpan(sourceToken, lastToken(node)),
     };

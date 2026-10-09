@@ -1,4 +1,5 @@
 import { createToken, Lexer } from "chevrotain";
+import { quotedLiteralPattern } from "./quotedLiteral.js";
 
 export const WhiteSpace = createToken({
   name: "WhiteSpace",
@@ -55,7 +56,7 @@ export const MessageName = createToken({
 
 export const StringLiteral = createToken({
   name: "StringLiteral",
-  pattern: /"[^"]*"/,
+  pattern: quotedLiteralPattern,
 });
 
 export const Identifier = createToken({

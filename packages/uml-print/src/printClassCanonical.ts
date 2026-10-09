@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import type {
   AggregationRelationship,
   AssociationRelationship,
@@ -259,10 +260,7 @@ export function isClassPrintableRelationship(
 }
 
 export function printClassCanonical(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram class"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram class ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("class", options?.name)];
 
   const printableElements = model.elements.filter(shouldPrintElement);
   for (const element of printableElements) {

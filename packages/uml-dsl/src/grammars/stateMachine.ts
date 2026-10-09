@@ -15,6 +15,7 @@ import type {
   DslSpan,
   StateMachineDiagramAst,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   BracketedGuard,
@@ -41,6 +42,7 @@ import {
   TransitionArrow,
   stateMachineLexer,
   stateMachineTokens,
+  QuotedLiteral,
 } from "../tokens/stateMachineTokens.js";
 
 export class StateMachineDslParser extends CstParser {
@@ -52,9 +54,7 @@ export class StateMachineDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(StateMachineKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.stateDeclaration) },
@@ -312,7 +312,7 @@ class StateMachineDslVisitor {
 
     return {
       kind: "stateMachine",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       items,
       transitions,
       span,

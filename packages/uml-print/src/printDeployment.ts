@@ -1,4 +1,5 @@
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 
 function isNodeish(element: UmlElement): boolean {
   return (
@@ -77,10 +78,7 @@ function printRelationship(
 }
 
 export function printDeployment(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram deployment"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram deployment ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("deployment", options?.name)];
 
   lines.push(...printTopLevelNodes(model));
 

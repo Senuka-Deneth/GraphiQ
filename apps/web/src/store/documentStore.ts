@@ -15,8 +15,8 @@ import {
   type UmlModel,
 } from "@graphiq/uml-model";
 import type { MessageSort, RelationshipType } from "@graphiq/uml-model";
-import { parse } from "@graphiq/uml-dsl";
-import { astToModel, print, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
+import { parse, replaceDiagramHeaderTitle } from "@graphiq/uml-dsl";
+import { compileDiagram, hasBlockingParseErrors, print, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
@@ -715,12 +715,22 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
     persistState: "loading",
 
     setTitle: (title) => {
-      set((state) => ({
-        document: {
-          ...state.document,
-          title,
-        },
-      }));
+      const trimmed = title.trim();
+      if (trimmed.length === 0) {
+        return;
+      }
+
+      set((state) => {
+        const defaultTitle = DEFAULT_TITLE_BY_KIND[state.document.kind];
+        const headerName = trimmed !== defaultTitle ? trimmed : undefined;
+        return {
+          document: {
+            ...state.document,
+            title: trimmed,
+            dsl: replaceDiagramHeaderTitle(state.document.dsl, headerName),
+          },
+        };
+      });
     },
 
     setDslEditorFocused: (focused) => {
@@ -839,27 +849,26 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
     runParse: async () => {
       const { document, lastGoodModel, lastGoodOverlay } = get();
-      const parseResult = parse(document.kind, document.dsl);
+      const compiled = compileDiagram(document.kind, document.dsl, lastGoodModel);
 
-      if (!parseResult.ok) {
+      if (
+        compiled.model === undefined ||
+        compiled.ast === undefined ||
+        hasBlockingParseErrors(compiled.diagnostics)
+      ) {
         set({
-          diagnostics: parseResult.error.diagnostics,
+          diagnostics: compiled.diagnostics,
           parseTimer: null,
         });
         return;
       }
 
-      const { ast, diagnostics: parseDiagnostics, comments } = parseResult.value;
-
-      if (hasFatalErrors(parseDiagnostics)) {
-        set({
-          diagnostics: parseDiagnostics,
-          parseTimer: null,
-        });
-        return;
-      }
-
-      const model = astToModel(ast, lastGoodModel);
+      const { ast, diagnostics: parseDiagnostics, comments } = {
+        ast: compiled.ast,
+        diagnostics: compiled.diagnostics,
+        comments: compiled.comments,
+      };
+      const model = compiled.model;
       const modelDiagnostics = validate(document.kind, model);
       const diagnostics = bindDiagnosticSpans(ast, model, [
         ...parseDiagnostics,

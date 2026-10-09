@@ -1,4 +1,5 @@
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 
 function printTaggedValues(element: UmlElement): string {
   if (element.elementType !== "stereotype" || element.attributes.length === 0) {
@@ -64,10 +65,7 @@ function printRelationship(relationship: UmlRelationship, nameById: ReadonlyMap<
 }
 
 export function printProfile(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram profile"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram profile ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("profile", options?.name)];
 
   lines.push(...printTopLevelElements(model));
 

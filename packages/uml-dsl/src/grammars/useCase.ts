@@ -8,6 +8,7 @@ import type {
   DslSpan,
   UseCaseDiagramAst,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   ActorKeyword,
@@ -26,6 +27,7 @@ import {
   useCaseLexer,
   useCaseTokens,
   Colon,
+  QuotedLiteral,
 } from "../tokens/useCaseTokens.js";
 
 export class UseCaseDslParser extends CstParser {
@@ -37,9 +39,7 @@ export class UseCaseDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(UseCaseDiagramKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.actorDeclaration) },
@@ -216,7 +216,7 @@ class UseCaseDslVisitor {
 
     return {
       kind: "useCase",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       actors,
       subjects,
       useCases,
@@ -266,7 +266,9 @@ class UseCaseDslVisitor {
     const targetToken = node.children.targetName?.[0] as IToken;
     return {
       sourceName: sourceToken.image,
+      sourceNameSpan: tokenSpan(sourceToken),
       targetName: targetToken.image,
+      targetNameSpan: tokenSpan(targetToken),
       relationshipType: "association",
       span: tokenSpan(sourceToken, lastToken(node)),
     };
@@ -286,11 +288,20 @@ class UseCaseDslVisitor {
       labelToken === undefined
         ? "dependency"
         : relationshipTypeFromLabel(labelToken.image);
+    const stereotype =
+      relationshipType === "dependency" && labelToken !== undefined
+        ? stereotypeName(labelToken.image).trim()
+        : undefined;
 
     return {
       sourceName: sourceToken.image,
+      sourceNameSpan: tokenSpan(sourceToken),
       targetName: targetToken.image,
+      targetNameSpan: tokenSpan(targetToken),
       relationshipType,
+      ...(stereotype !== undefined && stereotype.toLowerCase() !== "dependency"
+        ? { stereotype }
+        : {}),
       span: tokenSpan(sourceToken, lastToken(node)),
     };
   }
@@ -300,7 +311,9 @@ class UseCaseDslVisitor {
     const targetToken = node.children.generalizationTargetName?.[0] as IToken;
     return {
       sourceName: sourceToken.image,
+      sourceNameSpan: tokenSpan(sourceToken),
       targetName: targetToken.image,
+      targetNameSpan: tokenSpan(targetToken),
       relationshipType: "generalization",
       span: tokenSpan(sourceToken, lastToken(node)),
     };

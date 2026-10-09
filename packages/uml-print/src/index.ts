@@ -1,4 +1,13 @@
 export { astToModel } from "./astToModel.js";
+export { compileDiagram, hasBlockingParseErrors } from "./compile.js";
+export type { CompilationResult } from "./compile.js";
+export {
+  AMBIGUOUS_REFERENCE_RULE_ID,
+  DUPLICATE_DECLARATION_RULE_ID,
+  UNRESOLVED_REFERENCE_RULE_ID,
+  UNSUPPORTED_FEATURE_RULE_ID,
+} from "./identity.js";
+export type { CompilationSourceMap, SourceMapEntry } from "./identity.js";
 export { classAstToModel } from "./classAstToModel.js";
 export { componentAstToModel } from "./componentAstToModel.js";
 export { deploymentAstToModel } from "./deploymentAstToModel.js";

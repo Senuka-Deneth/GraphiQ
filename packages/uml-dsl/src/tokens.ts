@@ -1,4 +1,5 @@
 import { createToken, Lexer } from "chevrotain";
+import { quotedLiteralPattern } from "./tokens/quotedLiteral.js";
 
 export const WhiteSpace = createToken({
   name: "WhiteSpace",
@@ -100,7 +101,7 @@ export const PackageVisibility = createToken({
 
 export const QuotedMultiplicity = createToken({
   name: "QuotedMultiplicity",
-  pattern: /"[^"]*"/,
+  pattern: quotedLiteralPattern,
 });
 
 export const UnquotedMultiplicity = createToken({
