@@ -37,6 +37,7 @@ export type MessageRelationship = RelationshipBase & {
   messageSort: MessageSort;
   sequenceNumber?: string;
   time?: number;
+  interactionIndex?: number;
 };
 
 export type TransitionRelationship = RelationshipBase & {

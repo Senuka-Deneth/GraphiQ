@@ -1,4 +1,5 @@
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 
 function owningComponent(model: UmlModel, element: UmlElement | undefined): UmlElement | undefined {
   if (element === undefined) {
@@ -122,10 +123,7 @@ function printRelationship(model: UmlModel, relationship: UmlRelationship): stri
 }
 
 export function printComponent(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram component"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram component ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("component", options?.name)];
 
   lines.push(...printTopLevelComponents(model));
 

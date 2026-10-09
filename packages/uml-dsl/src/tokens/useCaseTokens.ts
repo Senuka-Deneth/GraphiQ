@@ -1,4 +1,7 @@
 import { createToken, Lexer } from "chevrotain";
+import { QuotedLiteral } from "./quotedLiteral.js";
+
+export { QuotedLiteral };
 
 export const WhiteSpace = createToken({
   name: "WhiteSpace",
@@ -103,6 +106,7 @@ export const useCaseTokens = [
   UseCaseElementKeyword,
   ActorKeyword,
   SubjectKeyword,
+  QuotedLiteral,
   Identifier,
   LCurly,
   RCurly,

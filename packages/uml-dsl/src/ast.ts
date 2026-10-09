@@ -135,7 +135,9 @@ export type AstPackageDeclaration = {
 
 export type AstPackageRelationship = {
   sourceName: string;
+  sourceNameSpan?: DslSpan;
   targetName: string;
+  targetNameSpan?: DslSpan;
   relationshipType: Extract<
     RelationshipType,
     "packageImport" | "packageMerge" | "dependency"
@@ -324,11 +326,14 @@ export type AstSubjectDeclaration = {
 
 export type AstUseCaseRelationship = {
   sourceName: string;
+  sourceNameSpan?: DslSpan;
   targetName: string;
+  targetNameSpan?: DslSpan;
   relationshipType: Extract<
     RelationshipType,
     "association" | "include" | "extend" | "generalization" | "dependency"
   >;
+  stereotype?: string;
   span: DslSpan;
 };
 
@@ -523,11 +528,17 @@ export type AstSequenceMessageSort =
 
 export type AstSequenceMessage = {
   sourceName: string;
+  sourceNameSpan?: DslSpan;
   targetName: string;
+  targetNameSpan?: DslSpan;
   messageSort: AstSequenceMessageSort;
   name?: string;
   span: DslSpan;
 };
+
+export type AstSequenceInteraction =
+  | { interactionKind: "message"; message: AstSequenceMessage }
+  | { interactionKind: "fragment"; fragment: AstSequenceCombinedFragment };
 
 export type AstSequenceCombinedFragmentOperator = "alt" | "opt" | "loop";
 
@@ -549,6 +560,7 @@ export type SequenceDiagramAst = {
   lifelines: AstSequenceLifeline[];
   combinedFragments: AstSequenceCombinedFragment[];
   messages: AstSequenceMessage[];
+  interactions: AstSequenceInteraction[];
   span: DslSpan;
 };
 

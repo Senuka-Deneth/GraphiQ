@@ -1,4 +1,5 @@
 import type { PartElement, PortElement, UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 
 function printQualifiedEnd(model: UmlModel, elementId: string): string | undefined {
   const element = model.elements.find((item) => item.id === elementId);
@@ -76,10 +77,7 @@ function printConnector(model: UmlModel, relationship: UmlRelationship): string 
 }
 
 export function printCompositeStructure(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram compositeStructure"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram compositeStructure ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("compositeStructure", options?.name)];
 
   const frames = model.elements.filter(
     (element) =>

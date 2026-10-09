@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import {
   type LifelineElement,
   type MessageRelationship,
@@ -143,10 +144,7 @@ export function printTiming(model: UmlModel, options?: { name?: string }): strin
   const lifelines = model.elements.filter(isPrintableLifeline);
   const nameById = new Map(lifelines.map((element) => [element.id, element.name]));
 
-  const lines: string[] = [
-    options?.name !== undefined ? `diagram timing ${options.name}` : "diagram timing",
-    "",
-  ];
+  const lines: string[] = [formatDiagramHeader("timing", options?.name), ""];
 
   for (const lifeline of lifelines) {
     lines.push(printLifeline(lifeline));

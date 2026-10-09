@@ -10,6 +10,8 @@ import type {
   DslSpan,
 } from "../ast.js";
 import { commentsFromLexerGroups } from "../comments.js";
+import { guardVisit } from "../cstGuard.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import {
   AbstractKeyword,
   AggregationArrow,
@@ -52,9 +54,7 @@ export class ClassDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(ClassKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedMultiplicity);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.classifierDeclaration) },
@@ -285,7 +285,7 @@ function visibilityFromNode(node: CstNode | undefined): Visibility {
 
 function multiplicityValue(token: IToken): string {
   if (token.tokenType === QuotedMultiplicity) {
-    return token.image.slice(1, -1);
+    return readDiagramTitle(token) ?? token.image;
   }
   return token.image;
 }
@@ -323,17 +323,23 @@ export class ClassDslVisitor {
 
     const classifierNodes = cst.children.classifierDeclaration ?? [];
     for (const node of classifierNodes) {
-      classifiers.push(this.visitClassifier(node as CstNode));
+      const classifier = guardVisit(() => this.visitClassifier(node as CstNode));
+      if (classifier !== undefined) {
+        classifiers.push(classifier);
+      }
     }
 
     const relationshipNodes = cst.children.relationshipDeclaration ?? [];
     for (const node of relationshipNodes) {
-      relationships.push(this.visitRelationship(node as CstNode));
+      const relationship = guardVisit(() => this.visitRelationship(node as CstNode));
+      if (relationship !== undefined) {
+        relationships.push(relationship);
+      }
     }
 
     return {
       kind: "class",
-      name: diagramNameToken?.image,
+      name: readDiagramTitle(diagramNameToken),
       classifiers,
       relationships,
       span: tokenSpan(
@@ -440,9 +446,15 @@ export class ClassDslVisitor {
     for (const memberNode of memberNodes) {
       const member = memberNode as CstNode;
       if (member.children.operation) {
-        operations.push(this.visitOperation(member.children.operation[0] as CstNode));
+        const operation = guardVisit(() => this.visitOperation(member.children.operation?.[0] as CstNode));
+        if (operation !== undefined) {
+          operations.push(operation);
+        }
       } else if (member.children.attribute) {
-        attributes.push(this.visitAttribute(member.children.attribute[0] as CstNode));
+        const attribute = guardVisit(() => this.visitAttribute(member.children.attribute?.[0] as CstNode));
+        if (attribute !== undefined) {
+          attributes.push(attribute);
+        }
       }
     }
 

@@ -1,4 +1,5 @@
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 
 function printActors(model: UmlModel): string[] {
   const lines: string[] = [];
@@ -67,16 +68,17 @@ function printRelationship(
       return `${sourceName} ..> ${targetName} : «extend»`;
     case "generalization":
       return `${sourceName} --|> ${targetName}`;
+    case "dependency":
+      return relationship.name !== undefined && relationship.name.length > 0
+        ? `${sourceName} ..> ${targetName} : «${relationship.name}»`
+        : `${sourceName} ..> ${targetName}`;
     default:
       return undefined;
   }
 }
 
 export function printUseCase(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram useCase"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram useCase ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("useCase", options?.name)];
 
   lines.push(...printActors(model));
   lines.push(...printSubjects(model));

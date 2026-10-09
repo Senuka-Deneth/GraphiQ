@@ -15,15 +15,21 @@ import { sequenceAstToModel } from "./sequenceAstToModel.js";
 import { timingAstToModel } from "./timingAstToModel.js";
 import { interactionOverviewAstToModel } from "./interactionOverviewAstToModel.js";
 import { useCaseAstToModel } from "./useCaseAstToModel.js";
+import { createBuildContext, type BuildContext } from "./identity.js";
 
-export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
+export function astToModel(
+  ast: DiagramAst,
+  previous?: UmlModel,
+  context?: BuildContext,
+): UmlModel {
+  const active = context ?? createBuildContext(previous?.kind === ast.kind ? previous : undefined);
   switch (ast.kind) {
     case "class":
-      return classAstToModel(ast, previous?.kind === "class" ? previous : undefined);
+      return classAstToModel(ast, previous?.kind === "class" ? previous : undefined, active);
     case "object":
       return objectAstToModel(ast, previous?.kind === "object" ? previous : undefined);
     case "package":
-      return packageAstToModel(ast, previous?.kind === "package" ? previous : undefined);
+      return packageAstToModel(ast, previous?.kind === "package" ? previous : undefined, active);
     case "component":
       return componentAstToModel(ast, previous?.kind === "component" ? previous : undefined);
     case "deployment":
@@ -31,7 +37,7 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
     case "profile":
       return profileAstToModel(ast, previous?.kind === "profile" ? previous : undefined);
     case "useCase":
-      return useCaseAstToModel(ast, previous?.kind === "useCase" ? previous : undefined);
+      return useCaseAstToModel(ast, previous?.kind === "useCase" ? previous : undefined, active);
     case "compositeStructure":
       return compositeStructureAstToModel(
         ast,
@@ -50,7 +56,7 @@ export function astToModel(ast: DiagramAst, previous?: UmlModel): UmlModel {
         previous?.kind === "stateMachine" ? previous : undefined,
       );
     case "sequence":
-      return sequenceAstToModel(ast, previous?.kind === "sequence" ? previous : undefined);
+      return sequenceAstToModel(ast, previous?.kind === "sequence" ? previous : undefined, active);
     case "timing":
       return timingAstToModel(ast, previous?.kind === "timing" ? previous : undefined);
     case "interactionOverview":

@@ -6,6 +6,7 @@ import type {
   CommunicationDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   Colon,
@@ -34,9 +35,7 @@ export class CommunicationDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(CommunicationKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, StringLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.instanceDeclaration) },
@@ -172,7 +171,7 @@ class CommunicationDslVisitor {
 
     return {
       kind: "communication",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       instances,
       messages,
       links,

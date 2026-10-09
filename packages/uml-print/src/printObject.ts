@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import type {
   InstanceSpecificationElement,
   UmlElement,
@@ -61,10 +62,7 @@ function printObjectRelationship(
 }
 
 export function printObject(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram object"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram object ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("object", options?.name)];
 
   const instances = model.elements.filter(isPrintableInstance);
   for (const instance of instances) {

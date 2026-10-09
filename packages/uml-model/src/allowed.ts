@@ -128,6 +128,7 @@ const USE_CASE_RELATIONSHIPS = setOf<RelationshipType>(
   "include",
   "extend",
   "generalization",
+  "dependency",
 );
 
 const ACTIVITY_ELEMENTS = setOf<ElementType>(

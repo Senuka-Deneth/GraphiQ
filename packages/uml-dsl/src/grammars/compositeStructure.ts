@@ -6,6 +6,7 @@ import type {
   CompositeStructureDiagramAst,
   DslSpan,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   ClassKeyword,
@@ -24,6 +25,7 @@ import {
   ToKeyword,
   compositeStructureLexer,
   compositeStructureTokens,
+  QuotedLiteral,
 } from "../tokens/compositeStructureTokens.js";
 
 export class CompositeStructureDslParser extends CstParser {
@@ -35,9 +37,7 @@ export class CompositeStructureDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(CompositeStructureDiagramKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.frameDeclaration) },
@@ -182,7 +182,7 @@ class CompositeStructureDslVisitor {
 
     return {
       kind: "compositeStructure",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       frames,
       connectors,
       span,

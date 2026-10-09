@@ -8,6 +8,7 @@ import {
   kindMismatchDiagnostic,
   lexerErrorToDiagnostic,
   parserErrorToDiagnostic,
+  unexpectedParseDiagnostic,
 } from "./diagnostics.js";
 import { parseClassCst, parseClassDocument } from "./grammars/class.js";
 import { parseComponentCst, parseComponentDocument } from "./grammars/component.js";
@@ -48,6 +49,24 @@ export function parse(
   kind: DiagramKind,
   text: string,
 ): Result<ParseSuccess, ParseFailure> {
+  try {
+    return parseKind(kind, text);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return err({
+        diagnostics: [headerParseDiagnostic("Incomplete statement could not be read")],
+      });
+    }
+    return err({
+      diagnostics: [unexpectedParseDiagnostic(error)],
+    });
+  }
+}
+
+function parseKind(
+  kind: DiagramKind,
+  text: string,
+): Result<ParseSuccess, ParseFailure> {
   switch (kind) {
     case "class":
       return parseClass(kind, text);
@@ -82,6 +101,25 @@ export function parse(
   }
 }
 
+function readAst<T>(
+  diagnostics: Diagnostic[],
+  build: () => T,
+): Result<T, ParseFailure> {
+  try {
+    return ok(build());
+  } catch (error) {
+    if (!(error instanceof TypeError)) {
+      throw error;
+    }
+    return err({
+      diagnostics: [
+        ...diagnostics,
+        headerParseDiagnostic("Incomplete statement could not be read"),
+      ],
+    });
+  }
+}
+
 function parseClass(
   expectedKind: "class",
   text: string,
@@ -107,7 +145,11 @@ function parseClass(
     });
   }
 
-  const ast = parseClassDocument(cst);
+  const built = readAst(diagnostics, () => parseClassDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -142,7 +184,11 @@ function parseObject(
     });
   }
 
-  const ast = parseObjectDocument(cst);
+  const built = readAst(diagnostics, () => parseObjectDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
   const completeInstances = ast.instances.filter((instance) =>
     instanceDeclarationHasColon(text, instance),
   );
@@ -188,7 +234,11 @@ function parsePackage(
     });
   }
 
-  const ast = parsePackageDocument(cst);
+  const built = readAst(diagnostics, () => parsePackageDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -223,7 +273,11 @@ function parseComponent(
     });
   }
 
-  const ast = parseComponentDocument(cst);
+  const built = readAst(diagnostics, () => parseComponentDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -258,7 +312,11 @@ function parseDeployment(
     });
   }
 
-  const ast = parseDeploymentDocument(cst);
+  const built = readAst(diagnostics, () => parseDeploymentDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -293,7 +351,11 @@ function parseProfile(
     });
   }
 
-  const ast = parseProfileDocument(cst);
+  const built = readAst(diagnostics, () => parseProfileDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -328,7 +390,11 @@ function parseUseCase(
     });
   }
 
-  const ast = parseUseCaseDocument(cst);
+  const built = readAst(diagnostics, () => parseUseCaseDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -363,7 +429,11 @@ function parseCompositeStructure(
     });
   }
 
-  const ast = parseCompositeStructureDocument(cst);
+  const built = readAst(diagnostics, () => parseCompositeStructureDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -398,7 +468,11 @@ function parseCommunication(
     });
   }
 
-  const ast = parseCommunicationDocument(cst);
+  const built = readAst(diagnostics, () => parseCommunicationDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -433,7 +507,11 @@ function parseActivity(
     });
   }
 
-  const ast = parseActivityDocument(cst);
+  const built = readAst(diagnostics, () => parseActivityDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -468,7 +546,11 @@ function parseStateMachine(
     });
   }
 
-  const ast = parseStateMachineDocument(cst);
+  const built = readAst(diagnostics, () => parseStateMachineDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -503,7 +585,11 @@ function parseSequence(
     });
   }
 
-  const ast = parseSequenceDocument(cst);
+  const built = readAst(diagnostics, () => parseSequenceDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -538,7 +624,11 @@ function parseTiming(
     });
   }
 
-  const ast = parseTimingDocument(cst);
+  const built = readAst(diagnostics, () => parseTimingDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,
@@ -573,7 +663,11 @@ function parseInteractionOverview(
     });
   }
 
-  const ast = parseInteractionOverviewDocument(cst);
+  const built = readAst(diagnostics, () => parseInteractionOverviewDocument(cst));
+  if (!built.ok) {
+    return built;
+  }
+  const ast = built.value;
 
   return ok({
     ast,

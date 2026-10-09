@@ -1,7 +1,6 @@
 import { createId } from "@graphiq/uml-core";
 import type { ClassDiagramAst, AstClassifier } from "@graphiq/uml-dsl";
 import {
-  addElement,
   emptyModel,
   type Attribute,
   type Operation,
@@ -9,6 +8,7 @@ import {
   type UmlModel,
   type UmlRelationship,
 } from "@graphiq/uml-model";
+import { createBuildContext, type BuildContext, type IdentityTable } from "./identity.js";
 
 type AstAttribute = {
   visibility: Attribute["visibility"];
@@ -24,46 +24,6 @@ type AstOperation = {
   parameters: readonly { name: string; typeName: string }[];
   returnType?: string;
 };
-
-function findPreviousClassifier(
-  previous: UmlModel | undefined,
-  classifier: AstClassifier,
-): UmlElement | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return (
-    previous.elements.find((element) => {
-      switch (classifier.classifierKind) {
-        case "class":
-          return (
-            element.elementType === "class" &&
-            element.name === classifier.name &&
-            element.isAbstract === classifier.isAbstract
-          );
-        case "interface":
-          return element.elementType === "interface" && element.name === classifier.name;
-        case "enumeration":
-          return element.elementType === "enumeration" && element.name === classifier.name;
-        default:
-          return classifier satisfies never;
-      }
-    }) ??
-    previous.elements.find((element) => {
-      if (classifier.classifierKind === "class" && element.elementType === "class") {
-        return element.name === classifier.name;
-      }
-      if (classifier.classifierKind === "interface" && element.elementType === "interface") {
-        return element.name === classifier.name;
-      }
-      if (classifier.classifierKind === "enumeration" && element.elementType === "enumeration") {
-        return element.name === classifier.name;
-      }
-      return false;
-    })
-  );
-}
 
 function mergeAttributes(
   astAttributes: readonly AstAttribute[],
@@ -220,56 +180,48 @@ function insertClassifierElement(model: UmlModel, spec: NewUmlElementFromClassif
   }
 }
 
-function findPreviousRelationship(
-  previous: UmlModel | undefined,
-  sourceId: string,
-  targetId: string,
-  relationshipType: UmlRelationship["relationshipType"],
-  name?: string,
-): UmlRelationship | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.relationships.find(
-    (relationship) =>
-      relationship.sourceId === sourceId &&
-      relationship.targetId === targetId &&
-      relationship.relationshipType === relationshipType &&
-      relationship.name === name,
-  );
-}
-
 function ensureElementByName(
   model: UmlModel,
   name: string,
-  previous?: UmlModel,
+  identity: IdentityTable,
+  span?: ClassDiagramAst["relationships"][number]["sourceNameSpan"],
 ): UmlModel {
-  if (model.elements.some((element) => element.name === name)) {
+  const matches = model.elements.filter((element) => element.name === name);
+  if (matches.length === 1) {
+    return model;
+  }
+  if (matches.length > 1) {
     return model;
   }
 
-  const previousElement = previous?.elements.find((element) => element.name === name);
-  if (previousElement !== undefined) {
-    return {
-      ...model,
-      elements: [...model.elements, previousElement],
-    };
-  }
-
-  const result = addElement(model, { elementType: "class", name });
-  if (!result.ok) {
-    throw new Error(result.error.message);
-  }
-  return result.value;
+  const claim = identity.allocateElement({
+    elementType: "class",
+    name,
+    span,
+  });
+  return {
+    ...model,
+    elements: [
+      ...model.elements,
+      {
+        id: claim.id,
+        elementType: "class",
+        name,
+        isAbstract: false,
+        attributes: [],
+        operations: [],
+      },
+    ],
+  };
 }
 
-function elementIdByName(model: UmlModel, name: string): string {
-  const element = model.elements.find((item) => item.name === name);
-  if (element === undefined) {
-    throw new Error(`Element "${name}" was not found`);
-  }
-  return element.id;
+function elementIdByName(
+  model: UmlModel,
+  name: string,
+  identity: IdentityTable,
+  span?: ClassDiagramAst["relationships"][number]["sourceNameSpan"],
+): string | undefined {
+  return identity.resolve(model, name, span);
 }
 
 function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
@@ -287,9 +239,8 @@ function addAssociationFamilyRelationship(
   relationship: ClassDiagramAst["relationships"][number],
   sourceId: string,
   targetId: string,
-  previousRelationship?: UmlRelationship,
+  id: string,
 ): UmlModel {
-  const id = previousRelationship?.id ?? createId();
   const sourceMultiplicity = relationship.sourceMultiplicity ?? "1";
   const targetMultiplicity = relationship.targetMultiplicity ?? "1";
   const name = relationship.name;
@@ -355,9 +306,8 @@ function addBinaryRelationship(
   relationship: ClassDiagramAst["relationships"][number],
   sourceId: string,
   targetId: string,
-  previousRelationship?: UmlRelationship,
+  id: string,
 ): UmlModel {
-  const id = previousRelationship?.id ?? createId();
   const name = relationship.name;
 
   let nextRelationship: UmlRelationship;
@@ -399,7 +349,12 @@ function addBinaryRelationship(
   };
 }
 
-export function classAstToModel(ast: ClassDiagramAst, previous?: UmlModel): UmlModel {
+export function classAstToModel(
+  ast: ClassDiagramAst,
+  previous?: UmlModel,
+  context?: BuildContext,
+): UmlModel {
+  const identity = context?.identity ?? createBuildContext(previous).identity;
   const base = previous ?? emptyModel("class");
   let model: UmlModel = {
     id: base.id,
@@ -409,24 +364,51 @@ export function classAstToModel(ast: ClassDiagramAst, previous?: UmlModel): UmlM
   };
 
   for (const classifier of ast.classifiers) {
-    const previousClassifier = findPreviousClassifier(previous, classifier);
-    const spec = buildClassifierElement(classifier, previousClassifier);
+    const elementType =
+      classifier.classifierKind === "class"
+        ? "class"
+        : classifier.classifierKind === "interface"
+          ? "interface"
+          : "enumeration";
+    const claim = identity.allocateElement({
+      elementType,
+      name: classifier.name,
+      span: classifier.nameSpan,
+    });
+    const spec = {
+      ...buildClassifierElement(classifier, claim.previous),
+      id: claim.id,
+    };
     model = insertClassifierElement(model, spec);
   }
 
   for (const relationship of ast.relationships) {
-    model = ensureElementByName(model, relationship.sourceName, previous);
-    model = ensureElementByName(model, relationship.targetName, previous);
+    model = ensureElementByName(model, relationship.sourceName, identity, relationship.sourceNameSpan);
+    model = ensureElementByName(model, relationship.targetName, identity, relationship.targetNameSpan);
 
-    const sourceId = elementIdByName(model, relationship.sourceName);
-    const targetId = elementIdByName(model, relationship.targetName);
-    const previousRelationship = findPreviousRelationship(
-      previous,
+    const sourceId = elementIdByName(
+      model,
+      relationship.sourceName,
+      identity,
+      relationship.sourceNameSpan,
+    );
+    const targetId = elementIdByName(
+      model,
+      relationship.targetName,
+      identity,
+      relationship.targetNameSpan,
+    );
+    if (sourceId === undefined || targetId === undefined) {
+      continue;
+    }
+
+    const claim = identity.allocateRelationship({
       sourceId,
       targetId,
-      relationship.relationshipType,
-      relationship.name,
-    );
+      relationshipType: relationship.relationshipType,
+      name: relationship.name,
+      span: relationship.span,
+    });
 
     switch (relationship.relationshipType) {
       case "association":
@@ -438,7 +420,7 @@ export function classAstToModel(ast: ClassDiagramAst, previous?: UmlModel): UmlM
           relationship,
           sourceId,
           targetId,
-          previousRelationship,
+          claim.id,
         );
         break;
       case "generalization":
@@ -449,12 +431,13 @@ export function classAstToModel(ast: ClassDiagramAst, previous?: UmlModel): UmlM
           relationship,
           sourceId,
           targetId,
-          previousRelationship,
+          claim.id,
         );
         break;
       default:
-        throw new Error(
+        identity.unsupported(
           `Unsupported relationship type in class AST: ${String(relationship.relationshipType)}`,
+          relationship.span,
         );
     }
   }

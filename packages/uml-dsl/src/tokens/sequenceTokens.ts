@@ -1,4 +1,7 @@
 import { createToken, Lexer } from "chevrotain";
+import { QuotedLiteral } from "./quotedLiteral.js";
+
+export { QuotedLiteral };
 
 export const WhiteSpace = createToken({
   name: "WhiteSpace",
@@ -113,6 +116,7 @@ export const sequenceTokens = [
   OptKeyword,
   LoopKeyword,
   MessageName,
+  QuotedLiteral,
   Identifier,
   LCurly,
   RCurly,

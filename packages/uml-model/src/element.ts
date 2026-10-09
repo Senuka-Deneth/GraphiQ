@@ -65,6 +65,7 @@ export type CombinedFragmentElement = NamedElementBase & {
   elementType: "combinedFragment";
   operator: CombinedFragmentOperator;
   operands: CombinedFragmentOperand[];
+  interactionIndex?: number;
 };
 
 export type LifelineElement = NamedElementBase & {

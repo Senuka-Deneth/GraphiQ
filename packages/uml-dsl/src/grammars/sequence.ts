@@ -16,6 +16,8 @@ import type {
   SequenceDiagramAst,
 } from "../ast.js";
 import { commentsFromLexerGroups } from "../comments.js";
+import { guardNodes } from "../cstGuard.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import {
   AltKeyword,
   AsyncArrow,
@@ -29,6 +31,7 @@ import {
   LCurly,
   MessageName,
   OptKeyword,
+  QuotedLiteral,
   RBracket,
   ReplyArrow,
   RCurly,
@@ -47,9 +50,7 @@ export class SequenceDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(SequenceKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.lifelineDeclaration) },
@@ -196,7 +197,9 @@ function parseMessageNode(node: CstNode): AstSequenceMessage | null {
 
   return {
     sourceName: sourceToken.image,
+    sourceNameSpan: tokenSpan(sourceToken),
     targetName: targetToken.image,
+    targetNameSpan: tokenSpan(targetToken),
     messageSort: parseMessageSort(arrowToken),
     ...(labelToken !== undefined ? { name: labelToken } : {}),
     span: nodeSpan(node),
@@ -227,8 +230,11 @@ function parseFragmentNode(node: CstNode): AstSequenceCombinedFragment {
   };
 }
 
-function parseLifelineNode(node: CstNode): AstSequenceLifeline {
-  const nameToken = node.children.lifelineName?.[0] as IToken;
+function parseLifelineNode(node: CstNode): AstSequenceLifeline | null {
+  const nameToken = node.children.lifelineName?.[0] as IToken | undefined;
+  if (nameToken === undefined) {
+    return null;
+  }
   const classifierToken = node.children.classifierName?.[0] as IToken | undefined;
 
   return {
@@ -238,33 +244,66 @@ function parseLifelineNode(node: CstNode): AstSequenceLifeline {
   };
 }
 
-export function parseSequenceDocument(cst: CstNode): SequenceDiagramAst {
-  const nameToken = cst.children.diagramName?.[0] as IToken | undefined;
-  const lifelines: AstSequenceLifeline[] = [];
-  const combinedFragments: AstSequenceCombinedFragment[] = [];
-  const messages: AstSequenceMessage[] = [];
+function nodeOffset(node: CstNode): number {
+  return firstToken(node)?.startOffset ?? Number.MAX_SAFE_INTEGER;
+}
 
-  for (const node of cst.children.lifelineDeclaration ?? []) {
-    lifelines.push(parseLifelineNode(node as CstNode));
-  }
-  for (const node of cst.children.combinedFragmentDeclaration ?? []) {
-    combinedFragments.push(parseFragmentNode(node as CstNode));
-  }
-  for (const node of cst.children.messageDeclaration ?? []) {
-    const message = parseMessageNode(node as CstNode);
+export function parseSequenceDocument(cst: CstNode): SequenceDiagramAst {
+  const title = readDiagramTitle(cst.children.diagramName?.[0]);
+  const lifelines = guardNodes(cst.children.lifelineDeclaration, parseLifelineNode).filter(
+    (lifeline): lifeline is AstSequenceLifeline => lifeline !== null,
+  );
+  const combinedFragments = guardNodes(cst.children.combinedFragmentDeclaration, parseFragmentNode);
+  const messages = guardNodes(cst.children.messageDeclaration, parseMessageNode).filter(
+    (message): message is AstSequenceMessage => message !== null,
+  );
+
+  const interactionNodes = [
+    ...(cst.children.combinedFragmentDeclaration ?? []).map((node) => ({
+      interactionKind: "fragment" as const,
+      node: node as CstNode,
+    })),
+    ...(cst.children.messageDeclaration ?? []).map((node) => ({
+      interactionKind: "message" as const,
+      node: node as CstNode,
+    })),
+  ].sort((left, right) => nodeOffset(left.node) - nodeOffset(right.node));
+
+  const interactions: SequenceDiagramAst["interactions"] = [];
+  for (const item of interactionNodes) {
+    if (item.interactionKind === "fragment") {
+      const fragment = guardVisitFragment(item.node);
+      if (fragment !== undefined) {
+        interactions.push({ interactionKind: "fragment", fragment });
+      }
+      continue;
+    }
+    const message = parseMessageNode(item.node);
     if (message !== null) {
-      messages.push(message);
+      interactions.push({ interactionKind: "message", message });
     }
   }
 
   return {
     kind: "sequence",
-    ...(nameToken !== undefined ? { name: nameToken.image } : {}),
+    ...(title !== undefined ? { name: title } : {}),
     lifelines,
     combinedFragments,
     messages,
+    interactions,
     span: nodeSpan(cst),
   };
+}
+
+function guardVisitFragment(node: CstNode): AstSequenceCombinedFragment | undefined {
+  try {
+    return parseFragmentNode(node);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return undefined;
+    }
+    throw error;
+  }
 }
 
 const parser = new SequenceDslParser();

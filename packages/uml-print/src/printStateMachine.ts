@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import {
   isTransitionRelationship,
   type UmlElement,
@@ -234,10 +235,7 @@ function printStateBlock(model: UmlModel, state: UmlElement, indent: string): st
 }
 
 export function printStateMachine(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram stateMachine"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram stateMachine ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("stateMachine", options?.name)];
 
   const elementById = new Map(model.elements.map((element) => [element.id, element]));
 

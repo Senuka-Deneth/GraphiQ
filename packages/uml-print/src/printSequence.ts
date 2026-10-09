@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import {
   isClassifierElement,
   type CombinedFragmentElement,
@@ -89,10 +90,7 @@ function printCombinedFragment(
 }
 
 export function printSequence(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram sequence"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram sequence ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("sequence", options?.name)];
 
   const lifelines = model.elements.filter(isPrintableLifeline);
   for (const lifeline of lifelines) {
@@ -103,21 +101,49 @@ export function printSequence(model: UmlModel, options?: { name?: string }): str
   const nameById = new Map(model.elements.map((element) => [element.id, element.name]));
   const printedMessageIds = new Set<string>();
   const fragments = model.elements.filter(isCombinedFragment);
+  const fragmentMessageIds = new Set(
+    fragments.flatMap((fragment) => fragment.operands.flatMap((operand) => operand.messageIds)),
+  );
 
-  if (fragments.length > 0 || model.relationships.some(isMessageRelationship)) {
-    lines.push("");
-  }
+  type PrintItem =
+    | { index: number; kind: "fragment"; fragment: CombinedFragmentElement }
+    | { index: number; kind: "message"; relationship: MessageRelationship };
 
-  for (const fragment of fragments) {
-    lines.push(...printCombinedFragment(fragment, model, nameById, printedMessageIds));
-    lines.push("");
-  }
-
+  const items: PrintItem[] = [];
+  fragments.forEach((fragment, fallbackIndex) => {
+    items.push({
+      index: fragment.interactionIndex ?? fallbackIndex,
+      kind: "fragment",
+      fragment,
+    });
+  });
+  let messageFallback = fragments.length;
   for (const relationship of model.relationships) {
-    if (!isMessageRelationship(relationship) || printedMessageIds.has(relationship.id)) {
+    if (!isMessageRelationship(relationship) || fragmentMessageIds.has(relationship.id)) {
       continue;
     }
-    lines.push(printMessage(relationship, nameById));
+    items.push({
+      index: relationship.interactionIndex ?? messageFallback,
+      kind: "message",
+      relationship,
+    });
+    if (relationship.interactionIndex === undefined) {
+      messageFallback += 1;
+    }
+  }
+  items.sort((left, right) => left.index - right.index);
+
+  if (items.length > 0) {
+    lines.push("");
+  }
+
+  for (const item of items) {
+    if (item.kind === "fragment") {
+      lines.push(...printCombinedFragment(item.fragment, model, nameById, printedMessageIds));
+      lines.push("");
+      continue;
+    }
+    lines.push(printMessage(item.relationship, nameById));
   }
 
   return `${lines.join("\n").trimEnd()}\n`;

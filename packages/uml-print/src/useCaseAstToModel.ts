@@ -1,4 +1,3 @@
-import { createId } from "@graphiq/uml-core";
 import type {
   AstSubjectDeclaration,
   AstUseCaseDeclaration,
@@ -10,6 +9,7 @@ import {
   type UmlModel,
   type UmlRelationship,
 } from "@graphiq/uml-model";
+import { createBuildContext, type BuildContext, type IdentityTable } from "./identity.js";
 
 function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
   if (!previous) {
@@ -19,52 +19,22 @@ function preservedNonDslElements(previous: UmlModel | undefined): UmlElement[] {
   return previous.elements.filter((element) => element.elementType === "note");
 }
 
-function findPreviousElement(
-  previous: UmlModel | undefined,
-  name: string,
-  elementType: UmlElement["elementType"],
-  parentId?: string,
-): UmlElement | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.elements.find(
-    (element) =>
-      element.name === name &&
-      element.elementType === elementType &&
-      element.parentId === parentId,
-  );
-}
-
-function findPreviousRelationship(
-  previous: UmlModel | undefined,
-  sourceId: string,
-  targetId: string,
-  relationshipType: UmlRelationship["relationshipType"],
-): UmlRelationship | undefined {
-  if (!previous) {
-    return undefined;
-  }
-
-  return previous.relationships.find(
-    (relationship) =>
-      relationship.sourceId === sourceId &&
-      relationship.targetId === targetId &&
-      relationship.relationshipType === relationshipType,
-  );
-}
-
 function addNamedElement(
   model: UmlModel,
   elementType: Extract<UmlElement["elementType"], "actor" | "useCase" | "subject">,
   name: string,
-  previous?: UmlModel,
+  identity: IdentityTable,
+  span?: UseCaseDiagramAst["span"],
   parentId?: string,
 ): { model: UmlModel; id: string } {
-  const previousElement = findPreviousElement(previous, name, elementType, parentId);
+  const claim = identity.allocateElement({
+    elementType,
+    name,
+    parentId,
+    span,
+  });
   const element: UmlElement = {
-    id: previousElement?.id ?? createId(),
+    id: claim.id,
     elementType,
     name,
     ...(parentId !== undefined ? { parentId } : {}),
@@ -83,11 +53,11 @@ function addUseCasesFromSubject(
   model: UmlModel,
   subject: AstSubjectDeclaration,
   subjectId: string,
-  previous?: UmlModel,
+  identity: IdentityTable,
 ): UmlModel {
   let nextModel = model;
   for (const useCase of subject.useCases) {
-    nextModel = addUseCases(nextModel, useCase, previous, subjectId).model;
+    nextModel = addUseCases(nextModel, useCase, identity, subjectId).model;
   }
   return nextModel;
 }
@@ -95,41 +65,31 @@ function addUseCasesFromSubject(
 function addUseCases(
   model: UmlModel,
   useCase: AstUseCaseDeclaration,
-  previous?: UmlModel,
+  identity: IdentityTable,
   parentId?: string,
 ): { model: UmlModel; id: string } {
-  return addNamedElement(model, "useCase", useCase.name, previous, parentId);
+  return addNamedElement(model, "useCase", useCase.name, identity, useCase.span, parentId);
 }
 
 function addRelationshipIfMissing(
   model: UmlModel,
-  relationshipType: Exclude<AstUseCaseRelationship["relationshipType"], "dependency">,
+  relationship: AstUseCaseRelationship,
   sourceId: string,
   targetId: string,
-  previous?: UmlModel,
+  identity: IdentityTable,
 ): UmlModel {
-  if (
-    model.relationships.some(
-      (relationship) =>
-        relationship.sourceId === sourceId &&
-        relationship.targetId === targetId &&
-        relationship.relationshipType === relationshipType,
-    )
-  ) {
-    return model;
-  }
-
-  const previousRelationship = findPreviousRelationship(
-    previous,
+  const claim = identity.allocateRelationship({
     sourceId,
     targetId,
-    relationshipType,
-  );
+    relationshipType: relationship.relationshipType,
+    name: relationship.stereotype,
+    span: relationship.span,
+  });
 
   const nextRelationship: UmlRelationship =
-    relationshipType === "association"
+    relationship.relationshipType === "association"
       ? {
-          id: previousRelationship?.id ?? createId(),
+          id: claim.id,
           relationshipType: "association",
           sourceId,
           targetId,
@@ -137,10 +97,11 @@ function addRelationshipIfMissing(
           targetMultiplicity: "1",
         }
       : {
-          id: previousRelationship?.id ?? createId(),
-          relationshipType,
+          id: claim.id,
+          relationshipType: relationship.relationshipType,
           sourceId,
           targetId,
+          ...(relationship.stereotype !== undefined ? { name: relationship.stereotype } : {}),
         };
 
   return {
@@ -149,17 +110,14 @@ function addRelationshipIfMissing(
   };
 }
 
-function findElementIdByName(model: UmlModel, name: string): string {
-  const element = model.elements.find((item) => item.name === name);
-  if (element === undefined) {
-    throw new Error(`Element "${name}" was not found`);
-  }
-  return element.id;
-}
-
 type AstUseCaseRelationship = UseCaseDiagramAst["relationships"][number];
 
-export function useCaseAstToModel(ast: UseCaseDiagramAst, previous?: UmlModel): UmlModel {
+export function useCaseAstToModel(
+  ast: UseCaseDiagramAst,
+  previous?: UmlModel,
+  context?: BuildContext,
+): UmlModel {
+  const identity = context?.identity ?? createBuildContext(previous).identity;
   const base = previous ?? emptyModel("useCase");
   let model: UmlModel = {
     id: base.id,
@@ -169,32 +127,34 @@ export function useCaseAstToModel(ast: UseCaseDiagramAst, previous?: UmlModel): 
   };
 
   for (const actor of ast.actors) {
-    model = addNamedElement(model, "actor", actor.name, previous).model;
+    model = addNamedElement(model, "actor", actor.name, identity, actor.span).model;
   }
 
   for (const subject of ast.subjects) {
-    const added = addNamedElement(model, "subject", subject.name, previous);
-    model = addUseCasesFromSubject(added.model, subject, added.id, previous);
+    const added = addNamedElement(model, "subject", subject.name, identity, subject.span);
+    model = addUseCasesFromSubject(added.model, subject, added.id, identity);
   }
 
   for (const useCase of ast.useCases) {
-    model = addUseCases(model, useCase, previous).model;
+    model = addUseCases(model, useCase, identity).model;
   }
 
   for (const relationship of ast.relationships) {
-    if (relationship.relationshipType === "dependency") {
+    const sourceId = identity.resolve(
+      model,
+      relationship.sourceName,
+      relationship.sourceNameSpan ?? relationship.span,
+    );
+    const targetId = identity.resolve(
+      model,
+      relationship.targetName,
+      relationship.targetNameSpan ?? relationship.span,
+    );
+    if (sourceId === undefined || targetId === undefined) {
       continue;
     }
 
-    const sourceId = findElementIdByName(model, relationship.sourceName);
-    const targetId = findElementIdByName(model, relationship.targetName);
-    model = addRelationshipIfMissing(
-      model,
-      relationship.relationshipType,
-      sourceId,
-      targetId,
-      previous,
-    );
+    model = addRelationshipIfMissing(model, relationship, sourceId, targetId, identity);
   }
 
   return model;

@@ -15,6 +15,7 @@ import type {
   AstActivityPartition,
   DslSpan,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   ActionKeyword,
@@ -39,6 +40,7 @@ import {
   RCurly,
   activityLexer,
   activityTokens,
+  QuotedLiteral,
 } from "../tokens/activityTokens.js";
 
 export class ActivityDslParser extends CstParser {
@@ -50,9 +52,7 @@ export class ActivityDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(ActivityKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.partitionDeclaration) },
@@ -321,7 +321,7 @@ class ActivityDslVisitor {
 
     return {
       kind: "activity",
-      name: nameToken?.image,
+      name: readDiagramTitle(nameToken),
       partitions,
       interruptibles,
       nodes,

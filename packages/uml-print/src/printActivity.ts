@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import { isActivityFlowRelationship, type UmlElement, type UmlModel, type UmlRelationship } from "@graphiq/uml-model";
 
 function needsDeclaration(element: UmlElement): boolean {
@@ -153,10 +154,7 @@ function printFlow(
 }
 
 export function printActivity(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram activity"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram activity ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("activity", options?.name)];
 
   const partitions = model.elements.filter(
     (element) => element.elementType === "activityPartition" && element.parentId === undefined,

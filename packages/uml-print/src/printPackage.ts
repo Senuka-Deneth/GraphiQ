@@ -1,4 +1,5 @@
 import { assertNever } from "@graphiq/uml-core";
+import { formatDiagramHeader } from "@graphiq/uml-dsl";
 import type { UmlElement, UmlModel, UmlRelationship } from "@graphiq/uml-model";
 
 type PackagePrintableRelationship = UmlRelationship & {
@@ -106,10 +107,7 @@ function printRelationship(
 }
 
 export function printPackage(model: UmlModel, options?: { name?: string }): string {
-  const lines: string[] = ["diagram package"];
-  if (options?.name !== undefined) {
-    lines[0] = `diagram package ${options.name}`;
-  }
+  const lines: string[] = [formatDiagramHeader("package", options?.name)];
 
   lines.push(...printTopLevelPackages(model));
 

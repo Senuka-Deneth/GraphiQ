@@ -15,6 +15,7 @@ import type {
   DslSpan,
   TimingDiagramAst,
 } from "../ast.js";
+import { optionalSameLineDiagramTitle, readDiagramTitle } from "../diagramTitle.js";
 import { commentsFromLexerGroups } from "../comments.js";
 import {
   AtSign,
@@ -34,6 +35,7 @@ import {
   TimingKeyword,
   timingLexer,
   timingTokens,
+  QuotedLiteral,
 } from "../tokens/timingTokens.js";
 
 export class TimingDslParser extends CstParser {
@@ -45,9 +47,7 @@ export class TimingDslParser extends CstParser {
   public document = this.RULE("document", () => {
     this.CONSUME(DiagramKeyword);
     this.CONSUME(TimingKeyword, { LABEL: "diagramKind" });
-    this.OPTION1(() => {
-      this.CONSUME1(Identifier, { LABEL: "diagramName" });
-    });
+    optionalSameLineDiagramTitle(this, Identifier, QuotedLiteral);
     this.MANY(() => {
       this.OR([
         { ALT: () => this.SUBRULE(this.lifelineDeclaration) },
@@ -307,7 +307,7 @@ export function parseTimingDocument(cst: CstNode): TimingDiagramAst {
 
   return {
     kind: "timing",
-    ...(nameToken !== undefined ? { name: nameToken.image } : {}),
+    ...(readDiagramTitle(nameToken) !== undefined ? { name: readDiagramTitle(nameToken) } : {}),
     lifelines,
     stateBlocks,
     messages,

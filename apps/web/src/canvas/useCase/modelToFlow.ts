@@ -128,7 +128,9 @@ export function useCaseModelToFlow(
       relationship,
       overlay.edges[relationship.id],
       severityById.get(relationship.id),
-      relationship.name ?? notation.keyword,
+      relationship.relationshipType === "dependency" && relationship.name !== undefined
+        ? `«${relationship.name}»`
+        : relationship.name ?? notation.keyword,
     );
   });
 

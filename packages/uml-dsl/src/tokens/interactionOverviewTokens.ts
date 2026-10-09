@@ -1,4 +1,7 @@
 import { createToken, Lexer } from "chevrotain";
+import { QuotedLiteral } from "./quotedLiteral.js";
+
+export { QuotedLiteral };
 
 export const WhiteSpace = createToken({
   name: "WhiteSpace",
@@ -111,6 +114,7 @@ export const interactionOverviewTokens = [
   JoinKeyword,
   InitialKeyword,
   FinalKeyword,
+  QuotedLiteral,
   Identifier,
   LBracket,
   RBracket,
