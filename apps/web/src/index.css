@@ -422,4 +422,3 @@ body { -webkit-font-smoothing: antialiased; }
 }
 
 [data-testid="edge-style-toolbar"] { flex-wrap: wrap; max-width: calc(100% - 100px); }
-

@@ -11,11 +11,13 @@ for (const provider of ["chatgpt", "gemini"]) {
       await page.getByTestId("import-dsl-input").setInputFiles({
         name: "gemini.md", mimeType: "text/markdown", buffer: Buffer.from(`\`\`\`text\n${source}\`\`\``),
       });
+      await page.getByTestId("submit-dsl").click();
       await expect(page.getByTestId("document-kind-badge")).toHaveText("activity");
     } else {
       await selectDiagramKind(page, "activity");
       await openDslPanel(page);
       await page.getByTestId("dsl-editor").fill(source);
+      await page.getByTestId("submit-dsl").click();
     }
     await expect(page.locator(".react-flow__edge")).toHaveCount(source.split("\n").filter((line) => line.includes("-->")).length);
     await expect(page.locator('[data-testid="diagnostics-list"] [data-severity="error"]')).toHaveCount(0);
@@ -31,8 +33,10 @@ test("plain-language errors show exact locations, navigate from a collapsed edit
   await openDslPanel(page);
   const editor = page.getByTestId("dsl-editor");
   await editor.fill("diagram activity\naction Stable\ninitial --> Stable\nStable --> final");
+  await page.getByTestId("submit-dsl").click();
   await expect(page.locator(".react-flow__edge")).toHaveCount(2);
   await editor.fill("diagram activity\naction Stable\nStable -->");
+  await page.getByTestId("submit-dsl").click();
   const diagnostics = page.getByTestId("diagnostics-list");
   await expect(diagnostics).toContainText("Expected a node name");
   await expect(diagnostics).not.toContainText("Expecting one of these possible Token sequences");
@@ -43,6 +47,7 @@ test("plain-language errors show exact locations, navigate from a collapsed edit
   await expect(editor).toBeFocused();
   await expect(page.locator(".cm-lintPoint-error")).toBeAttached();
   await editor.fill("diagram activity\naction Stable\ninitial --> Stable\nStable --> final");
+  await page.getByTestId("submit-dsl").click();
   await expect(diagnostics).toContainText("No issues");
   await expect(page.locator(".react-flow__edge")).toHaveCount(2);
 });
@@ -53,6 +58,7 @@ test("unknown node errors identify the reference and select it on click", async 
   await selectDiagramKind(page, "activity");
   await openDslPanel(page);
   await page.getByTestId("dsl-editor").fill("diagram activity\naction Login\nLogin --> Missing");
+  await page.getByTestId("submit-dsl").click();
   const diagnostics = page.getByTestId("diagnostics-list");
   await expect(diagnostics).toContainText("'Missing' is not declared");
   await diagnostics.getByRole("button", { name: "Line 3, column 11" }).click();
@@ -84,6 +90,8 @@ test("error panel fits a narrow viewport and hidden controls cannot receive focu
     name: "diagram.md", mimeType: "text/markdown",
     buffer: Buffer.from("```text\ndiagram activity\naction Login\nLogin --> Missing\n```"),
   });
+  await page.getByTestId("submit-dsl").click();
+  await page.getByTestId("dsl-panel-toggle").click();
   const panel = page.getByTestId("diagnostics-list");
   await expect(panel).toContainText("'Missing' is not declared");
   await expect.poll(async () => {
