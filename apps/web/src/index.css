@@ -5,33 +5,33 @@
   color-scheme: light;
 
   /* The diagram surface stays light: UML notation is black on white. */
-  --color-canvas: #f8fafc;
+  --color-canvas: #fafafa;
 
-  /* Radii measured from the macOS Apple Maps chrome. */
+  /* Shared geometry for the editor, inspectors, and export workspace. */
   --graphiq-radius-island: 12px;
   --graphiq-radius-control: 8px;
   --graphiq-radius-row: 6px;
   --graphiq-radius-pill: 999px;
 
   --graphiq-inset: 12px;
-  /* Height of the DSL/diagnostics toggle stack plus the top inset. Shared so
+  /* Height of the DSL/diagnostics stack, top inset, and separation. Shared so
      the zoom island inside the canvas cannot drift away from it. */
   --graphiq-right-stack-offset: 168px;
 
-  /* What the vibrancy surfaces blend against where no canvas sits behind them. */
-  --graphiq-backdrop: #f2f2f7;
-  --graphiq-vibrancy: rgba(255, 255, 255, 0.72);
-  --graphiq-island: rgba(255, 255, 255, 0.8);
-  --graphiq-island-hover: rgba(0, 0, 0, 0.05);
-  --graphiq-island-active: rgba(0, 0, 0, 0.09);
-  --graphiq-hairline: rgba(0, 0, 0, 0.08);
-  --graphiq-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), 0 1px 2px rgba(0, 0, 0, 0.08);
+  /* Opaque surfaces keep contrast stable over every diagram. */
+  --graphiq-backdrop: #f6f6f5;
+  --graphiq-vibrancy: #ffffff;
+  --graphiq-island: #ffffff;
+  --graphiq-island-hover: #f0f0ef;
+  --graphiq-island-active: #e7e7e5;
+  --graphiq-hairline: #e5e5e3;
+  --graphiq-shadow: 0 2px 8px rgba(24, 24, 27, 0.04), 0 1px 2px rgba(24, 24, 27, 0.03);
 
-  --graphiq-label: #1c1c1e;
-  --graphiq-label-secondary: rgba(60, 60, 67, 0.6);
-  --graphiq-accent: #007aff;
+  --graphiq-label: #252525;
+  --graphiq-label-secondary: #6b6b68;
+  --graphiq-accent: #292929;
   --graphiq-accent-ink: #ffffff;
-  --graphiq-field: rgba(255, 255, 255, 0.75);
+  --graphiq-field: #fafaf9;
   --graphiq-syntax-keyword: #7c3aed;
   --graphiq-error: #d70015;
   --graphiq-warning: #a1560a;
@@ -41,7 +41,7 @@ body {
   margin: 0;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
-  font-size: 15px;
+  font-size: 13px;
   color: var(--graphiq-label);
   background-color: var(--graphiq-backdrop);
 }
@@ -49,15 +49,11 @@ body {
 @layer components {
   .graphiq-sidebar {
     background-color: var(--graphiq-vibrancy);
-    backdrop-filter: blur(30px) saturate(1.8);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8);
     border-right: 1px solid var(--graphiq-hairline);
   }
 
   .graphiq-island {
     background-color: var(--graphiq-island);
-    backdrop-filter: blur(30px) saturate(1.8);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8);
     border: 1px solid var(--graphiq-hairline);
     border-radius: var(--graphiq-radius-island);
     box-shadow: var(--graphiq-shadow);
@@ -67,8 +63,6 @@ body {
   /* A single 36px corner button, or a group of them stacked in one island. */
   .graphiq-island-controls {
     background-color: var(--graphiq-island);
-    backdrop-filter: blur(30px) saturate(1.8);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8);
     border: 1px solid var(--graphiq-hairline);
     border-radius: var(--graphiq-radius-control);
     box-shadow: var(--graphiq-shadow);
@@ -83,7 +77,7 @@ body {
     gap: 6px;
     border-radius: var(--graphiq-radius-control);
     color: var(--graphiq-label);
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1;
   }
 
@@ -100,8 +94,8 @@ body {
   }
 
   .graphiq-control[aria-pressed="true"] {
-    background-color: var(--graphiq-accent);
-    color: var(--graphiq-accent-ink);
+    background-color: #e9e9e6;
+    color: var(--graphiq-label);
   }
 
   .graphiq-icon-button {
@@ -124,8 +118,8 @@ body {
   }
 
   .graphiq-icon-button[aria-pressed="true"] {
-    background-color: var(--graphiq-accent);
-    color: var(--graphiq-accent-ink);
+    background-color: #e9e9e6;
+    color: var(--graphiq-label);
   }
 
   .graphiq-icon-tile {
@@ -147,8 +141,8 @@ body {
   }
 
   .graphiq-icon-tile[aria-pressed="true"] {
-    background-color: var(--graphiq-accent);
-    color: var(--graphiq-accent-ink);
+    background-color: #e9e9e6;
+    color: var(--graphiq-label);
   }
 
   /* Sidebar list row kept for any remaining labeled chrome. */
@@ -160,7 +154,7 @@ body {
     gap: 8px;
     border-radius: var(--graphiq-radius-row);
     padding: 0 8px;
-    font-size: 15px;
+    font-size: 13px;
     color: var(--graphiq-label);
     text-align: left;
   }
@@ -170,13 +164,14 @@ body {
   }
 
   .graphiq-row[aria-pressed="true"] {
-    background-color: var(--graphiq-accent);
-    color: var(--graphiq-accent-ink);
+    background-color: #e9e9e6;
+    color: var(--graphiq-label);
   }
 
   .graphiq-section-label {
     padding: 0 4px;
-    font-size: 13px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
     font-weight: 600;
     color: var(--graphiq-label-secondary);
   }
@@ -186,7 +181,7 @@ body {
     border-radius: var(--graphiq-radius-row);
     background-color: var(--graphiq-field);
     color: var(--graphiq-label);
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .graphiq-title-pill {
@@ -195,14 +190,12 @@ body {
     height: 36px;
     border: 1px solid var(--graphiq-hairline);
     border-radius: var(--graphiq-radius-pill);
-    background-color: rgba(255, 255, 255, 0.82);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    background-color: var(--graphiq-field);
     padding: 0 14px;
-    font-size: 15px;
+    font-size: 13px;
     line-height: 36px;
+    font-weight: 500;
     color: var(--graphiq-label);
-    backdrop-filter: blur(20px) saturate(1.6);
-    -webkit-backdrop-filter: blur(20px) saturate(1.6);
   }
 
   .graphiq-title-pill::placeholder {
@@ -214,11 +207,11 @@ body {
     height: 32px;
     align-items: center;
     justify-content: center;
-    border-radius: var(--graphiq-radius-pill);
+    border-radius: var(--graphiq-radius-control);
     background-color: var(--graphiq-accent);
     color: var(--graphiq-accent-ink);
     padding: 0 14px;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 500;
   }
 
@@ -251,8 +244,8 @@ body {
   }
 
   .graphiq-segment-item[aria-pressed="true"] {
-    background-color: var(--graphiq-accent);
-    color: var(--graphiq-accent-ink);
+    background-color: #e9e9e6;
+    color: var(--graphiq-label);
   }
 
   .graphiq-switch {
@@ -260,7 +253,7 @@ body {
     width: 42px;
     height: 26px;
     flex: none;
-    border-radius: var(--graphiq-radius-pill);
+    border-radius: var(--graphiq-radius-control);
     background-color: rgba(120, 120, 128, 0.2);
     transition: background-color 160ms ease;
   }
@@ -347,36 +340,60 @@ body {
   border-color: var(--graphiq-accent) !important;
 }
 
-/* Shared liquid-glass controls: specular rim, translucent fill, spring expansion. */
-.graphiq-glass-button, .graphiq-icon-tile, .graphiq-control, .graphiq-icon-button {
-  border: 1px solid rgba(255,255,255,.9);
-  background: linear-gradient(155deg, rgba(255,255,255,.92), rgba(232,240,251,.68));
-  box-shadow: inset 0 1px 1px #fff, inset 0 -1px 2px rgba(150,170,200,.16), 0 3px 10px rgba(40,60,90,.12);
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  transition: width 320ms cubic-bezier(.22,1,.36,1), background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+/* Consistent interaction states across all chrome, including dialogs. */
+button, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
 }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.4; }
+button, .graphiq-icon-tile, input, select {
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+:where(button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #73736e;
+  outline-offset: 3px;
+}
+body { -webkit-font-smoothing: antialiased; }
+.graphiq-icon-tile { border: 1px solid var(--graphiq-hairline); background: #fff; }
+.graphiq-icon-tile:hover { border-color: #cececa; }
+.graphiq-title-pill { border-radius: var(--graphiq-radius-control); }
+.graphiq-segment { padding: 3px; gap: 3px; background: #f1f1ef; }
+.graphiq-segment-item { border-radius: 6px; }
+.graphiq-segment-item[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 3px #00000012; }
+.graphiq-row[aria-pressed="true"] { font-weight: 600; }
+.graphiq-row[aria-pressed="true"]::after { content: "✓"; margin-left: auto; }
+.graphiq-export-options { padding: 8px 4px; }
+.graphiq-export-options select { min-width: 0; width: 0; }
+.graphiq-export-options label { min-height: 32px; }
+.graphiq-export-options label span { font-size: 13px; }
+.graphiq-export-stage { border: 1px solid var(--graphiq-hairline); background: #eeeeec; }
+.graphiq-export-scroll { display: flex; overflow: auto; height: 100%; padding: 32px; }
+.graphiq-export-sheet { flex: none; margin: auto; box-shadow: 0 4px 24px #0000000a, 0 1px 4px #00000010; }
+.graphiq-loading { width: 100%; height: 100dvh; display: grid; place-items: center; background: #fff; }
+.graphiq-loading-wordmark { font-size: 30px; font-weight: 600; letter-spacing: -1.2px; color: #252525; }
+@media (max-width: 640px) {
+  .graphiq-export-body { flex-direction: column; overflow: auto; }
+  .graphiq-export-stage { flex: none; height: 44dvh; min-height: 220px; }
+  .graphiq-export-options { width: 100%; flex: none; overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+/* Preserve generation controls and their expanding labels with solid surfaces. */
 .graphiq-glass-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 44px; padding: 0 16px; border-radius: 18px; font-size: 13px;
-  font-weight: 600; color: var(--graphiq-label); cursor: pointer;
+  min-height: 44px; padding: 0 16px; border-radius: var(--graphiq-radius-control);
+  border: 1px solid var(--graphiq-hairline); background: #fff;
+  box-shadow: var(--graphiq-shadow); font-size: 13px; font-weight: 500;
+  color: var(--graphiq-label);
 }
 .graphiq-glass-button svg, .graphiq-icon-tile svg { flex-shrink: 0; }
-.graphiq-glass-button:hover:not(:disabled), .graphiq-icon-tile:hover {
-  background: linear-gradient(150deg, #fff, rgba(218,234,255,.9));
-  box-shadow: inset 0 1px 2px #fff, 0 5px 16px rgba(40,90,150,.2);
-}
-.graphiq-glass-button:active:not(:disabled) { transform: scale(.97); }
-.graphiq-glass-button:disabled { opacity: .45; cursor: default; }
-button:focus-visible, [draggable]:focus-visible {
-  outline: 3px solid #007aff; outline-offset: 3px;
-}
+.graphiq-glass-button:hover:not(:disabled) { background: var(--graphiq-island-hover); }
 .graphiq-glass-primary, .graphiq-glass-button[aria-pressed="true"] {
-  background: linear-gradient(150deg, rgba(48,153,255,.96), rgba(0,100,235,.92));
-  color: white;
+  background: var(--graphiq-accent); color: var(--graphiq-accent-ink);
 }
 .graphiq-glass-primary:hover:not(:disabled), .graphiq-glass-button[aria-pressed="true"]:hover {
-  background: linear-gradient(150deg, #238eff, #005ad9);
+  background: #444;
 }
 .graphiq-expand-button { width: 44px; padding: 0 12px; gap: 0; overflow: hidden; justify-content: flex-start; }
 .graphiq-expand-button .graphiq-button-label {
@@ -396,18 +413,12 @@ button:focus-visible, [draggable]:focus-visible {
 [data-testid="canvas-panel"]:has(~ [data-testid="dsl-editor-panel"][aria-hidden="false"]) { margin-right: 444px; }
 @media (max-width: 900px) {
   [data-testid="canvas-panel"]:has(~ [data-testid="dsl-editor-panel"][aria-hidden="false"]) { margin-right: 0; }
-  .graphiq-sidebar { max-width: 190px; min-width: 190px !important; }
+  [data-testid="stencil"].graphiq-sidebar { max-width: 190px; min-width: 190px !important; }
 }
 @media (hover: none) {
   .graphiq-expand-button { width: 132px; }
   .graphiq-expand-button .graphiq-button-label { opacity: 1; max-width: 100px; margin-left: 8px; transform: none; }
   .graphiq-code-panel { right: 152px; width: min(380px, calc(100% - 164px)); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .graphiq-glass-button, .graphiq-button-label, .graphiq-icon-tile, .graphiq-icon-button, .graphiq-control, [data-testid="canvas-panel"] { transition: none !important; }
-}
 
-.graphiq-icon-tile[aria-pressed="true"], .graphiq-control[aria-pressed="true"] {
-  background: linear-gradient(150deg, #3099ff, #0064eb); color: white;
-}
 [data-testid="edge-style-toolbar"] { flex-wrap: wrap; max-width: calc(100% - 100px); }

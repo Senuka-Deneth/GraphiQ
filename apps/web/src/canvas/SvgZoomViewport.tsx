@@ -92,12 +92,7 @@ export function SvgSquareGrid({ width, height }: { width: number; height: number
           height={GRID_GAP}
           patternUnits="userSpaceOnUse"
         >
-          <path
-            d={`M ${GRID_GAP} 0 L 0 0 0 ${GRID_GAP}`}
-            fill="none"
-            stroke={GRID_COLOR}
-            strokeWidth={1}
-          />
+          <circle cx={1} cy={1} r={0.8} fill={GRID_COLOR} />
         </pattern>
       </defs>
       <rect width={width} height={height} fill="url(#graphiq-svg-grid)" />
