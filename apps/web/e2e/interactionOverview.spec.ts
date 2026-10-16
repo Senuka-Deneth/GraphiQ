@@ -29,6 +29,7 @@ test("interaction overview document layouts the section 5.14 fixture as a direct
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(orderFlowFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="interaction-overview-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -67,6 +68,7 @@ test("sequence-style messages are not accepted at the overview top level", async
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(messageFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText("dsl.parse", {
     timeout: 10_000,

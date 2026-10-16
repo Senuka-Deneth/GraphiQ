@@ -30,6 +30,7 @@ test("use case document renders actors, ellipses, and include label", async ({ p
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(storefrontFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="use-case-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -73,6 +74,7 @@ test("actor-to-actor association shows uc.assoc.actor-to-usecase", async ({ page
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(illegalActorAssocFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "uc.assoc.actor-to-usecase",

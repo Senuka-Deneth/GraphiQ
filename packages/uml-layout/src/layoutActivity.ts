@@ -34,7 +34,7 @@ export function measureActivityNode(element: UmlElement): Pick<OverlayNode, "wid
   switch (element.elementType) {
     case "action":
     case "objectNode":
-      return { width: 140, height: 48 };
+      return { width: Math.max(140, element.name.length * 8 + 40), height: 48 };
     case "initialNode":
       return { width: 20, height: 20 };
     case "activityFinalNode":
@@ -439,6 +439,27 @@ export async function layoutActivity(
     });
   }
 
+  // Rank the whole activity before packing swimlanes. Laying out each column
+  // alone loses cross-lane ordering and can put the final node beside the initial.
+  const globalY = new Map<string, number>();
+  if (mode === "full") {
+    const vertices = model.elements.filter(e => leafNodes.some(n => n.id === e.id) || spanningIds.has(e.id));
+    const vertexIds = new Set(vertices.map(e => e.id));
+    const ranked = await layoutWithElk({ id: "activity-ranks", layoutOptions: {
+      "elk.algorithm": "layered", "elk.direction": "DOWN", "elk.layered.spacing.nodeNodeBetweenLayers": "64",
+    }, children: vertices.map(e => ({ id: e.id, ...measureActivityNode(e) })),
+      edges: model.relationships.filter(r => vertexIds.has(r.sourceId) && vertexIds.has(r.targetId))
+        .map(r => ({ id: r.id, sources: [r.sourceId], targets: [r.targetId] })),
+    });
+    for (const node of ranked.children ?? []) globalY.set(node.id, node.y ?? 0);
+    for (const [columnId, column] of columnLayouts) {
+      for (const [id, node] of column.positions) {
+        node.y = (globalY.get(id) ?? node.y) + (columnId === IMPLICIT_COLUMN_ID ? PARTITION_HEADER : 0);
+      }
+      column.size = columnContentSize(column.positions);
+    }
+  }
+
   let maxColumnHeight = 0;
   for (const column of columnLayouts.values()) {
     maxColumnHeight = Math.max(
@@ -531,7 +552,7 @@ export async function layoutActivity(
     next.nodes[element.id] = {
       id: element.id,
       x: minX,
-      y: (minY + maxY) / 2 - FORK_JOIN_HEIGHT / 2,
+      y: globalY.has(element.id) ? globalY.get(element.id)! + PARTITION_HEADER : (minY + maxY) / 2 - FORK_JOIN_HEIGHT / 2,
       width: Math.max(FORK_JOIN_MIN_WIDTH, maxX - minX),
       height: FORK_JOIN_HEIGHT,
     };

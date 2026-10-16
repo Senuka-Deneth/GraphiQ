@@ -70,7 +70,7 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
 
   return (
     <div
-      className="graphiq-island pointer-events-auto absolute left-1/2 top-3 z-40 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 px-2 py-1.5"
+      className="graphiq-island pointer-events-auto absolute left-3 top-3 z-40 flex max-w-[calc(100%-1.5rem)] items-center gap-1 px-2 py-1.5"
       data-testid="edge-style-toolbar"
     >
       {ROUTE_STYLES.map((route) => (
@@ -186,9 +186,9 @@ export function EdgeStyleToolbar({ relationshipId, diagramKind }: EdgeStyleToolb
         onClick={() => {
           void deleteRelationships([relationshipId]);
         }}
-        className="graphiq-icon-button"
+        className="graphiq-glass-button"
       >
-        <DeleteIcon />
+        <DeleteIcon /><span>Delete</span>
       </button>
     </div>
   );

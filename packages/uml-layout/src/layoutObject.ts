@@ -21,7 +21,7 @@ export function measureObjectNode(element: UmlElement): Pick<OverlayNode, "width
     );
 
     return {
-      width: CLASS_BOX.minWidth,
+      width: Math.max(CLASS_BOX.minWidth, Math.max(`${element.name}: ${element.classifierName}`.length, ...element.slots.map(s => `${s.featureName} = ${s.value}`.length)) * 8 + 40),
       height,
     };
   }
@@ -111,7 +111,7 @@ function buildElkGraph(
         "elk.direction": "RIGHT",
         "elk.edgeRouting": "ORTHOGONAL",
         "elk.spacing.nodeNode": "48",
-        "elk.layered.spacing.nodeNodeBetweenLayers": "64",
+        "elk.layered.spacing.nodeNodeBetweenLayers": String(Math.max(96, ...model.relationships.map(r => (r.name?.length ?? 0) * 8 + 64))),
       },
       children,
       edges,

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { paintedMarkerUrl } from "../class/markerPaint.js";
 import { MarkerDefs } from "../class/MarkerDefs.js";
 import { SvgSquareGrid, SvgZoomViewport } from "../SvgZoomViewport.js";
 import { useCanvasMode } from "../canvasMode.js";
@@ -235,7 +236,7 @@ export function SequenceCanvas({
       {!isPreview && (selectedLifelineId !== null || selectedMessageId !== null) ? (
         <button
           type="button"
-          className="graphiq-island-controls graphiq-icon-button absolute left-3 top-3 z-20"
+          className="graphiq-glass-button absolute left-3 top-3 z-20"
           aria-label="Delete element"
           data-testid="delete-element"
           onClick={() => {
@@ -252,7 +253,7 @@ export function SequenceCanvas({
             }
           }}
         >
-          <DeleteIcon />
+          <DeleteIcon /><span>Delete selected</span>
         </button>
       ) : null}
       <SvgZoomViewport width={renderable.width} height={renderable.height} chrome={!isPreview}>
@@ -285,7 +286,7 @@ export function SequenceCanvas({
               }
         }
       >
-        <MarkerDefs />
+        <MarkerDefs extraColors={["#dc2626", "#d97706"]} />
         {isPreview ? null : <SvgSquareGrid width={renderable.width} height={renderable.height} />}
         {renderable.combinedFragments.map((fragment) => (
           <g key={fragment.id} data-testid="combined-fragment">
@@ -296,7 +297,6 @@ export function SequenceCanvas({
               height={fragment.height}
               fill="rgba(255,255,255,0.6)"
               stroke={strokeForDiagnostic(fragment.diagnosticSeverity) ?? "#64748b"}
-              strokeDasharray="6 4"
             />
             <text
               x={fragment.x + 8}
@@ -305,6 +305,11 @@ export function SequenceCanvas({
             >
               {fragment.operator}
             </text>
+            <path d={`M ${fragment.x} ${fragment.y + 23} h 48 l 10 -10 v -13`} fill="none" stroke="#64748b" />
+            {fragment.operands.map((operand, index) => <g key={index}>
+              {index > 0 ? <line x1={fragment.x} x2={fragment.x + fragment.width} y1={operand.y} y2={operand.y} stroke="#64748b" strokeDasharray="6 4" /> : null}
+              {operand.guard ? <text x={fragment.x + 64} y={operand.y + 14} className="fill-slate-700 text-xs">[{operand.guard}]</text> : null}
+            </g>)}
           </g>
         ))}
 
@@ -410,21 +415,20 @@ export function SequenceCanvas({
               data-marker-id={message.markerId}
               onClick={(event) => onMessageClick(message.id, event)}
             >
-              <line
-                x1={message.x1}
-                y1={message.y}
-                x2={message.x2}
-                y2={message.y}
+              <path
+                d={message.selfCall ? `M ${message.x1} ${message.y} h 48 v 28 h -48` : `M ${message.x1} ${message.y} H ${message.x2}`}
+                fill="none"
                 stroke={stroke}
                 strokeWidth={selectedMessageId === message.id ? DEFAULT_STROKE_WIDTH + 0.5 : DEFAULT_STROKE_WIDTH}
-                markerEnd={`url(#${message.markerId})`}
+                markerEnd={paintedMarkerUrl(message.markerId as Parameters<typeof paintedMarkerUrl>[0], stroke) ?? undefined}
                 {...dashProps}
               />
+              {message.messageSort === "deleteMessage" ? <path d={`M ${message.x2 - 8} ${message.y - 8} l 16 16 M ${message.x2 + 8} ${message.y - 8} l -16 16`} stroke={stroke} strokeWidth="2" /> : null}
               {message.label !== undefined ? (
                 <text
-                  x={(message.x1 + message.x2) / 2}
+                  x={message.selfCall ? message.x1 + 54 : (message.x1 + message.x2) / 2}
                   y={message.y - 6}
-                  textAnchor="middle"
+                  textAnchor={message.selfCall ? "start" : "middle"}
                   className="fill-slate-700 text-xs"
                 >
                   {message.label}

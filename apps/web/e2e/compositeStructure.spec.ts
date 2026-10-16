@@ -26,6 +26,7 @@ test("composite structure document renders frame, parts, border port, and connec
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(carFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="composite-structure-canvas"]')).toBeVisible({
     timeout: 10_000,

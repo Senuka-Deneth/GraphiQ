@@ -146,3 +146,14 @@ export async function expectIllegalSvgConnect(
   );
   await expect(page.locator(messageSelector)).toHaveCount(messageCountBefore);
 }
+
+/** SVG straight segments can have zero-height bounding boxes; click the actual stroke. */
+export async function clickFlowEdge(page: Page): Promise<void> {
+  const point = await page.locator(".react-flow__edge-interaction").first().evaluate((element) => {
+    const path = element as SVGPathElement;
+    const point = path.getPointAtLength(path.getTotalLength() / 2);
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM()!);
+    return { x: screen.x, y: screen.y };
+  });
+  await page.mouse.click(point.x, point.y);
+}

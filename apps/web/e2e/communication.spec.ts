@@ -29,6 +29,7 @@ test("communication document renders instances and numbered message labels", asy
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(checkoutFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="communication-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -48,6 +49,7 @@ test("duplicate sequence numbers show comm.number-unique-in-interaction", async 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(duplicateNumberFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "comm.number-unique-in-interaction",

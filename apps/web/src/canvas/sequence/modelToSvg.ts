@@ -32,6 +32,7 @@ export type SequenceMessageRender = {
   x1: number;
   y: number;
   x2: number;
+  selfCall: boolean;
   markerId: string;
   lineStyle: "solid" | "dash";
   diagnosticSeverity?: "error" | "warning";
@@ -49,6 +50,7 @@ export type SequenceExecutionRender = {
 export type SequenceFragmentRender = {
   id: string;
   operator: CombinedFragmentElement["operator"];
+  operands: { guard?: string; y: number }[];
   x: number;
   y: number;
   width: number;
@@ -91,7 +93,8 @@ export function sequenceModelToSvg(
         x: node.x,
         y: node.y,
         width: node.width,
-        height: node.height,
+        height: Math.min(node.height, ...model.relationships.filter(r => r.relationshipType === "message" && r.messageSort === "deleteMessage" && r.targetId === element.id)
+          .map(r => (overlay.edges[r.id]?.waypoints?.[0]?.y ?? node.y + node.height) - node.y)),
         centerX: node.x + node.width / 2,
         diagnosticSeverity: diagnosticSeverityFor(diagnostics, element.id),
       },
@@ -117,7 +120,10 @@ export function sequenceModelToSvg(
         messageSort: relationship.messageSort,
         x1: start.x,
         y: start.y,
-        x2: end.x,
+        x2: relationship.messageSort === "createMessage"
+          ? end.x + (start.x < end.x ? -1 : 1) * (overlay.nodes[relationship.targetId]?.width ?? 0) / 2
+          : end.x,
+        selfCall: relationship.sourceId === relationship.targetId,
         markerId,
         lineStyle: notation.lineStyle,
         diagnosticSeverity: diagnosticSeverityFor(diagnostics, relationship.id),
@@ -157,6 +163,13 @@ export function sequenceModelToSvg(
       {
         id: element.id,
         operator: element.operator,
+        operands: element.operands.map((operand, index) => {
+          const firstMessageY = Math.min(...operand.messageIds.map(id => overlay.edges[id]?.waypoints?.[0]?.y ?? Infinity));
+          return {
+            guard: operand.guard,
+            y: index === 0 ? node.y + 2 : Number.isFinite(firstMessageY) ? firstMessageY - 32 : node.y + node.height * index / element.operands.length,
+          };
+        }),
         x: node.x,
         y: node.y,
         width: node.width,

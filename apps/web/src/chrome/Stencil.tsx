@@ -280,9 +280,9 @@ export function Stencil({
           aria-expanded={false}
           aria-label="Show stencil"
           onClick={onToggle}
-          className="graphiq-island-controls graphiq-icon-button absolute left-3 top-3 z-20"
+          className="graphiq-glass-button absolute left-3 top-3 z-20"
         >
-          <SidebarToggleIcon />
+          <SidebarToggleIcon /><span>{open ? "Hide" : "Shapes"}</span>
         </button>
       ) : null}
       <aside
@@ -303,9 +303,9 @@ export function Stencil({
             aria-expanded={open}
             aria-label="Hide stencil"
             onClick={onToggle}
-            className="graphiq-icon-button"
+            className="graphiq-glass-button"
           >
-            <SidebarToggleIcon />
+            <SidebarToggleIcon /><span>{open ? "Hide" : "Shapes"}</span>
           </button>
         </div>
         <div className="shrink-0 px-3 pb-3">
@@ -340,7 +340,7 @@ export function Stencil({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
           <div className="graphiq-section-label flex h-7 items-center">Shapes</div>
-          <ul className="mb-3 grid grid-cols-3 gap-1">
+          <ul className="mb-3 grid grid-cols-2 gap-1">
             {items.map((item) => (
               <li key={item.id}>
                 <div
@@ -354,7 +354,7 @@ export function Stencil({
                   aria-label={item.label}
                   title={item.label}
                 >
-                  <StencilShapeIcon id={item.id} />
+                  <StencilShapeIcon id={item.id} /><span>{item.label}</span>
                 </div>
               </li>
             ))}
@@ -365,7 +365,7 @@ export function Stencil({
           >
             Connectors
           </div>
-          <ul className="grid grid-cols-3 gap-1">
+          <ul className="grid grid-cols-2 gap-1">
             {tools.map((tool) => (
               <li key={tool.id}>
                 <button
@@ -377,7 +377,7 @@ export function Stencil({
                   onClick={() => onSelectTool(tool.id)}
                   className="graphiq-icon-tile"
                 >
-                  <ConnectorToolIcon id={tool.id} />
+                  <ConnectorToolIcon id={tool.id} /><span>{tool.label}</span>
                 </button>
               </li>
             ))}
@@ -400,7 +400,7 @@ export function Stencil({
           </div>
         ) : null}
         <div
-          className="grid shrink-0 grid-cols-3 gap-1 px-3 py-3"
+          className="grid shrink-0 grid-cols-2 gap-2 px-3 py-3"
           style={{ borderTop: "1px solid var(--graphiq-hairline)" }}
         >
           <button
@@ -412,7 +412,7 @@ export function Stencil({
             disabled={onOpenExport === undefined}
             onClick={onOpenExport}
           >
-            <DownloadIcon />
+            <DownloadIcon /><span>Export</span>
           </button>
           <button
             type="button"
@@ -422,7 +422,7 @@ export function Stencil({
             title="Import DSL"
             onClick={onImportClick}
           >
-            <ImportIcon />
+            <ImportIcon /><span>Upload code</span>
           </button>
           <button
             type="button"
@@ -432,7 +432,7 @@ export function Stencil({
             title="DSL guide"
             onClick={onDownloadGuide}
           >
-            <ExportIcon />
+            <ExportIcon /><span>DSL guide</span>
           </button>
         </div>
         {open ? (

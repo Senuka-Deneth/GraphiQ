@@ -33,6 +33,7 @@ test("timing document renders lifelines and ordered states from the section 5.13
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(lampFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="timing-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -60,6 +61,7 @@ test("overlapping intervals show tm.intervals-non-overlapping-per-lifeline", asy
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(overlappingFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "tm.intervals-non-overlapping-per-lifeline",
