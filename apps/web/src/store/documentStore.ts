@@ -213,6 +213,7 @@ type DocumentStoreState = {
   lastGoodOverlay: NotationOverlay;
   lastParseSource: PrintSource | null;
   dslRevision: number;
+  generationRevision: number;
   parseTimer: ReturnType<typeof setTimeout> | null;
   dslEditorFocused: boolean;
   relationshipTool: RelationshipTool;
@@ -746,6 +747,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
     lastGoodOverlay: initialDocument.overlay,
     lastParseSource: initialParseSource,
     dslRevision: 0,
+    generationRevision: 0,
     parseTimer: null,
     dslEditorFocused: false,
     relationshipTool: "generalization",
@@ -787,6 +789,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
         lastGoodOverlay: document.overlay,
         lastParseSource: refreshParseSource(kind, document.dsl),
         dslRevision: 0,
+        generationRevision: 0,
         parseTimer: null,
         relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[kind],
       });
@@ -934,6 +937,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
       }
       const overlay = preserveNewerPresentation(laidOut, document.overlay, get().document.overlay);
 
+      if (get().document.id !== document.id || get().document.dsl !== document.dsl) return;
       set({
         document: {
           ...document,
@@ -941,6 +945,7 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
           overlay,
           title: ast.name ?? document.title,
         },
+        generationRevision: get().generationRevision + 1,
         lastGoodModel: model,
         lastGoodOverlay: overlay,
         lastParseSource: {
@@ -1997,6 +2002,7 @@ export function resetDocumentStoreForTests(): void {
     lastGoodOverlay: initialDocument.overlay,
     lastParseSource: refreshParseSource(initialDocument.kind, initialDocument.dsl),
     dslRevision: 0,
+    generationRevision: 0,
     parseTimer: null,
     dslEditorFocused: false,
     relationshipTool: "generalization",

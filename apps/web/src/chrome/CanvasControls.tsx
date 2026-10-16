@@ -1,4 +1,5 @@
-import { Panel, useReactFlow } from "@xyflow/react";
+import { CanvasControlPortal } from "./CanvasControlPortal.js";
+import { useReactFlow } from "@xyflow/react";
 import { FitViewIcon, ZoomInIcon, ZoomOutIcon } from "./icons.js";
 
 /**
@@ -11,46 +12,38 @@ export function CanvasControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
 
   return (
-    <Panel
-      position="top-right"
-      className="flex flex-col items-end gap-2"
-      style={{
-        marginTop: "var(--graphiq-right-stack-offset)",
-        marginRight: "var(--graphiq-inset)",
-      }}
-    >
-      <div className="graphiq-island-controls flex flex-col">
+    <CanvasControlPortal>
+      <div className="flex flex-col items-end gap-2">
         <button
           type="button"
-          className="graphiq-icon-button"
+          className="graphiq-glass-button graphiq-expand-button"
           aria-label="Zoom in"
           data-testid="flow-zoom-in"
           onClick={() => zoomIn()}
         >
-          <ZoomInIcon />
+          <ZoomInIcon /><span className="graphiq-button-label">Zoom in</span>
         </button>
-        <div className="h-px bg-[var(--graphiq-hairline)]" />
         <button
           type="button"
-          className="graphiq-icon-button"
+          className="graphiq-glass-button graphiq-expand-button"
           aria-label="Zoom out"
           data-testid="flow-zoom-out"
           onClick={() => zoomOut()}
         >
-          <ZoomOutIcon />
+          <ZoomOutIcon /><span className="graphiq-button-label">Zoom out</span>
         </button>
       </div>
-      <div className="graphiq-island-controls flex flex-col">
+      <div className="flex flex-col items-end gap-2">
         <button
           type="button"
-          className="graphiq-icon-button"
+          className="graphiq-glass-button graphiq-expand-button"
           aria-label="Fit view"
           data-testid="flow-fit-view"
           onClick={() => fitView({ padding: 0.2 })}
         >
-          <FitViewIcon />
+          <FitViewIcon /><span className="graphiq-button-label">Fit view</span>
         </button>
       </div>
-    </Panel>
+    </CanvasControlPortal>
   );
 }

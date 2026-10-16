@@ -99,7 +99,7 @@ export function componentModelToFlow(
           diagnosticSeverity,
         },
         className,
-        ...parent,
+        ...(element.parentId ? { parentId: element.parentId, draggable: false } : {}),
       });
       continue;
     }
@@ -116,7 +116,7 @@ export function componentModelToFlow(
           diagnosticSeverity,
         },
         className,
-        ...parent,
+        ...(element.parentId ? { parentId: element.parentId, draggable: false } : {}),
       });
       continue;
     }

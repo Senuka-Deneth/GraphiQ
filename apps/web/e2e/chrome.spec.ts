@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { connectFlowNodesByHandles, openDslPanel, waitForPersistReady } from "./helpers.js";
+import { clickFlowEdge, connectFlowNodesByHandles, openDslPanel, waitForPersistReady } from "./helpers.js";
 
 test("diagnostics stay hidden until an error appears", async ({ page }) => {
   await page.goto("/");
@@ -21,6 +21,7 @@ interface B {
 
 A --|> B
 `);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     /class\.gen\.same-metaclass|rules\.illegal-connector/,
@@ -59,7 +60,7 @@ test("selected edge toolbar can change generalization notation", async ({ page }
   await connectFlowNodesByHandles(page);
   await expect(page.locator(".react-flow__edge")).toHaveCount(1, { timeout: 10_000 });
 
-  await page.locator(".react-flow__edge-interaction").first().click({ force: true });
+  await clickFlowEdge(page);
   await expect(page.locator('[data-testid="edge-style-toolbar"]')).toBeVisible();
 
   await page.locator('[data-testid="edge-end-head"]').selectOption("gen-hollow-triangle");
@@ -94,7 +95,7 @@ test("illegal head change keeps the previous relationship", async ({ page }) => 
     .toMatch(/Class -- Interface/);
   const dslBefore = (await editor.innerText()).replace(/\s+/g, " ").trim();
 
-  await page.locator(".react-flow__edge-interaction").first().click({ force: true });
+  await clickFlowEdge(page);
   await expect(page.locator('[data-testid="edge-style-toolbar"]')).toBeVisible();
   await page.locator('[data-testid="edge-end-head"]').selectOption("gen-hollow-triangle");
 

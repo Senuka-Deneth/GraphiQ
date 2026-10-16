@@ -31,6 +31,7 @@ test("profile extension renders a filled triangle marker", async ({ page }) => {
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(javaFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="profile-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -52,6 +53,7 @@ test("extension to Order shows prf.metaclass-not-a-user-class", async ({ page })
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(illegalMetaclassFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "prf.metaclass-not-a-user-class",

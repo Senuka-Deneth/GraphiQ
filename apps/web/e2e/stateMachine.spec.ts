@@ -28,6 +28,7 @@ test("state machine document renders states and transitions from the section 5.1
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(orderLifecycleFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="state-machine-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -48,6 +49,7 @@ test("initial with trigger shows sm.initial-one-outgoing-no-trigger", async ({ p
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(initialWithTriggerFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "sm.initial-one-outgoing-no-trigger",

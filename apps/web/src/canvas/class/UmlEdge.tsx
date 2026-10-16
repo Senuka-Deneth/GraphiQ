@@ -3,6 +3,8 @@ import type { EdgeRouteStyle, OverlayEdge } from "@graphiq/uml-layout";
 import type { MessageSort, RelationshipType, UmlRelationship } from "@graphiq/uml-model";
 import {
   BaseEdge,
+  EdgeText,
+  useInternalNode,
   getBezierPath,
   getSmoothStepPath,
   getStraightPath,
@@ -17,6 +19,8 @@ import { paintedMarkerUrl } from "./markerPaint.js";
 
 export type UmlEdgeData = {
   relationshipType: RelationshipType;
+  sourceMultiplicity?: string;
+  targetMultiplicity?: string;
   messageSort?: MessageSort;
   label?: string;
   waypoints?: readonly { x: number; y: number }[];
@@ -46,6 +50,9 @@ export function buildUmlFlowEdge(
   diagnosticSeverity: DiagnosticSeverity | undefined,
   label?: string,
 ): UmlFlowEdge {
+  const keyword = getRelationshipNotation(relationship.relationshipType).keyword;
+  const name = label ?? relationship.name;
+  const displayLabel = keyword && !name?.includes(keyword) ? [keyword, name].filter(Boolean).join(" ") : name;
   return {
     id: relationship.id,
     source: relationship.sourceId,
@@ -54,7 +61,9 @@ export function buildUmlFlowEdge(
     data: {
       relationshipType: relationship.relationshipType,
       messageSort: relationship.relationshipType === "message" ? relationship.messageSort : undefined,
-      label: label ?? relationship.name,
+      label: displayLabel,
+      sourceMultiplicity: "sourceMultiplicity" in relationship ? relationship.sourceMultiplicity : undefined,
+      targetMultiplicity: "targetMultiplicity" in relationship ? relationship.targetMultiplicity : undefined,
       waypoints: overlayEdge?.waypoints,
       diagnosticSeverity,
       routeStyle: overlayEdge?.routeStyle,
@@ -103,6 +112,8 @@ function edgePathForRoute(
 
 export function UmlEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -114,6 +125,8 @@ export function UmlEdge({
   markerStart,
   style,
 }: EdgeProps<UmlFlowEdge>) {
+  const sourceNode = useInternalNode(source);
+  const targetNode = useInternalNode(target);
   const relationshipType = data?.relationshipType ?? "association";
   const notation =
     relationshipType === "message"
@@ -121,7 +134,7 @@ export function UmlEdge({
       : getRelationshipNotation(relationshipType);
   const routeStyle = data?.routeStyle ?? "orthogonal";
 
-  const [edgePath, labelX, labelY] = edgePathForRoute(
+  let [edgePath, labelX, labelY] = edgePathForRoute(
     routeStyle,
     sourceX,
     sourceY,
@@ -131,6 +144,31 @@ export function UmlEdge({
     targetPosition,
   );
 
+  const points = data?.waypoints;
+  const contains = (node: typeof sourceNode, point: { x: number; y: number } | undefined) => {
+    if (!node || !point) return false;
+    const origin = node.internals.positionAbsolute;
+    return point.x >= origin.x - 2 && point.x <= origin.x + (node.measured.width ?? 0) + 2 &&
+      point.y >= origin.y - 2 && point.y <= origin.y + (node.measured.height ?? 0) + 2;
+  };
+  // ELK routes include obstacle avoidance. Reuse them only while their endpoints
+  // still belong to the current nodes (dragging/resizing invalidates the route).
+  const routed = routeStyle === "orthogonal" && points && points.length >= 2 &&
+    contains(sourceNode, points[0]) && contains(targetNode, points[points.length - 1]);
+  if (routed) {
+    [edgePath, labelX, labelY] = polylinePath(points);
+  }
+  const start = routed ? points[0]! : { x: sourceX, y: sourceY };
+  const end = routed ? points[points.length - 1]! : { x: targetX, y: targetY };
+
+  const nearStart = routed ? points[1]! : end;
+  const nearEnd = routed ? points[points.length - 2]! : start;
+  const endLabel = (point: { x: number; y: number }, toward: { x: number; y: number }) => {
+    const horizontal = Math.abs(toward.x - point.x) >= Math.abs(toward.y - point.y);
+    return horizontal ? { x: point.x + Math.sign(toward.x - point.x) * 20, y: point.y - 12 }
+      : { x: point.x + 16, y: point.y + Math.sign(toward.y - point.y) * 22 };
+  };
+  const sourceLabel = endLabel(start, nearStart), targetLabel = endLabel(end, nearEnd);
   const diagnosticStroke =
     data?.diagnosticSeverity === "error"
       ? "#dc2626"
@@ -142,6 +180,7 @@ export function UmlEdge({
   const computedMarkerEnd = paintedMarkerUrl(notation.targetMarkerId, paint);
 
   return (
+    <>
     <BaseEdge
       id={id}
       path={edgePath}
@@ -159,5 +198,21 @@ export function UmlEdge({
         ...(notation.lineStyle === "dash" ? dashStrokeStyle : {}),
       }}
     />
+    {data?.sourceMultiplicity ? <EdgeText x={sourceLabel.x} y={sourceLabel.y} label={data.sourceMultiplicity} labelStyle={{ fontSize: 11 }} /> : null}
+    {data?.targetMultiplicity ? <EdgeText x={targetLabel.x} y={targetLabel.y} label={data.targetMultiplicity} labelStyle={{ fontSize: 11 }} /> : null}
+    </>
   );
+}
+
+/** Place labels on the longest segment, away from endpoint symbols. */
+export function polylinePath(points: readonly { x: number; y: number }[]): [string, number, number] {
+  let longest = -1;
+  let labelX = points[0]?.x ?? 0;
+  let labelY = points[0]?.y ?? 0;
+  points.slice(1).forEach((point, index) => {
+    const previous = points[index]!;
+    const length = Math.hypot(point.x - previous.x, point.y - previous.y);
+    if (length > longest) { longest = length; labelX = (point.x + previous.x) / 2; labelY = (point.y + previous.y) / 2; }
+  });
+  return [points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" "), labelX, labelY];
 }

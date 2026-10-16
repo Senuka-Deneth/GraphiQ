@@ -1,3 +1,4 @@
+import { CanvasControlPortal } from "../chrome/CanvasControlPortal.js";
 import { useCallback, useState, type ReactNode } from "react";
 import {
   DEFAULT_ZOOM,
@@ -47,33 +48,26 @@ export function SvgZoomViewport({
       className="relative h-full w-full overflow-auto bg-[var(--color-canvas)]"
       onWheel={onWheel}
     >
-      <div
-        className="graphiq-island-controls absolute z-10 flex flex-col"
-        style={{
-          top: "var(--graphiq-right-stack-offset)",
-          right: "var(--graphiq-inset)",
-        }}
-      >
+      <CanvasControlPortal>
         <button
           type="button"
           aria-label="Zoom in"
           data-testid="svg-zoom-in"
           onClick={() => setZoom((current) => clampZoom(Number((current + 0.25).toFixed(2))))}
-          className="graphiq-icon-button"
+          className="graphiq-glass-button graphiq-expand-button"
         >
-          <ZoomInIcon />
+          <ZoomInIcon /><span className="graphiq-button-label">Zoom in</span>
         </button>
-        <div className="h-px bg-[var(--graphiq-hairline)]" />
         <button
           type="button"
           aria-label="Zoom out"
           data-testid="svg-zoom-out"
           onClick={() => setZoom((current) => clampZoom(Number((current - 0.25).toFixed(2))))}
-          className="graphiq-icon-button"
+          className="graphiq-glass-button graphiq-expand-button"
         >
-          <ZoomOutIcon />
+          <ZoomOutIcon /><span className="graphiq-button-label">Zoom out</span>
         </button>
-      </div>
+      </CanvasControlPortal>
       <div
         style={{
           width,

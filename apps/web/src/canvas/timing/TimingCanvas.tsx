@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { paintedMarkerUrl } from "../class/markerPaint.js";
 import { MarkerDefs } from "../class/MarkerDefs.js";
 import { SvgSquareGrid, SvgZoomViewport } from "../SvgZoomViewport.js";
 import { useCanvasMode } from "../canvasMode.js";
@@ -235,7 +236,7 @@ export function TimingCanvas({
       {!isPreview && (selectedLifelineId !== null || selectedMessageId !== null) ? (
         <button
           type="button"
-          className="graphiq-island-controls graphiq-icon-button absolute left-3 top-3 z-20"
+          className="graphiq-glass-button absolute left-3 top-3 z-20"
           aria-label="Delete element"
           data-testid="delete-element"
           onClick={() => {
@@ -252,7 +253,7 @@ export function TimingCanvas({
             }
           }}
         >
-          <DeleteIcon />
+          <DeleteIcon /><span>Delete selected</span>
         </button>
       ) : null}
       <SvgZoomViewport width={renderable.width} height={renderable.height} chrome={!isPreview}>
@@ -285,7 +286,7 @@ export function TimingCanvas({
               }
         }
       >
-        <MarkerDefs />
+        <MarkerDefs extraColors={["#dc2626", "#d97706"]} />
         {isPreview ? null : <SvgSquareGrid width={renderable.width} height={renderable.height} />}
         <line
           x1={160}
@@ -432,7 +433,7 @@ export function TimingCanvas({
                 y2={message.y2}
                 stroke={stroke}
                 strokeWidth={selectedMessageId === message.id ? DEFAULT_STROKE_WIDTH + 0.5 : DEFAULT_STROKE_WIDTH}
-                markerEnd={`url(#${message.markerId})`}
+                markerEnd={paintedMarkerUrl(message.markerId, stroke)}
                 {...dashProps}
               />
               {message.label !== undefined ? (

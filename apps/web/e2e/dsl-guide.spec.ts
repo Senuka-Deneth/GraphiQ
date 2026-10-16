@@ -53,6 +53,7 @@ test("import DSL loads a class fixture into the editor and canvas", async ({ pag
   writeFileSync(fixturePath, CLASS_IMPORT_DSL, "utf8");
 
   await page.locator('[data-testid="import-dsl-input"]').setInputFiles(fixturePath);
+  await page.getByTestId("submit-dsl").click();
   await expect(page.locator(".react-flow__node")).toHaveCount(2, { timeout: 10_000 });
 
   await openDslPanel(page);
@@ -70,6 +71,7 @@ test("import DSL switches document kind when the fixture kind differs", async ({
   writeFileSync(fixturePath, ACTIVITY_IMPORT_DSL, "utf8");
 
   await page.locator('[data-testid="import-dsl-input"]').setInputFiles(fixturePath);
+  await page.getByTestId("submit-dsl").click();
   await expect(page.locator('[data-testid="document-kind-badge"]')).toHaveText("activity", {
     timeout: 10_000,
   });
@@ -90,6 +92,7 @@ test("importing Mermaid classDiagram does not create GraphiQ class nodes", async
   );
 
   await page.locator('[data-testid="import-dsl-input"]').setInputFiles(fixturePath);
+  await page.getByTestId("submit-dsl").click();
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "dsl.import-no-diagram",
     { timeout: 10_000 },
@@ -98,6 +101,6 @@ test("importing Mermaid classDiagram does not create GraphiQ class nodes", async
 
   await openDslPanel(page);
   const editor = page.locator('[data-testid="dsl-editor"]');
-  await expect(editor).toContainText("diagram class");
-  await expect(editor).not.toContainText("Alpha");
+  await expect(editor).toContainText("classDiagram");
+  await expect(editor).toContainText("Alpha");
 });

@@ -64,6 +64,7 @@ async function openExportPreview(page: Page): Promise<void> {
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(CLASS_GENERALIZATION_DSL);
+  await page.getByTestId("submit-dsl").click();
   await expect(page.locator(".react-flow__node")).toHaveCount(2, { timeout: 10_000 });
 
   await page.locator('[data-testid="open-export"]').click();

@@ -66,12 +66,18 @@ function operationRowCount(element: LayoutElement): number {
 }
 
 export function measureClassNode(element: LayoutElement): Pick<OverlayNode, "width" | "height"> {
-  const width = CLASS_BOX.minWidth;
+  const lines = [element.name];
+  if (element.elementType === "enumeration") lines.push(...element.literals);
+  else {
+    lines.push(...element.attributes.map(a => `${a.name}: ${a.typeName}${a.multiplicity ? ` [${a.multiplicity}]` : ""}`));
+    lines.push(...element.operations.map(o => `${o.name}(${o.parameters.map(p => `${p.name}: ${p.typeName}`).join(", ")})${o.returnType ? `: ${o.returnType}` : ""}`));
+  }
+  const width = Math.max(CLASS_BOX.minWidth, ...lines.map(line => line.length * 8 + 32));
   const bodyRows = attributeRowCount(element) + operationRowCount(element);
   const computedHeight =
     CLASS_BOX.nameCompartmentHeight +
     keywordRowCount(element) * CLASS_BOX.rowHeight +
-    bodyRows * CLASS_BOX.rowHeight;
+    bodyRows * CLASS_BOX.rowHeight + 20;
 
   return {
     width,

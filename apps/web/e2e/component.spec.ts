@@ -36,6 +36,7 @@ test("component document renders assembly between provided and required interfac
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(shopFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="component-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -55,6 +56,7 @@ test("assembly between two provided interfaces shows cmp.assembly-provided-to-re
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(illegalAssemblyFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "cmp.assembly-provided-to-required",

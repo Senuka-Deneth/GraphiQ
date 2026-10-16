@@ -1,262 +1,80 @@
-import { CLASS_BOX } from "@graphiq/uml-notation";
 import type { UmlElement, UmlModel } from "@graphiq/uml-model";
-import type { ElkGraphInput, ElkGraphOutput } from "./elk.js";
-import { layoutWithElk } from "./elk.js";
-import type { LayoutMode, NotationOverlay, OverlayEdge, OverlayNode } from "./overlay.js";
-
-const COMPONENT_PADDING = 24;
-const COMPONENT_HEADER_HEIGHT = 32;
-
-function isLayoutElement(element: UmlElement): boolean {
-  return (
-    element.elementType === "component" ||
-    element.elementType === "interface" ||
-    element.elementType === "port" ||
-    element.elementType === "artifact" ||
-    element.elementType === "note"
-  );
-}
+import { layoutWithElk, type ElkGraphInput } from "./elk.js";
+import type { LayoutMode, NotationOverlay, OverlayNode } from "./overlay.js";
 
 export function measureComponentNode(element: UmlElement): Pick<OverlayNode, "width" | "height"> {
-  switch (element.elementType) {
-    case "component":
-      return { width: 220, height: 140 };
-    case "interface":
-      return { width: 96, height: 36 };
-    case "port":
-      return { width: 16, height: 16 };
-    case "artifact":
-      return { width: CLASS_BOX.minWidth, height: CLASS_BOX.minHeight };
-    case "note":
-      return { width: 120, height: 60 };
-    default:
-      return {
-        width: CLASS_BOX.minWidth,
-        height: CLASS_BOX.minHeight,
-      };
-  }
+  if (element.elementType === "port") return { width: 16, height: 16 };
+  if (element.elementType === "interface") return { width: Math.max(100, element.name.length * 7 + 28), height: 56 };
+  return { width: Math.max(200, element.name.length * 9 + 48), height: element.elementType === "component" ? 112 : 72 };
 }
 
-function hasFinitePosition(node: OverlayNode | undefined): node is OverlayNode {
-  return (
-    node !== undefined &&
-    Number.isFinite(node.x) &&
-    Number.isFinite(node.y) &&
-    Number.isFinite(node.width) &&
-    Number.isFinite(node.height)
-  );
-}
-
-function pruneOverlay(model: UmlModel, overlay: NotationOverlay): NotationOverlay {
-  const elementIds = new Set(model.elements.map((element) => element.id));
-  const relationshipIds = new Set(model.relationships.map((relationship) => relationship.id));
-
+/** Interface strips are reserved in the layout envelope, outside the component body.
+ * Fixed ELK ports route assemblies to the ball/socket rather than through the box. */
+export async function layoutComponent(model: UmlModel, overlay: NotationOverlay, mode: LayoutMode): Promise<NotationOverlay> {
+  const required = new Set(model.relationships.filter(r => r.relationshipType === "usage").map(r => r.targetId));
   const nodes: Record<string, OverlayNode> = {};
-  for (const [id, node] of Object.entries(overlay.nodes)) {
-    if (elementIds.has(id)) {
-      nodes[id] = node;
+  const envelopes = new Map<string, { left: number; bodyWidth: number; height: number }>();
+  const children: ElkGraphInput[] = model.elements.filter(e => !e.parentId).map(element => {
+    const owned = model.elements.filter(e => e.parentId === element.id);
+    const provided = owned.filter(e => e.elementType === "interface" && !required.has(e.id));
+    const needed = owned.filter(e => e.elementType === "interface" && required.has(e.id));
+    const ports = owned.filter(e => e.elementType === "port");
+    const interior = owned.filter(e => e.elementType !== "interface" && e.elementType !== "port");
+    const measured = measureComponentNode(element);
+    const left = provided.length ? Math.max(...provided.map(e => measureComponentNode(e).width)) : 0;
+    const right = needed.length ? Math.max(...needed.map(e => measureComponentNode(e).width)) : 0;
+    const bodyWidth = Math.max(measured.width, ...interior.map(e => measureComponentNode(e).width + 40), ports.length * 64);
+    const height = Math.max(measured.height, 72 + Math.max(provided.length, needed.length) * 64, 72 + interior.length * 96);
+    envelopes.set(element.id, { left, bodyWidth, height });
+    const elkPorts: NonNullable<ElkGraphInput["ports"]> = [];
+    for (const [side, items] of [["WEST", provided], ["EAST", needed]] as const) {
+      items.forEach((item, index) => {
+        const width = side === "WEST" ? left : right;
+        const x = side === "WEST" ? -left : bodyWidth;
+        const y = 64 + index * 64;
+        nodes[item.id] = { id: item.id, x, y, width, height: 56 };
+        elkPorts.push({ id: item.id, x: side === "WEST" ? 12 : left + bodyWidth + right - 12, y: y + 32, width: 0, height: 0,
+          layoutOptions: { "elk.port.side": side } });
+      });
     }
-  }
-
-  const edges: Record<string, OverlayEdge> = {};
-  for (const [id, edge] of Object.entries(overlay.edges)) {
-    if (relationshipIds.has(id)) {
-      edges[id] = edge;
-    }
-  }
-
-  return {
-    ...overlay,
-    nodes,
-    edges,
-  };
-}
-
-function buildElkNode(
-  model: UmlModel,
-  element: UmlElement,
-  overlay: NotationOverlay,
-  mode: LayoutMode,
-  layoutIds: string[],
-): ElkGraphInput {
-  const measured = measureComponentNode(element);
-  const existing = overlay.nodes[element.id];
-  const shouldPreserve = mode === "incremental" && hasFinitePosition(existing);
-  const children = model.elements.filter((item) => item.parentId === element.id);
-
-  if (element.elementType === "component" && children.length > 0) {
-    const childNodes = children.map((child) =>
-      buildElkNode(model, child, overlay, mode, layoutIds),
-    );
-
-    if (!shouldPreserve) {
-      layoutIds.push(element.id);
-      for (const child of children) {
-        if (!(mode === "incremental" && hasFinitePosition(overlay.nodes[child.id]))) {
-          layoutIds.push(child.id);
-        }
-      }
-    }
-
-    return {
-      id: element.id,
-      layoutOptions: {
-        "elk.algorithm": "box",
-        "elk.padding": `[top=${COMPONENT_HEADER_HEIGHT},left=${COMPONENT_PADDING},bottom=${COMPONENT_PADDING},right=${COMPONENT_PADDING}]`,
-        "elk.spacing.nodeNode": "24",
-      },
-      children: childNodes,
-      ...(shouldPreserve
-        ? {
-            x: existing.x,
-            y: existing.y,
-            width: existing.width,
-            height: existing.height,
-            layoutOptions: {
-              "elk.algorithm": "box",
-              "elk.fixed": "true",
-            },
-          }
-        : {
-            width: measured.width,
-            height: measured.height,
-          }),
-    };
-  }
-
-  if (!shouldPreserve) {
-    layoutIds.push(element.id);
-  }
-
-  return {
-    id: element.id,
-    width: shouldPreserve ? existing.width : measured.width,
-    height: shouldPreserve ? existing.height : measured.height,
-    ...(shouldPreserve
-      ? {
-          x: existing.x,
-          y: existing.y,
-          layoutOptions: {
-            "org.eclipse.elk.fixed": "true",
-          },
-        }
-      : {}),
-  };
-}
-
-function buildElkGraph(
-  model: UmlModel,
-  overlay: NotationOverlay,
-  mode: LayoutMode,
-): { graph: ElkGraphInput; layoutIds: string[] } {
-  const roots = model.elements.filter(
-    (element) => isLayoutElement(element) && element.parentId === undefined,
-  );
-  const layoutIds: string[] = [];
-  const children = roots.map((element) => buildElkNode(model, element, overlay, mode, layoutIds));
-
-  const edges = model.relationships.map((relationship) => ({
-    id: relationship.id,
-    sources: [relationship.sourceId],
-    targets: [relationship.targetId],
-  }));
-
-  return {
-    graph: {
-      id: "root",
-      layoutOptions: {
-        "elk.algorithm": "layered",
-        "elk.direction": "RIGHT",
-        "elk.edgeRouting": "ORTHOGONAL",
-        "elk.spacing.nodeNode": "64",
-        "elk.layered.spacing.nodeNodeBetweenLayers": "80",
-      },
-      children,
-      edges,
-    },
-    layoutIds,
-  };
-}
-
-function flattenElkChildren(
-  node: ElkGraphOutput,
-  nodes: Record<string, OverlayNode>,
-  layoutIds: ReadonlySet<string>,
-): void {
-  if (
-    layoutIds.has(node.id) &&
-    node.x !== undefined &&
-    node.y !== undefined &&
-    node.width !== undefined &&
-    node.height !== undefined
-  ) {
-    nodes[node.id] = {
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      width: node.width,
-      height: node.height,
-    };
-  }
-
-  for (const child of node.children ?? []) {
-    flattenElkChildren(child, nodes, layoutIds);
-  }
-}
-
-function applyElkResult(
-  overlay: NotationOverlay,
-  result: ElkGraphOutput,
-  layoutIds: readonly string[],
-): NotationOverlay {
-  const layoutIdSet = new Set(layoutIds);
-  const nodes = { ...overlay.nodes };
-
+    ports.forEach((port, index) => {
+      const x = (index + 1) * bodyWidth / (ports.length + 1) - 8;
+      nodes[port.id] = { id: port.id, x, y: height - 8, width: 16, height: 16 };
+      elkPorts.push({ id: port.id, x: left + x + 8, y: height, width: 0, height: 0, layoutOptions: { "elk.port.side": "SOUTH" } });
+    });
+    interior.forEach((item, index) => {
+      nodes[item.id] = { id: item.id, x: 20, y: 64 + index * 96, ...measureComponentNode(item) };
+    });
+    return { id: element.id, width: left + bodyWidth + right, height: height + (ports.length ? 24 : 0), ports: elkPorts,
+      layoutOptions: { "elk.portConstraints": "FIXED_POS" } };
+  });
+  const ids = new Set(children.flatMap(n => [n.id, ...(n.ports ?? []).map(p => p.id)]));
+  const edges = model.relationships.filter(r => r.relationshipType !== "usage" && r.relationshipType !== "interfaceRealization" && ids.has(r.sourceId) && ids.has(r.targetId))
+    .map(r => ({ id: r.id, sources: [r.sourceId], targets: [r.targetId] }));
+  const result = await layoutWithElk({ id: "root", children, edges, layoutOptions: {
+    "elk.algorithm": "layered", "elk.direction": "RIGHT", "elk.edgeRouting": "ORTHOGONAL",
+    "elk.spacing.nodeNode": "80", "elk.layered.spacing.nodeNodeBetweenLayers": "120",
+    "elk.spacing.edgeNode": "32", "elk.layered.spacing.edgeEdgeBetweenLayers": "24",
+  } });
   for (const child of result.children ?? []) {
-    flattenElkChildren(child, nodes, layoutIdSet);
+    const box = envelopes.get(child.id)!;
+    nodes[child.id] = { id: child.id, x: (child.x ?? 0) + box.left, y: child.y ?? 0, width: box.bodyWidth, height: box.height };
   }
-
-  const edges = { ...overlay.edges };
-  for (const edge of result.edges ?? []) {
-    const sections = edge.sections;
-    if (sections === undefined || sections.length === 0) {
-      continue;
-    }
-
-    const waypoints: { x: number; y: number }[] = [];
-    for (const section of sections) {
-      waypoints.push(section.startPoint);
-      for (const bendPoint of section.bendPoints ?? []) {
-        waypoints.push(bendPoint);
+  // Incremental canvas edits retain user positions. Discard automatic routes when
+  // their endpoints no longer correspond to the calculated positions.
+  let moved = false;
+  if (mode === "incremental") {
+    for (const [id, node] of Object.entries(nodes)) {
+      const prior = overlay.nodes[id];
+      if (prior) {
+        moved ||= prior.x !== node.x || prior.y !== node.y;
+        nodes[id] = { ...node, x: prior.x, y: prior.y };
       }
-      waypoints.push(section.endPoint);
     }
-
-    edges[edge.id] = {
-      id: edge.id,
-      waypoints,
-    };
   }
-
-  return {
-    ...overlay,
-    nodes,
-    edges,
-  };
-}
-
-export async function layoutComponent(
-  model: UmlModel,
-  overlay: NotationOverlay,
-  mode: LayoutMode,
-): Promise<NotationOverlay> {
-  const pruned = pruneOverlay(model, overlay);
-  const { graph, layoutIds } = buildElkGraph(model, pruned, mode);
-
-  if (layoutIds.length === 0 && (graph.children?.length ?? 0) > 0) {
-    return pruned;
-  }
-
-  const result = await layoutWithElk(graph);
-  return applyElkResult(pruned, result, layoutIds);
+  return { ...overlay, nodes, edges: Object.fromEntries(model.relationships.map(r => {
+    const edge = result.edges?.find(e => e.id === r.id);
+    const waypoints = moved ? undefined : edge?.sections?.flatMap(s => [s.startPoint, ...(s.bendPoints ?? []), s.endPoint]);
+    return [r.id, { ...overlay.edges[r.id], id: r.id, waypoints }];
+  })) };
 }

@@ -16,7 +16,7 @@
   --graphiq-inset: 12px;
   /* Height of the DSL/diagnostics toggle stack plus the top inset. Shared so
      the zoom island inside the canvas cannot drift away from it. */
-  --graphiq-right-stack-offset: 84px;
+  --graphiq-right-stack-offset: 168px;
 
   /* What the vibrancy surfaces blend against where no canvas sits behind them. */
   --graphiq-backdrop: #f2f2f7;
@@ -346,3 +346,68 @@ body {
 .graphiq-resize-line {
   border-color: var(--graphiq-accent) !important;
 }
+
+/* Shared liquid-glass controls: specular rim, translucent fill, spring expansion. */
+.graphiq-glass-button, .graphiq-icon-tile, .graphiq-control, .graphiq-icon-button {
+  border: 1px solid rgba(255,255,255,.9);
+  background: linear-gradient(155deg, rgba(255,255,255,.92), rgba(232,240,251,.68));
+  box-shadow: inset 0 1px 1px #fff, inset 0 -1px 2px rgba(150,170,200,.16), 0 3px 10px rgba(40,60,90,.12);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  transition: width 320ms cubic-bezier(.22,1,.36,1), background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.graphiq-glass-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 16px; border-radius: 18px; font-size: 13px;
+  font-weight: 600; color: var(--graphiq-label); cursor: pointer;
+}
+.graphiq-glass-button svg, .graphiq-icon-tile svg { flex-shrink: 0; }
+.graphiq-glass-button:hover:not(:disabled), .graphiq-icon-tile:hover {
+  background: linear-gradient(150deg, #fff, rgba(218,234,255,.9));
+  box-shadow: inset 0 1px 2px #fff, 0 5px 16px rgba(40,90,150,.2);
+}
+.graphiq-glass-button:active:not(:disabled) { transform: scale(.97); }
+.graphiq-glass-button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, [draggable]:focus-visible {
+  outline: 3px solid #007aff; outline-offset: 3px;
+}
+.graphiq-glass-primary, .graphiq-glass-button[aria-pressed="true"] {
+  background: linear-gradient(150deg, rgba(48,153,255,.96), rgba(0,100,235,.92));
+  color: white;
+}
+.graphiq-glass-primary:hover:not(:disabled), .graphiq-glass-button[aria-pressed="true"]:hover {
+  background: linear-gradient(150deg, #238eff, #005ad9);
+}
+.graphiq-expand-button { width: 44px; padding: 0 12px; gap: 0; overflow: hidden; justify-content: flex-start; }
+.graphiq-expand-button .graphiq-button-label {
+  white-space: nowrap; opacity: 0; max-width: 0; transform: translateX(6px);
+  transition: opacity 180ms ease, max-width 320ms ease, transform 320ms ease, margin 320ms ease;
+}
+.graphiq-expand-button:hover, .graphiq-expand-button:focus-visible { width: 164px; }
+.graphiq-expand-button:hover .graphiq-button-label, .graphiq-expand-button:focus-visible .graphiq-button-label {
+  opacity: 1; max-width: 125px; margin-left: 8px; transform: translateX(0);
+}
+.graphiq-icon-tile { min-height: 62px; height: auto; padding: 8px 4px; gap: 4px; flex-direction: column; border-radius: 12px; }
+.graphiq-icon-tile span { font-size: 11px; line-height: 14px; overflow-wrap: anywhere; text-align: center; }
+.graphiq-code-panel { width: min(380px, calc(100% - 80px)); }
+.graphiq-code-panel .graphiq-section-label { height: 36px; padding: 0 12px; }
+/* Panels occupy space so generated content remains visible beside the editor. */
+[data-testid="canvas-panel"] { transition: margin-right 240ms ease; }
+[data-testid="canvas-panel"]:has(~ [data-testid="dsl-editor-panel"][aria-hidden="false"]) { margin-right: 444px; }
+@media (max-width: 900px) {
+  [data-testid="canvas-panel"]:has(~ [data-testid="dsl-editor-panel"][aria-hidden="false"]) { margin-right: 0; }
+  .graphiq-sidebar { max-width: 190px; min-width: 190px !important; }
+}
+@media (hover: none) {
+  .graphiq-expand-button { width: 132px; }
+  .graphiq-expand-button .graphiq-button-label { opacity: 1; max-width: 100px; margin-left: 8px; transform: none; }
+  .graphiq-code-panel { right: 152px; width: min(380px, calc(100% - 164px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .graphiq-glass-button, .graphiq-button-label, .graphiq-icon-tile, .graphiq-icon-button, .graphiq-control, [data-testid="canvas-panel"] { transition: none !important; }
+}
+
+.graphiq-icon-tile[aria-pressed="true"], .graphiq-control[aria-pressed="true"] {
+  background: linear-gradient(150deg, #3099ff, #0064eb); color: white;
+}
+[data-testid="edge-style-toolbar"] { flex-wrap: wrap; max-width: calc(100% - 100px); }
