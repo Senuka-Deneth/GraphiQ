@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BackIcon, ZoomInIcon, ZoomOutIcon } from "../chrome/icons.js";
 import { useDocumentStore } from "../store/documentStore.js";
 import { ExportCropOverlay } from "./ExportCropOverlay.js";
@@ -38,7 +38,7 @@ type ExportPageProps = {
   onClose: () => void;
 };
 
-function GlassSwitch({
+function OptionSwitch({
   checked,
   label,
   testId,
@@ -80,7 +80,7 @@ function OptionRow({
       type="button"
       data-testid={testId}
       aria-pressed={active}
-      className={`graphiq-row w-full ${active ? "bg-[var(--graphiq-island-hover)]" : ""}`}
+      className="graphiq-row w-full"
       onClick={onClick}
     >
       {children}
@@ -94,6 +94,19 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
   const [settings, setSettings] = useState<ExportSettings>(DEFAULT_EXPORT_SETTINGS);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setStageSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   const editorViewport = useMemo(
     () =>
@@ -133,7 +146,12 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
   const visibleSource = editingCustomCrop ? previewRect : exportRect;
   const visibleSheet = editingCustomCrop ? previewSheetSize : sheetSize;
 
-  const displayScale = 0.72 * previewZoom;
+  const fitScale = Math.min(
+    1,
+    Math.max(1, stageSize.width - 64) / visibleSheet.width,
+    Math.max(1, stageSize.height - 64) / visibleSheet.height,
+  );
+  const displayScale = fitScale * previewZoom;
 
   const setCustomCrop = (next: ExportRect) => {
     setSettings((current) => ({
@@ -148,6 +166,7 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
       return;
     }
     setBusy(true);
+    setDownloadError(null);
     try {
       await downloadCapturedDiagram({
         document,
@@ -160,6 +179,7 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
       });
     } catch (error) {
       console.error("Export download failed", error);
+      setDownloadError("Download failed. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -178,12 +198,12 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
           >
             <BackIcon />
           </button>
-          <div className="min-w-0 truncate px-2 text-[15px] text-[var(--graphiq-label)]">
-            <span className="text-[var(--graphiq-label-secondary)]">
+          <div className="flex min-w-0 items-center gap-1 px-2 text-[13px] text-[var(--graphiq-label)]">
+            <span className="truncate max-sm:hidden text-[var(--graphiq-label-secondary)]">
               {document.title.trim().length > 0 ? document.title : document.kind}
             </span>
-            <span className="text-[var(--graphiq-label-secondary)]"> / </span>
-            <span className="font-medium">Export</span>
+            <span className="max-sm:hidden text-[var(--graphiq-label-secondary)]"> / </span>
+            <span className="shrink-0 font-medium">Export</span>
           </div>
         </div>
         <div className="flex items-center gap-2 pr-1">
@@ -209,14 +229,15 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
         </div>
       </header>
 
-      <div className="mt-3 flex min-h-0 flex-1 gap-3 px-3 pb-3">
+      <div className="graphiq-export-body mt-3 flex min-h-0 flex-1 gap-3 px-3 pb-3">
         <section
-          className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-[var(--graphiq-radius-island)] bg-[#e5e5ea]"
+          ref={stageRef}
+          className="graphiq-export-stage relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-[var(--graphiq-radius-island)]"
           data-testid="export-stage"
         >
-          <div className="flex h-full w-full items-center justify-center overflow-auto p-8">
+          <div className="graphiq-export-scroll">
             <div
-              className="relative overflow-hidden rounded-[10px] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+              className="graphiq-export-sheet relative overflow-hidden bg-white"
               style={{
                 width: visibleSheet.width * displayScale,
                 height: visibleSheet.height * displayScale,
@@ -225,16 +246,15 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
               data-sheet-width={String(visibleSheet.width)}
               data-sheet-height={String(visibleSheet.height)}
             >
-              <ExportPreviewFrame
-                document={document}
-                sourceRect={visibleSource}
-                sheetSize={{
-                  width: visibleSheet.width * displayScale,
-                  height: visibleSheet.height * displayScale,
-                }}
-                includePageFill={settings.includePageFill}
-                captureRef={captureRef}
-              />
+              <div style={{ transform: `scale(${displayScale})`, transformOrigin: "0 0" }}>
+                <ExportPreviewFrame
+                  document={document}
+                  sourceRect={visibleSource}
+                  sheetSize={visibleSheet}
+                  includePageFill={settings.includePageFill}
+                  captureRef={captureRef}
+                />
+              </div>
               {editingCustomCrop ? (
                 <ExportCropOverlay
                   bounds={previewRect}
@@ -270,10 +290,10 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
         </section>
 
         <aside
-          className="graphiq-sidebar flex w-72 shrink-0 flex-col overflow-auto rounded-[var(--graphiq-radius-island)] border border-[var(--graphiq-hairline)]"
+          className="graphiq-sidebar graphiq-export-options flex w-72 shrink-0 flex-col overflow-auto rounded-[var(--graphiq-radius-island)] border border-[var(--graphiq-hairline)]"
           data-testid="export-options"
         >
-          <div className="graphiq-section-label px-3 pt-3">Options</div>
+          <h2 className="px-3 pb-2 pt-3 text-sm font-semibold">Export settings</h2>
           <div className="px-3 pt-2 text-[13px] font-medium text-[var(--graphiq-label-secondary)]">
             File format
           </div>
@@ -319,7 +339,7 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
 
           <label className="mx-3 mt-4 flex items-center justify-between gap-3">
             <span className="text-[15px]">Set page size</span>
-            <GlassSwitch
+            <OptionSwitch
               checked={settings.setPageSize}
               label="Set page size"
               testId="export-page-size"
@@ -366,7 +386,7 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
 
           <label className="mx-3 mt-4 mb-4 flex items-center justify-between gap-3">
             <span className="text-[15px]">Include page fill</span>
-            <GlassSwitch
+            <OptionSwitch
               checked={settings.includePageFill}
               label="Include page fill"
               testId="export-page-fill"
@@ -375,6 +395,7 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
               }
             />
           </label>
+          {downloadError ? <p role="alert" className="mx-3 mb-3 text-sm text-[var(--graphiq-error)]">{downloadError}</p> : null}
         </aside>
       </div>
     </div>

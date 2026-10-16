@@ -2,7 +2,7 @@ import { Panel, useReactFlow } from "@xyflow/react";
 import { FitViewIcon, ZoomInIcon, ZoomOutIcon } from "./icons.js";
 
 /**
- * Zoom and fit controls, styled as Apple-Maps corner islands. Rendered inside
+ * Zoom and fit controls, styled as compact corner groups. Rendered inside
  * `ReactFlow` because it needs the flow instance, and offset down the right
  * edge by the shared token so it lines up under the panel toggles that
  * `EditorShell` renders outside the canvas.

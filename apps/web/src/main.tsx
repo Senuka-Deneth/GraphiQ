@@ -21,10 +21,9 @@ if (!rootElement) {
 
 const root = createRoot(rootElement);
 
-void hydrateDocumentStore().then(() => {
-  root.render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
-});
+root.render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+void hydrateDocumentStore();

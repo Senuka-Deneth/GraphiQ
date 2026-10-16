@@ -5,8 +5,9 @@ export function GraphiqFlowBackground() {
   return (
     <Background
       id="graphiq-grid"
-      variant={BackgroundVariant.Lines}
+      variant={BackgroundVariant.Dots}
       gap={GRID_GAP}
+      size={1}
       color={GRID_COLOR}
     />
   );

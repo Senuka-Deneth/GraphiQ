@@ -4,10 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
+    <style>
+      .boot-screen { position: fixed; inset: 0; display: grid; place-items: center; background: #fff; color: #252525; font: 600 30px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; letter-spacing: -1.2px; }
+      .boot-screen span { animation: boot-pulse 1.4s ease-in-out infinite; }
+      @keyframes boot-pulse { 50% { opacity: .25; } }
+      @media (prefers-reduced-motion: reduce) { .boot-screen span { animation: none; } }
+    </style>
     <title>GraphiQ</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-screen" role="status" aria-label="Loading GraphiQ"><span aria-hidden="true">GraphiQ</span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
