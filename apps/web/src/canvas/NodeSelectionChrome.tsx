@@ -39,7 +39,7 @@ export function NodeSelectionChrome({ id, selected }: NodeSelectionChromeProps) 
       >
         <button
           type="button"
-          className="graphiq-island-controls graphiq-icon-button"
+          className="graphiq-glass-button"
           aria-label="Delete element"
           data-testid="delete-element"
           onClick={(event) => {
@@ -47,7 +47,7 @@ export function NodeSelectionChrome({ id, selected }: NodeSelectionChromeProps) 
             void deleteElements([id]);
           }}
         >
-          <DeleteIcon />
+          <DeleteIcon /><span>Delete element</span>
         </button>
       </NodeToolbar>
     </>

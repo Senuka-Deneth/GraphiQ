@@ -22,7 +22,7 @@ export function ActionNode({ data }: NodeProps<ActionFlowNode>) {
 
   return (
     <div
-      className={`flex items-center justify-center rounded-2xl border border-slate-800 bg-white px-3 text-center text-sm text-slate-900 ${diagnosticClass}`}
+      className={`flex items-center justify-center ${data.kind === "objectNode" ? "rounded-none" : "rounded-2xl"} border border-slate-800 bg-white px-3 text-center text-sm text-slate-900 ${diagnosticClass}`}
       style={{ width: data.width, height: data.height }}
       data-testid={data.kind === "objectNode" ? "object-node" : "action-node"}
     >

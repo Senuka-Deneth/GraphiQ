@@ -29,7 +29,7 @@ export function measureSequenceNode(
     case "lifeline": {
       const notation = getElementNotation("lifeline");
       return {
-        width: notation.minWidth ?? 180,
+        width: Math.max(notation.minWidth ?? 180, `${element.name}: ${element.classifierName ?? ""}`.length * 8 + 32),
         height: notation.minHeight ?? 32,
       };
     }
@@ -97,14 +97,10 @@ function lifelineIndexById(model: UmlModel, overlay: NotationOverlay): Map<strin
     if (leftX !== rightX) {
       return leftX - rightX;
     }
-    return left.name.localeCompare(right.name);
+    return 0; // Stable sort retains the declaration order when no positions exist.
   });
 
   return new Map(sorted.map((lifeline, index) => [lifeline.id, index]));
-}
-
-function messageY(index: number): number {
-  return MESSAGE_Y_START + index * MESSAGE_Y_SPACING;
 }
 
 function layoutCombinedFragments(
@@ -158,7 +154,10 @@ function layoutCombinedFragments(
           ) + 24
         : minX + 240;
     const minY = Math.min(...messageYs) - 28;
-    const maxY = Math.max(...messageYs) + 28;
+    const maxY = Math.max(...messageIds.map(id => {
+      const message = model.relationships.find(r => r.id === id);
+      return (messageYById.get(id) ?? 0) + (message?.sourceId === message?.targetId ? 48 : 28);
+    }));
 
     nodes[element.id] = {
       id: element.id,
@@ -186,11 +185,14 @@ export async function layoutSequence(
 
   let maxMessageY = HEAD_Y;
 
+  const lifelineSpacing = Math.max(LIFELINE_SPACING,
+    ...lifelines.map(l => measureSequenceNode(l).width + 64),
+    ...model.relationships.map(r => (r.name?.length ?? 0) * 8 + 80));
   lifelines.forEach((lifeline) => {
     const measured = measureSequenceNode(lifeline);
     const existing = nodes[lifeline.id];
     const index = lifelineOrder.get(lifeline.id) ?? 0;
-    const defaultX = LIFELINE_START_X + index * LIFELINE_SPACING;
+    const defaultX = LIFELINE_START_X + index * lifelineSpacing;
 
     nodes[lifeline.id] = {
       id: lifeline.id,
@@ -205,14 +207,17 @@ export async function layoutSequence(
   });
 
   const messageYById = new Map<string, number>();
-  model.relationships.forEach((relationship, index) => {
+  let messageCursorY = MESSAGE_Y_START;
+  model.relationships.forEach((relationship) => {
     if (relationship.relationshipType !== "message") {
       return;
     }
 
-    const y = messageY(index);
+    const y = messageCursorY;
+    const selfCall = relationship.sourceId === relationship.targetId;
+    messageCursorY += MESSAGE_Y_SPACING + (selfCall ? 32 : 0);
     messageYById.set(relationship.id, y);
-    maxMessageY = Math.max(maxMessageY, y);
+    maxMessageY = Math.max(maxMessageY, y + (selfCall ? 28 : 0));
 
     const sourceNode = nodes[relationship.sourceId];
     const targetNode = nodes[relationship.targetId];

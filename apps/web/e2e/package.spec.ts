@@ -34,6 +34,7 @@ test("package document renders nested classifiers inside packages", async ({ pag
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(systemFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="package-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -50,6 +51,7 @@ test("merge cycle shows pkg.no-cycle-merge diagnostic and marks edges", async ({
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(mergeCycleFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText("pkg.no-cycle-merge", {
     timeout: 10_000,

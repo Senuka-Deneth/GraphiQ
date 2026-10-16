@@ -18,6 +18,7 @@ test("reload restores the last saved diagram and DSL", async ({ page }) => {
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(PERSIST_CLASS_DSL);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator(".react-flow__node")).toHaveCount(1, { timeout: 10_000 });
   await expect(page.locator('[data-testid="persist-state"][data-value="saved"]')).toBeAttached({

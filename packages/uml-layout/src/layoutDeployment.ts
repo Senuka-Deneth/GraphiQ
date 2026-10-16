@@ -5,7 +5,7 @@ import { layoutWithElk } from "./elk.js";
 import type { LayoutMode, NotationOverlay, OverlayEdge, OverlayNode } from "./overlay.js";
 
 const NODE_PADDING = 24;
-const NODE_HEADER_HEIGHT = 36;
+const NODE_HEADER_HEIGHT = 72;
 
 function isNodeish(element: UmlElement): boolean {
   return (
@@ -26,7 +26,7 @@ function isLayoutElement(element: UmlElement): boolean {
 
 export function measureDeploymentNode(element: UmlElement): Pick<OverlayNode, "width" | "height"> {
   if (isNodeish(element)) {
-    return { width: 240, height: 160 };
+    return { width: Math.max(240, element.name.length * 8 + 48), height: 160 };
   }
 
   if (element.elementType === "note") {
@@ -34,7 +34,7 @@ export function measureDeploymentNode(element: UmlElement): Pick<OverlayNode, "w
   }
 
   return {
-    width: CLASS_BOX.minWidth,
+    width: Math.max(CLASS_BOX.minWidth, element.name.length * 8 + 48),
     height: CLASS_BOX.minHeight,
   };
 }

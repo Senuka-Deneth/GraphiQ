@@ -28,13 +28,13 @@ export function measureCompositeStructureNode(
     case "component":
       return { width: 280, height: 200 };
     case "part":
-      return { width: PART_MIN_WIDTH, height: PART_MIN_HEIGHT };
+      return { width: Math.max(PART_MIN_WIDTH, `${element.name}: ${element.typeName} [${element.multiplicity ?? ""}]`.length * 8 + 32), height: PART_MIN_HEIGHT };
     case "port":
       return { width: PORT_SIZE, height: PORT_SIZE };
     case "note":
       return { width: 120, height: 60 };
     default:
-      return { width: CLASS_BOX.minWidth, height: CLASS_BOX.minHeight };
+      return { width: Math.max(CLASS_BOX.minWidth, element.name.length * 8 + 48), height: CLASS_BOX.minHeight };
   }
 }
 

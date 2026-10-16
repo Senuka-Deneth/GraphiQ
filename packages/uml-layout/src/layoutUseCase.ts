@@ -11,7 +11,7 @@ const SUBJECT_MIN_HEIGHT = 240;
 const ACTOR_NAME_HEIGHT = 20;
 const ACTOR_COLUMN_GAP = 48;
 const ACTOR_SUBJECT_GAP = 64;
-const USE_CASE_GRID_GAP = 16;
+const USE_CASE_GRID_GAP = 96;
 
 function isLayoutElement(element: UmlElement): boolean {
   return (
@@ -25,15 +25,15 @@ function isLayoutElement(element: UmlElement): boolean {
 export function measureUseCaseNode(element: UmlElement): Pick<OverlayNode, "width" | "height"> {
   switch (element.elementType) {
     case "actor":
-      return { width: 80, height: ACTOR.height + ACTOR_NAME_HEIGHT };
+      return { width: Math.max(80, element.name.length * 8 + 16), height: ACTOR.height + ACTOR_NAME_HEIGHT };
     case "useCase":
-      return { width: USE_CASE.minWidth, height: USE_CASE.minHeight };
+      return { width: Math.max(USE_CASE.minWidth, element.name.length * 8 + 64), height: USE_CASE.minHeight };
     case "subject":
       return { width: SUBJECT_MIN_WIDTH, height: SUBJECT_MIN_HEIGHT };
     case "note":
       return { width: 120, height: 60 };
     default:
-      return { width: USE_CASE.minWidth, height: USE_CASE.minHeight };
+      return { width: Math.max(USE_CASE.minWidth, element.name.length * 8 + 64), height: USE_CASE.minHeight };
   }
 }
 

@@ -25,16 +25,16 @@ export function ComponentNode({ data }: NodeProps<ComponentFlowNode>) {
       style={{ width: data.width, height: data.height }}
       data-testid="component-node"
     >
-      <div className="absolute top-2 -left-1.5 flex flex-col gap-0.5" aria-hidden="true">
-        <span className="h-2.5 w-3 rounded-[1px] border border-slate-700 bg-white" />
-        <span className="h-2.5 w-3 rounded-[1px] border border-slate-700 bg-white" />
-      </div>
+      <svg className="absolute top-2 right-2" width="18" height="22" viewBox="0 0 18 22" aria-hidden="true">
+        <rect x="5" y="1" width="12" height="20" fill="white" stroke="#334155" />
+        <path d="M1 5 H9 V9 H1 Z M1 13 H9 V17 H1 Z" fill="white" stroke="#334155" />
+      </svg>
       <Handle type="target" position={Position.Left} className="!bg-slate-500" />
       <Handle type="source" position={Position.Right} className="!bg-slate-500" />
       <Handle type="target" position={Position.Top} className="!bg-slate-500" />
       <Handle type="source" position={Position.Bottom} className="!bg-slate-500" />
       <div className="px-4 pt-2 text-center text-[11px] text-slate-600">«component»</div>
-      <div className="px-4 text-center text-sm font-semibold">{data.label}</div>
+      <div className="px-6 text-center text-sm font-semibold whitespace-nowrap">{data.label}</div>
     </div>
   );
 }

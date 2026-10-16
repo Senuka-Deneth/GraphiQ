@@ -26,6 +26,7 @@ test("deployment document nests artifacts inside device nodes with a solid commu
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(prodFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="deployment-canvas"]')).toBeVisible({
     timeout: 10_000,

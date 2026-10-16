@@ -29,6 +29,7 @@ test("activity document renders partitions and actions from the section 5.9 fixt
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(fulfillOrderFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="activity-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -48,6 +49,7 @@ test("incoming flow to initial shows act.initial-no-incoming", async ({ page }) 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(incomingInitialFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "act.initial-no-incoming",

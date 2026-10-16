@@ -56,7 +56,7 @@ export function InteractionUseNode({ data }: NodeProps<InteractionUseFlowNode>) 
       <span className="absolute left-2 top-0.5 text-[10px] font-medium leading-4 text-slate-700">
         ref
       </span>
-      <div className="flex h-full items-center justify-center px-2 pt-3">
+      <div className="relative flex h-full items-center justify-center px-2 pt-3">
         <span
           className="truncate text-sm text-slate-900"
           data-testid="interaction-use-name"

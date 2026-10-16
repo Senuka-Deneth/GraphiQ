@@ -30,6 +30,7 @@ test("sequence document renders lifelines and ordered messages from the section 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(checkoutFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="sequence-canvas"]')).toBeVisible({
     timeout: 10_000,
@@ -40,8 +41,8 @@ test("sequence document renders lifelines and ordered messages from the section 
   await expect(page.locator('[data-testid="sequence-message"]')).toHaveCount(4);
   await expect(page.locator('[data-testid="execution-spec"]')).toHaveCount(2);
 
-  const messageYs = await page.locator('[data-testid="sequence-message"] line').evaluateAll((lines) =>
-    lines.map((line) => Number(line.getAttribute("y1"))),
+  const messageYs = await page.locator('[data-testid="sequence-message"] path').evaluateAll((paths) =>
+    paths.map((path) => Number(path.getAttribute("d")?.split(" ")[2])),
   );
   expect(messageYs.length).toBe(4);
   for (let index = 1; index < messageYs.length; index += 1) {
@@ -64,6 +65,7 @@ test("unmatched reply shows sd.reply-matches-synch-call", async ({ page }) => {
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(unmatchedReplyFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     "sd.reply-matches-synch-call",

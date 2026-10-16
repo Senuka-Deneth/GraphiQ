@@ -21,7 +21,7 @@ export function measureProfileNode(element: UmlElement): Pick<OverlayNode, "widt
   }
 
   if (element.elementType === "profile") {
-    return { width: 240, height: 160 };
+    return { width: Math.max(240, element.name.length * 8 + 48), height: 160 };
   }
 
   const notation = getElementNotation(element.elementType);
@@ -39,7 +39,9 @@ export function measureProfileNode(element: UmlElement): Pick<OverlayNode, "widt
   );
 
   return {
-    width: CLASS_BOX.minWidth,
+    width: Math.max(CLASS_BOX.minWidth, element.name.length * 8 + 48,
+      ...(element.elementType === "stereotype" ? element.attributes.map(a => `${a.name}: ${a.typeName}`.length * 8 + 32) : []),
+      ...(element.elementType === "enumeration" ? element.literals.map(l => l.length * 8 + 32) : [])),
     height,
   };
 }

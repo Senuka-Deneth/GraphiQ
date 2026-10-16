@@ -21,7 +21,7 @@ function isLayoutElement(element: UmlElement): boolean {
 export function measurePackageNode(element: UmlElement): Pick<OverlayNode, "width" | "height"> {
   if (element.elementType === "package") {
     return {
-      width: 240,
+      width: Math.max(240, element.name.length * 8 + 48),
       height: 160,
     };
   }
@@ -39,7 +39,7 @@ export function measurePackageNode(element: UmlElement): Pick<OverlayNode, "widt
   }
 
   return {
-    width: CLASS_BOX.minWidth,
+    width: Math.max(CLASS_BOX.minWidth, element.name.length * 8 + 48),
     height: CLASS_BOX.minHeight,
   };
 }

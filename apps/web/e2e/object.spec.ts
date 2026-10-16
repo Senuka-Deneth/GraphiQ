@@ -20,6 +20,7 @@ test("object document renders underlined instance names from DSL", async ({ page
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(checkoutFixture);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="object-canvas"]')).toBeVisible({
     timeout: 10_000,

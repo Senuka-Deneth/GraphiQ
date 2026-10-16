@@ -16,7 +16,7 @@
   --graphiq-inset: 12px;
   /* Height of the DSL/diagnostics stack, top inset, and separation. Shared so
      the zoom island inside the canvas cannot drift away from it. */
-  --graphiq-right-stack-offset: 96px;
+  --graphiq-right-stack-offset: 168px;
 
   /* Opaque surfaces keep contrast stable over every diagram. */
   --graphiq-backdrop: #f6f6f5;
@@ -379,3 +379,47 @@ body { -webkit-font-smoothing: antialiased; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+/* Preserve generation controls and their expanding labels with solid surfaces. */
+.graphiq-glass-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 16px; border-radius: var(--graphiq-radius-control);
+  border: 1px solid var(--graphiq-hairline); background: #fff;
+  box-shadow: var(--graphiq-shadow); font-size: 13px; font-weight: 500;
+  color: var(--graphiq-label);
+}
+.graphiq-glass-button svg, .graphiq-icon-tile svg { flex-shrink: 0; }
+.graphiq-glass-button:hover:not(:disabled) { background: var(--graphiq-island-hover); }
+.graphiq-glass-primary, .graphiq-glass-button[aria-pressed="true"] {
+  background: var(--graphiq-accent); color: var(--graphiq-accent-ink);
+}
+.graphiq-glass-primary:hover:not(:disabled), .graphiq-glass-button[aria-pressed="true"]:hover {
+  background: #444;
+}
+.graphiq-expand-button { width: 44px; padding: 0 12px; gap: 0; overflow: hidden; justify-content: flex-start; }
+.graphiq-expand-button .graphiq-button-label {
+  white-space: nowrap; opacity: 0; max-width: 0; transform: translateX(6px);
+  transition: opacity 180ms ease, max-width 320ms ease, transform 320ms ease, margin 320ms ease;
+}
+.graphiq-expand-button:hover, .graphiq-expand-button:focus-visible { width: 164px; }
+.graphiq-expand-button:hover .graphiq-button-label, .graphiq-expand-button:focus-visible .graphiq-button-label {
+  opacity: 1; max-width: 125px; margin-left: 8px; transform: translateX(0);
+}
+.graphiq-icon-tile { min-height: 62px; height: auto; padding: 8px 4px; gap: 4px; flex-direction: column; border-radius: 12px; }
+.graphiq-icon-tile span { font-size: 11px; line-height: 14px; overflow-wrap: anywhere; text-align: center; }
+.graphiq-code-panel { width: min(380px, calc(100% - 80px)); }
+.graphiq-code-panel .graphiq-section-label { height: 36px; padding: 0 12px; }
+/* Panels occupy space so generated content remains visible beside the editor. */
+[data-testid="canvas-panel"] { transition: margin-right 240ms ease; }
+[data-testid="canvas-panel"]:has(~ [data-testid="dsl-editor-panel"][aria-hidden="false"]) { margin-right: 444px; }
+@media (max-width: 900px) {
+  [data-testid="canvas-panel"]:has(~ [data-testid="dsl-editor-panel"][aria-hidden="false"]) { margin-right: 0; }
+  [data-testid="stencil"].graphiq-sidebar { max-width: 190px; min-width: 190px !important; }
+}
+@media (hover: none) {
+  .graphiq-expand-button { width: 132px; }
+  .graphiq-expand-button .graphiq-button-label { opacity: 1; max-width: 100px; margin-left: 8px; transform: none; }
+  .graphiq-code-panel { right: 152px; width: min(380px, calc(100% - 164px)); }
+}
+
+[data-testid="edge-style-toolbar"] { flex-wrap: wrap; max-width: calc(100% - 100px); }
+

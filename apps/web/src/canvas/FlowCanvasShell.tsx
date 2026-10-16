@@ -1,15 +1,18 @@
+import { routeFlowEdges } from "./routeEdges.js";
 import {
   ReactFlow,
   applyEdgeChanges,
   applyNodeChanges,
   useConnection,
+  useReactFlow,
+  useNodesInitialized,
   type Edge,
   type Node,
   type NodeChange,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { FlowMarkerDefs } from "./class/MarkerDefs.js";
 import { extraStrokeColors } from "./class/markerPaint.js";
 import { UmlEdge, umlEdgeTypeName, type UmlEdgeData } from "./class/UmlEdge.js";
@@ -122,16 +125,30 @@ function ConnectionInProgressFlag() {
   return <span hidden data-connecting={inProgress ? "true" : "false"} />;
 }
 
+function FitGeneratedDiagram() {
+  const { fitView } = useReactFlow();
+  const ready = useNodesInitialized();
+  const generation = useDocumentStore(state => state.generationRevision);
+  const fittedGeneration = useRef(-1);
+  useEffect(() => {
+    if (!ready || generation === 0 || fittedGeneration.current === generation) return;
+    const timer = setTimeout(() => { fittedGeneration.current = generation; void fitView({ padding: .18, maxZoom: 1, duration: 0 }); }, 80);
+    return () => clearTimeout(timer);
+  }, [generation, ready, fitView]);
+  return null;
+}
+
 export function FlowCanvasShell({
   testId,
   nodes: modelNodes,
-  edges: modelEdges,
+  edges: inputEdges,
   nodeTypes,
   onSelectedNodeChange,
   onSelectedEdgeChange,
   onNodeDoubleClick,
   children,
 }: FlowCanvasShellProps) {
+  const modelEdges = useMemo(() => routeFlowEdges(modelNodes, inputEdges), [modelNodes, inputEdges]);
   const overlay = useDocumentStore((state) => state.document.overlay);
   const canvasMode = useCanvasMode();
   const previewViewport = usePreviewViewport();
@@ -174,9 +191,9 @@ export function FlowCanvasShell({
   const extraColors = useMemo(
     () =>
       extraStrokeColors(
-        modelEdges.map((edge) => {
+        modelEdges.flatMap((edge) => {
           const data = edge.data as UmlEdgeData | undefined;
-          return data?.strokeColor;
+          return [data?.strokeColor, data?.diagnosticSeverity === "error" ? "#dc2626" : data?.diagnosticSeverity === "warning" ? "#d97706" : undefined];
         }),
       ),
     [modelEdges],
@@ -251,6 +268,7 @@ export function FlowCanvasShell({
         {isPreview ? null : <ConnectionInProgressFlag />}
         {isPreview ? null : <GraphiqFlowBackground />}
         {isPreview ? null : <CanvasControls />}
+        {isPreview ? null : <FitGeneratedDiagram />}
       </ReactFlow>
       {children}
     </div>

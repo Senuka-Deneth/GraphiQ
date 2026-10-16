@@ -32,8 +32,9 @@ function VertexShape({ data }: { data: VertexNodeData }) {
           <circle cx="12" cy="12" r="6" fill={stroke} />
         </svg>
       );
-    case "choice":
     case "junction":
+      return <svg width={data.width} height={data.height} viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill={stroke} /></svg>;
+    case "choice":
       return (
         <svg width={data.width} height={data.height} viewBox="0 0 36 36" aria-hidden="true">
           <path d="M18 2 L34 18 L18 34 L2 18 Z" fill="white" stroke={stroke} strokeWidth="2" />
@@ -71,8 +72,9 @@ function VertexShape({ data }: { data: VertexNodeData }) {
           <path d="M6 6 L18 18 M18 6 L6 18" stroke={stroke} strokeWidth="2.5" />
         </svg>
       );
-    case "entryPoint":
     case "exitPoint":
+      return <svg width={data.width} height={data.height} viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="white" stroke={stroke} strokeWidth="2" /><path d="M5 5 L15 15 M15 5 L5 15" stroke={stroke} strokeWidth="1.5" /></svg>;
+    case "entryPoint":
       return (
         <svg width={data.width} height={data.height} viewBox="0 0 20 20" aria-hidden="true">
           <circle cx="10" cy="10" r="8" fill="white" stroke={stroke} strokeWidth="2" />

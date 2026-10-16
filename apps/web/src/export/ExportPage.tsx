@@ -191,12 +191,12 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
         <div className="flex min-w-0 items-center gap-1">
           <button
             type="button"
-            className="graphiq-icon-button"
+            className="graphiq-glass-button"
             aria-label="Back to editor"
             data-testid="export-back"
             onClick={onClose}
           >
-            <BackIcon />
+            <BackIcon /><span>Back</span>
           </button>
           <div className="flex min-w-0 items-center gap-1 px-2 text-[13px] text-[var(--graphiq-label)]">
             <span className="truncate max-sm:hidden text-[var(--graphiq-label-secondary)]">
@@ -266,25 +266,24 @@ export function ExportPage({ entry, onClose }: ExportPageProps) {
             </div>
           </div>
 
-          <div className="graphiq-island-controls absolute bottom-3 right-3 z-10 flex flex-col">
+          <div className="absolute bottom-3 right-3 z-10 flex flex-col gap-2">
             <button
               type="button"
-              className="graphiq-icon-button"
+              className="graphiq-glass-button"
               aria-label="Preview zoom in"
               data-testid="export-preview-zoom-in"
               onClick={() => setPreviewZoom((zoom) => Math.min(2, Number((zoom + 0.25).toFixed(2))))}
             >
-              <ZoomInIcon />
+              <ZoomInIcon /><span>Zoom in</span>
             </button>
-            <div className="h-px bg-[var(--graphiq-hairline)]" />
             <button
               type="button"
-              className="graphiq-icon-button"
+              className="graphiq-glass-button"
               aria-label="Preview zoom out"
               data-testid="export-preview-zoom-out"
               onClick={() => setPreviewZoom((zoom) => Math.max(0.5, Number((zoom - 0.25).toFixed(2))))}
             >
-              <ZoomOutIcon />
+              <ZoomOutIcon /><span>Zoom out</span>
             </button>
           </div>
         </section>

@@ -29,7 +29,7 @@ export function measureInteractionOverviewNode(
     case "interactionUse": {
       const notation = getElementNotation("interactionUse");
       return {
-        width: notation.minWidth ?? 160,
+        width: Math.max(notation.minWidth ?? 160, element.name.length * 8 + 48),
         height: notation.minHeight ?? 80,
       };
     }

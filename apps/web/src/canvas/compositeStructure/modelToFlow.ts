@@ -103,7 +103,7 @@ export function compositeStructureModelToFlow(
           diagnosticSeverity,
         },
         className,
-        ...parent,
+        ...(element.parentId ? { parentId: element.parentId, draggable: false } : {}),
       });
       continue;
     }

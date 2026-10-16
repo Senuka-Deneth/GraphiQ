@@ -13,7 +13,9 @@ import { KindCanvas } from "../canvas/KindCanvas.js";
 import {
   DiagnosticsIcon,
   DslIcon,
+  ImportIcon,
 } from "./icons.js";
+import { extractGraphiqDsl } from "../dsl-guide/extractGraphiqDsl.js";
 import { Stencil } from "./Stencil.js";
 
 const IMPLEMENTED_KINDS: readonly ImplementedDiagramKind[] = [
@@ -46,7 +48,6 @@ export function EditorShell({
   const diagnostics = useDocumentStore((state) => state.diagnostics);
   const relationshipTool = useDocumentStore((state) => state.relationshipTool);
   const setTitle = useDocumentStore((state) => state.setTitle);
-  const setDsl = useDocumentStore((state) => state.setDsl);
   const setDslEditorFocused = useDocumentStore((state) => state.setDslEditorFocused);
   const setRelationshipTool = useDocumentStore((state) => state.setRelationshipTool);
   const createDocument = useDocumentStore((state) => state.createDocument);
@@ -58,10 +59,20 @@ export function EditorShell({
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 640);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 760);
   const [dslOpen, setDslOpen] = useState(false);
+  const [draft, setDraft] = useState(dsl);
+  const [draftRevision, setDraftRevision] = useState(0);
+  const [fileName, setFileName] = useState<string | null>(null);
+  useEffect(() => {
+    setDraft(dsl);
+    setDraftRevision((revision) => revision + 1);
+  }, [dsl, dslRevision, documentId]);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [selectionRequest, setSelectionRequest] = useState<{ start: number; end: number; request: number } | null>(null);
+  useEffect(() => {
+    if (dslOpen && window.innerWidth < 760) setSidebarOpen(false);
+  }, [dslOpen]);
   const hadErrorRef = useRef(false);
   const editMemberTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -91,8 +102,11 @@ export function EditorShell({
       return;
     }
     const text = await file.text();
-    importDsl(text);
-    if (window.innerWidth < 640) setSidebarOpen(false);
+    setDraft(extractGraphiqDsl(text)?.dsl ?? text);
+    setDraftRevision((revision) => revision + 1);
+    setFileName(file.name);
+    setDslOpen(true);
+    if (window.innerWidth < 760) setSidebarOpen(false);
   };
 
   const errorCount = diagnostics.filter(
@@ -179,7 +193,7 @@ export function EditorShell({
         }}
       />
       <div className="relative min-h-0 min-w-0 flex-1">
-          <div ref={canvasPanelRef} className="h-full min-h-0" data-testid="canvas-panel">
+          <div ref={canvasPanelRef} className="relative h-full min-h-0" data-testid="canvas-panel">
             <KindCanvas
               key={documentId}
               kind={kind}
@@ -188,28 +202,30 @@ export function EditorShell({
               editMemberTriggerRef={editMemberTriggerRef}
               selectedNodeId={selectedNodeId}
             />
+            {selectedEdgeId !== null ? (
+              <EdgeStyleToolbar relationshipId={selectedEdgeId} diagramKind={kind} />
+            ) : null}
           </div>
 
-          {selectedEdgeId !== null ? (
-            <EdgeStyleToolbar relationshipId={selectedEdgeId} diagramKind={kind} />
-          ) : null}
-
-          <div className="graphiq-island-controls absolute right-3 top-3 z-30 flex flex-col">
+          <div className="graphiq-right-tools absolute right-3 top-3 z-30 flex flex-col items-end gap-2">
             <button
               type="button"
-              className="graphiq-icon-button"
+              className="graphiq-glass-button graphiq-expand-button"
               data-testid="dsl-panel-toggle"
               aria-expanded={dslOpen}
               aria-pressed={dslOpen}
               aria-label={dslOpen ? "Hide DSL" : "Show DSL"}
               onClick={() => setDslOpen((open) => !open)}
             >
-              <DslIcon />
+              <DslIcon /><span className="graphiq-button-label">{dslOpen ? "Hide code" : "Edit code"}</span>
             </button>
-            <div className="h-px bg-[var(--graphiq-hairline)]" />
+            <button type="button" className="graphiq-glass-button graphiq-expand-button"
+              aria-label="Upload code" onClick={handleImportDslClick}>
+              <ImportIcon /><span className="graphiq-button-label">Upload code</span>
+            </button>
             <button
               type="button"
-              className="graphiq-icon-button relative"
+              className="graphiq-glass-button graphiq-expand-button relative"
               data-testid="diagnostics-toggle"
               aria-expanded={diagnosticsOpen}
               aria-pressed={diagnosticsOpen}
@@ -222,7 +238,7 @@ export function EditorShell({
               }
               onClick={() => setDiagnosticsOpen((open) => !open)}
             >
-              <DiagnosticsIcon />
+              <DiagnosticsIcon /><span className="graphiq-button-label">Diagnostics</span>
               {errorCount > 0 ? (
                 <span
                   className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[var(--graphiq-error)]"
@@ -232,21 +248,35 @@ export function EditorShell({
             </button>
           </div>
 
+          <div id="graphiq-canvas-tools" className="absolute right-3 z-30 flex flex-col items-end gap-2" style={{ top: "var(--graphiq-right-stack-offset)" }} />
           <ChromePanel
             open={dslOpen}
             panelTestId="dsl-editor-panel"
-            title="DSL"
-            openClassName="bottom-3 right-[calc(var(--graphiq-inset)+38px)] top-3 w-90 max-w-[calc(100%-4rem)]"
+            title="Diagram code"
+            openClassName="graphiq-code-panel bottom-3 right-16 top-3"
           >
+            <div className="px-3 pb-2 text-xs text-[var(--graphiq-label-secondary)]" aria-live="polite">
+              {fileName ? `${fileName} · ` : ""}{draft !== dsl ? "Changes ready to submit" : "Edit or upload code, then submit to generate."}
+            </div>
             <DslEditor
-              value={dsl}
-              revision={dslRevision}
+              value={draft}
+              revision={draftRevision}
               diagnostics={diagnostics}
               selectionRequest={selectionRequest}
-              onChange={setDsl}
+              onChange={setDraft}
               onFocus={() => setDslEditorFocused(true)}
               onBlur={() => setDslEditorFocused(false)}
             />
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--graphiq-hairline)] p-3">
+              <button type="button" className="graphiq-glass-button" data-testid="clear-dsl"
+                onClick={() => { setDraft(""); setDraftRevision((revision) => revision + 1); setFileName(null); }}>
+                Clear code
+              </button>
+              <button type="button" className="graphiq-glass-button graphiq-glass-primary" data-testid="submit-dsl"
+                disabled={!draft.trim()} onClick={() => { importDsl(draft); setSelectedNodeId(null); setSelectedEdgeId(null); }}>
+                Submit
+              </button>
+            </div>
           </ChromePanel>
 
           <DiagnosticsList diagnostics={diagnostics} open={diagnosticsOpen} source={dsl}

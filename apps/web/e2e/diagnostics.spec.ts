@@ -31,6 +31,7 @@ test("illegal DSL relationship shows rule id and marks the edge", async ({ page 
   const editor = page.locator('[data-testid="dsl-editor"]');
   await editor.click();
   await editor.fill(ILLEGAL_GENERALIZATION_DSL);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator('[data-testid="diagnostics-list"]')).toContainText(
     /class\.gen\.same-metaclass|rules\.illegal-connector/,
@@ -52,10 +53,12 @@ test("parse error squiggles the line and keeps the last good canvas", async ({ p
 class Stable {
 }
 `);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator(".react-flow__node")).toHaveCount(1, { timeout: 10_000 });
 
   await editor.fill(BROKEN_TOKEN_DSL);
+  await page.getByTestId("submit-dsl").click();
 
   await expect(page.locator(".cm-lintRange-error, .cm-lintRange-warning")).toHaveCount(
     1,

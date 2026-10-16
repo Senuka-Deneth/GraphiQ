@@ -26,6 +26,7 @@ export function PortNode({ data }: NodeProps<PortFlowNode>) {
       data-testid="port-node"
       title={data.label}
     >
+      <span className="absolute left-5 top-0 whitespace-nowrap bg-white/90 text-[10px] text-slate-900">{data.label}</span>
       <Handle type="target" position={Position.Left} className="!bg-slate-500" />
       <Handle type="source" position={Position.Right} className="!bg-slate-500" />
     </div>

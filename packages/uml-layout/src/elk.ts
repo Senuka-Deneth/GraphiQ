@@ -6,6 +6,7 @@ export type ElkGraphInput = {
   id: string;
   layoutOptions?: Record<string, string>;
   children?: ElkGraphInput[];
+  ports?: { id: string; x: number; y: number; width: number; height: number; layoutOptions?: Record<string, string> }[];
   edges?: {
     id: string;
     sources: string[];
@@ -17,7 +18,7 @@ export type ElkGraphInput = {
   y?: number;
 };
 
-export type ElkGraphOutput = ElkGraphInput & {
+export type ElkGraphOutput = Omit<ElkGraphInput, "children" | "edges"> & {
   children?: ElkGraphOutput[];
   edges?: {
     id: string;

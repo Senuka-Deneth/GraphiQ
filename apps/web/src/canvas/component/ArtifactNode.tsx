@@ -25,10 +25,9 @@ export function ArtifactNode({ data }: NodeProps<ArtifactFlowNode>) {
       style={{ width: data.width, height: data.height }}
       data-testid="artifact-node"
     >
-      <div
-        className="absolute top-0 right-0 h-4 w-4 border-b border-l border-slate-700 bg-slate-100"
-        aria-hidden="true"
-      />
+      <svg className="absolute top-2 right-2" width="18" height="22" viewBox="0 0 18 22" aria-hidden="true">
+        <path d="M1 1 H11 L17 7 V21 H1 Z M11 1 V7 H17" fill="white" stroke="#334155" />
+      </svg>
       <Handle type="target" position={Position.Left} className="!bg-slate-500" />
       <Handle type="source" position={Position.Right} className="!bg-slate-500" />
       <div className="px-2 pt-3 text-center text-[11px] text-slate-600">«artifact»</div>
