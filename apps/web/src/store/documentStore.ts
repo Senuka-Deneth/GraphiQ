@@ -15,8 +15,8 @@ import {
   type UmlModel,
 } from "@graphiq/uml-model";
 import type { MessageSort, RelationshipType } from "@graphiq/uml-model";
-import { parse, replaceDiagramHeaderTitle } from "@graphiq/uml-dsl";
-import { compileDiagram, hasBlockingParseErrors, print, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
+import { isSequenceMarkup, parse, replaceDiagramHeaderTitle } from "@graphiq/uml-dsl";
+import { compileDiagram, hasBlockingParseErrors, print, printSequenceMarkup, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
@@ -502,6 +502,9 @@ function printDocumentDsl(
     document.title.trim().length > 0 && document.title !== defaultTitle
       ? document.title
       : undefined;
+  if (document.kind === "sequence" && isSequenceMarkup(document.dsl)) {
+    return printSequenceMarkup(model, { name: title });
+  }
   return print(document.kind, model, { name: title, source: source ?? undefined });
 }
 
@@ -806,6 +809,45 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
       const extracted = extractGraphiqDsl(text);
       if (extracted === null) {
+        if (isSequenceMarkup(text)) {
+          const compiled = compileDiagram("sequence", text);
+          if (
+            compiled.model === undefined ||
+            compiled.ast === undefined ||
+            hasBlockingParseErrors(compiled.diagnostics)
+          ) {
+            set({
+              diagnostics: compiled.diagnostics,
+              parseTimer: null,
+            });
+            return;
+          }
+          const normalized = printSequenceMarkup(compiled.model, {
+            name: compiled.ast.kind === "sequence" ? compiled.ast.name : undefined,
+          });
+          const { document } = get();
+          const kindChanged = document.kind !== "sequence";
+          const nextDocument = kindChanged
+            ? createDocumentForKind("sequence", normalized)
+            : { ...document, dsl: normalized };
+          set((state) => ({
+            document: nextDocument,
+            diagnostics: [],
+            lastGoodModel: emptyModel("sequence"),
+            lastGoodOverlay: emptyOverlay(),
+            lastParseSource: null,
+            dslRevision: state.dslRevision + 1,
+            parseTimer: null,
+            relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND.sequence,
+          }));
+          if (kindChanged) {
+            void import("../persist/initDocumentPersistence.js").then(({ persistNewDocument }) =>
+              persistNewDocument(nextDocument),
+            );
+          }
+          void get().runParse();
+          return;
+        }
         set({
           diagnostics: [
             {

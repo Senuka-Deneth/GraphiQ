@@ -3,9 +3,12 @@ import {
   KIND_MISMATCH_RULE_ID,
   PARSE_RULE_ID,
   PARSER_FAILURE_RULE_ID,
+  isSequenceMarkup,
   parse,
+  parseSequenceMarkup,
   type DiagramAst,
   type DslComment,
+  type SequenceDiagramAst,
 } from "@graphiq/uml-dsl";
 import type { UmlModel } from "@graphiq/uml-model";
 import { astToModel } from "./astToModel.js";
@@ -13,6 +16,7 @@ import {
   createBuildContext,
   type CompilationSourceMap,
 } from "./identity.js";
+import { sequenceMarkupToModel } from "./sequenceMarkupToModel.js";
 
 export type CompilationResult = {
   model?: UmlModel;
@@ -29,6 +33,10 @@ export function compileDiagram(
   text: string,
   previous?: UmlModel,
 ): CompilationResult {
+  if (kind === "sequence" && isSequenceMarkup(text)) {
+    return compileSequenceMarkup(text, previous);
+  }
+
   const parsed = parse(kind, text);
   if (!parsed.ok) {
     return {
@@ -67,6 +75,27 @@ export function compileDiagram(
     comments: parsed.value.comments,
     diagnostics: [...parsed.value.diagnostics, ...context.identity.diagnostics],
     sourceMap: context.identity.sourceMap,
+  };
+}
+
+function compileSequenceMarkup(text: string, previous?: UmlModel): CompilationResult {
+  const parsed = parseSequenceMarkup(text);
+  const built = sequenceMarkupToModel(parsed.document, previous, parsed.diagnostics);
+  const ast: SequenceDiagramAst = {
+    kind: "sequence",
+    ...(parsed.document.title !== undefined ? { name: parsed.document.title } : {}),
+    lifelines: [],
+    combinedFragments: [],
+    messages: [],
+    interactions: [],
+    span: parsed.document.span,
+  };
+  return {
+    model: built.model,
+    ast,
+    comments: [],
+    diagnostics: built.diagnostics,
+    sourceMap: built.sourceMap,
   };
 }
 

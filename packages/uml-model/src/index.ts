@@ -24,6 +24,7 @@ export type {
   DataTypeElement,
   ExecutionSpecificationElement,
   LifelineElement,
+  LifelineHead,
   EnumerationElement,
   InstanceSpecificationElement,
   InterfaceElement,

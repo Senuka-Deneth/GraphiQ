@@ -1,6 +1,6 @@
+import { sequenceLifelineHeadHeight, type NotationOverlay } from "@graphiq/uml-layout";
 import { getElementNotation, getMessageNotation } from "@graphiq/uml-notation";
-import type { CombinedFragmentElement, UmlModel } from "@graphiq/uml-model";
-import type { NotationOverlay } from "@graphiq/uml-layout";
+import type { CombinedFragmentElement, LifelineHead, UmlModel } from "@graphiq/uml-model";
 import type { Diagnostic } from "@graphiq/uml-core";
 import { dashStrokeStyle } from "../class/ClassNode.js";
 
@@ -17,6 +17,9 @@ export type SequenceLifelineRender = {
   id: string;
   name: string;
   classifierName?: string;
+  head?: LifelineHead;
+  stereotype?: string;
+  headHeight: number;
   x: number;
   y: number;
   width: number;
@@ -90,6 +93,9 @@ export function sequenceModelToSvg(
         id: element.id,
         name: element.name,
         classifierName: element.classifierName,
+        head: element.head,
+        stereotype: element.stereotype,
+        headHeight: sequenceLifelineHeadHeight(element),
         x: node.x,
         y: node.y,
         width: node.width,

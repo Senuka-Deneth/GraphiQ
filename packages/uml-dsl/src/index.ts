@@ -96,3 +96,18 @@ export {
 } from "./diagramTitle.js";
 export { parse } from "./parse.js";
 export type { ParseFailure, ParseSuccess } from "./parse.js";
+export { isSequenceMarkup, parseSequenceMarkup } from "./sequenceMarkup/parseSequenceMarkup.js";
+export type { SequenceMarkupParseResult } from "./sequenceMarkup/parseSequenceMarkup.js";
+export { SEQUENCE_MARKUP_RULE_ID } from "./sequenceMarkup/types.js";
+export type {
+  SequenceMarkupActivation,
+  SequenceMarkupDocument,
+  SequenceMarkupGroup,
+  SequenceMarkupGroupOperator,
+  SequenceMarkupItem,
+  SequenceMarkupMessage,
+  SequenceMarkupMessageSort,
+  SequenceMarkupNote,
+  SequenceMarkupParticipant,
+  SequenceMarkupParticipantKind,
+} from "./sequenceMarkup/types.js";

@@ -53,6 +53,36 @@ initial --> final`;
     expect(document.dsl).toBe(activityDsl);
   });
 
+  it("imports sequence markup into a sequence document", async () => {
+    useDocumentStore.getState().importDsl(`@startuml
+title Checkout
+actor Customer
+participant Shop
+Customer -> Shop : placeOrder()
+alt in stock
+  Shop -> Shop : pack
+end
+@enduml`);
+    await useDocumentStore.getState().runParse();
+
+    const { document, diagnostics } = useDocumentStore.getState();
+    expect(diagnostics.some((diagnostic) => diagnostic.severity === "error")).toBe(false);
+    expect(document.kind).toBe("sequence");
+    expect(document.title).toBe("Checkout");
+    expect(document.dsl.startsWith("@startuml")).toBe(true);
+    expect(document.dsl).toContain("actor Customer");
+    expect(
+      document.model.elements.some(
+        (element) => element.elementType === "lifeline" && element.name === "Customer" && element.head === "actor",
+      ),
+    ).toBe(true);
+    expect(
+      document.model.elements.some(
+        (element) => element.elementType === "combinedFragment" && element.operator === "alt",
+      ),
+    ).toBe(true);
+  });
+
   it("does not mutate the model when Mermaid text is imported", async () => {
     useDocumentStore.getState().importDsl(MERMAID_TEXT);
 

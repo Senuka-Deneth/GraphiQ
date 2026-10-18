@@ -35,6 +35,8 @@ describe("EditorShell", () => {
     expect(sidebar).toContainElement(screen.getByLabelText("Diagram title"));
 
     expect(screen.getByLabelText("Show DSL")).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByTestId("download-diagram-code")).toHaveAttribute("aria-label", "Download code");
+    expect(screen.getByTestId("import-dsl-input")).toHaveAttribute("accept", expect.stringContaining(".puml"));
     expect(screen.getByLabelText("Show diagnostics")).toHaveAttribute(
       "aria-expanded",
       "false",

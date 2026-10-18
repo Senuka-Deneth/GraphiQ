@@ -1,0 +1,109 @@
+@startuml
+title DevInsight AI - Daily data collection, rating and notification
+actor Developer
+participant "Claude Code + Collector (dev PC)" as PC
+participant "Jira Cloud" as Jira
+participant "GitHub" as GH
+participant "Spring Boot Backend" as API
+database "PostgreSQL" as DB
+participant "FastAPI ML Service" as ML
+participant "Notification Service" as NS
+actor HR
+
+Developer -> PC : devinsight-task KEY (tag Claude session)
+activate PC
+PC --> Developer : "Task KEY linked" (prompt blocked, no cost)
+loop every hour while the developer works
+  PC ->> API : upload event batch (metadata only)
+  activate API
+  API -> DB : store allowlisted events
+  API -->> PC : accepted record ids
+  deactivate API
+end
+PC ->> API : device_day_complete (day closed 00:00 Colombo)
+deactivate PC
+
+note over API : 06:00 Colombo - daily poll job
+activate API
+par poll both sources
+  API -> Jira : GET issues, changelogs, worklogs updated since cursor - overlap
+  activate Jira
+  Jira --> API : changed records
+  deactivate Jira
+  API -> GH : GET PRs, reviews, CI runs updated since cursor - overlap
+  activate GH
+  GH --> API : changed records
+  deactivate GH
+end
+alt a poll failed
+  API -> API : retry later; next poll catches up (cursor overlap)
+else poll succeeded
+  API -> DB : save poll_finished_at, advance cursor
+end
+API -> API : drop every non-allowlisted field
+alt identity unmapped, HR or non-rated
+  API -> DB : save to ingest_quarantine (not activity)
+else identity mapped to a rated developer
+  API -> DB : save allowlisted records (new revision if changed)
+end
+
+note over API : 06:30 Colombo - daily snapshot
+alt all inputs arrived by 07:30
+  API -> DB : load point-in-time feature snapshot
+else inputs still missing at 07:30
+  API -> DB : load snapshot, mark provisional (source delayed)
+end
+activate DB
+DB --> API : feature snapshot
+deactivate DB
+alt [freeze day] Jira or GitHub gap still open
+  API -> DB : save result data_incomplete (missing_uploads)
+else not enough evidence (fewer than 8 finished tasks or 5 non-leave workdays)
+  API -> DB : save insufficient_data + reason codes (no score)
+  opt reason is few_finished_tasks
+    API -> DB : set hr_attention (HR queue)
+  end
+else enough evidence
+  par scoring and baseline
+    API -> ML : POST /score (short-term and long-term)
+    activate ML
+    ML --> API : ML ratings + factor contributions
+    API -> ML : POST /rate (rule baseline drs-0.2)
+    ML --> API : rule baseline score
+    deactivate ML
+  end
+  opt gap between ML and rule is 1 star or more
+    API -> DB : add model_rules_disagree_review (HR review)
+  end
+  API -> API : build explanation from templates
+  API -> API : run detectors S1, S2, S3 (flags only)
+  alt freeze day (sprint close + 2 workdays)
+    API -> DB : save frozen official sprint rating (open tasks: carried over N)
+  else normal day
+    API -> DB : save daily 14-day provisional value + range
+  end
+end
+opt freeze day
+  API ->> NS : sprint_rating_published
+  activate NS
+  par notify both
+    NS ->> Developer : official rating (or reason) ready
+    NS ->> HR : official rating ready for review
+  end
+  deactivate NS
+end
+deactivate API
+
+HR -> API : open dashboard
+activate API
+API -> DB : read ratings, trend, flags, evidence
+activate DB
+DB --> API : stored results
+deactivate DB
+API --> HR : dashboard (ratings, trend graph, flags, explanation)
+HR -> API : record decision (good or bad)
+API -> DB : save audited HR decision
+API --> HR : decision saved
+deactivate API
+note over HR : The rating supports HR. HR decides.
+@enduml

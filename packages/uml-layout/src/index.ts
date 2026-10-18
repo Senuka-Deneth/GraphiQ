@@ -26,6 +26,9 @@ export {
   createSequenceFixtureModel,
   layoutSequence,
   measureSequenceNode,
+  sequenceLifelineCaption,
+  sequenceLifelineHeadHeight,
+  wrapSequenceLabel,
 } from "./layoutSequence.js";
 export {
   createTimingFixtureModel,

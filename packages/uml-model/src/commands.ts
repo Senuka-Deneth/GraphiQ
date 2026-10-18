@@ -105,6 +105,8 @@ function createElement(spec: NewUmlElement): UmlElement {
         parentId: spec.parentId,
         operator: spec.operator,
         operands: spec.operands ?? [],
+        ...(spec.interactionIndex !== undefined ? { interactionIndex: spec.interactionIndex } : {}),
+        ...(spec.hostOperandIndex !== undefined ? { hostOperandIndex: spec.hostOperandIndex } : {}),
       };
     case "lifeline":
       return {
@@ -112,7 +114,9 @@ function createElement(spec: NewUmlElement): UmlElement {
         elementType: "lifeline",
         name: spec.name,
         parentId: spec.parentId,
-        classifierName: spec.classifierName,
+        ...(spec.classifierName !== undefined ? { classifierName: spec.classifierName } : {}),
+        ...(spec.head !== undefined ? { head: spec.head } : {}),
+        ...(spec.stereotype !== undefined ? { stereotype: spec.stereotype } : {}),
       };
     case "executionSpecification":
       return {
