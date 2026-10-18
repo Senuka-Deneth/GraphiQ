@@ -31,6 +31,7 @@ export { printStateMachine, structuralStateMachineModel } from "./printStateMach
 export { sequenceAstToModel, synthesizeSequenceExecutionSpecs } from "./sequenceAstToModel.js";
 export { sequenceMarkupToModel } from "./sequenceMarkupToModel.js";
 export { formatMarkupName, printSequenceMarkup } from "./printSequenceMarkup.js";
+export { printPlantUml } from "./printPlantUml.js";
 export { timingAstToModel } from "./timingAstToModel.js";
 export { printSequence, structuralSequenceModel } from "./printSequence.js";
 export { printTiming, structuralTimingModel } from "./printTiming.js";
