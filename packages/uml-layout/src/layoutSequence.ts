@@ -1,6 +1,49 @@
 import { getElementNotation } from "@graphiq/uml-notation";
-import type { UmlElement, UmlModel } from "@graphiq/uml-model";
+import type { CombinedFragmentElement, LifelineElement, UmlElement, UmlModel } from "@graphiq/uml-model";
 import type { LayoutMode, NotationOverlay, OverlayEdge, OverlayNode } from "./overlay.js";
+
+const LABEL_MAX_CHARS = 22;
+
+export function sequenceLifelineCaption(element: Pick<LifelineElement, "name" | "classifierName">): string {
+  return element.classifierName !== undefined && element.classifierName.length > 0
+    ? `${element.name}: ${element.classifierName}`
+    : element.name;
+}
+
+export function wrapSequenceLabel(text: string, maxChars = LABEL_MAX_CHARS): string[] {
+  const words = text.split(/\s+/).filter((word) => word.length > 0);
+  if (words.length === 0) {
+    return [""];
+  }
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (current.length === 0) {
+      current = word;
+      continue;
+    }
+    if (`${current} ${word}`.length <= maxChars) {
+      current = `${current} ${word}`;
+      continue;
+    }
+    lines.push(current);
+    current = word;
+  }
+  lines.push(current);
+  return lines;
+}
+
+export function sequenceLifelineHeadHeight(
+  element: Pick<LifelineElement, "name" | "classifierName" | "head" | "stereotype">,
+): number {
+  const lines = wrapSequenceLabel(sequenceLifelineCaption(element));
+  const text = lines.length * 16;
+  if (element.head === "actor") {
+    return 56 + text;
+  }
+  const stereotype = element.stereotype !== undefined && element.stereotype.length > 0 ? 16 : 0;
+  return 16 + stereotype + text;
+}
 
 const LIFELINE_SPACING = 200;
 const LIFELINE_START_X = 100;
@@ -28,9 +71,17 @@ export function measureSequenceNode(
   switch (element.elementType) {
     case "lifeline": {
       const notation = getElementNotation("lifeline");
+      const lines = wrapSequenceLabel(sequenceLifelineCaption(element));
+      const stereotype = element.stereotype ?? "";
+      const longest = Math.max(
+        ...lines.map((line) => line.length),
+        stereotype.length > 0 ? stereotype.length + 2 : 0,
+        1,
+      );
+      const minWidth = element.head === "actor" ? 72 : notation.minWidth ?? 180;
       return {
-        width: Math.max(notation.minWidth ?? 180, `${element.name}: ${element.classifierName ?? ""}`.length * 8 + 32),
-        height: notation.minHeight ?? 32,
+        width: Math.max(minWidth, longest * 8 + 32),
+        height: sequenceLifelineHeadHeight(element),
       };
     }
     case "executionSpecification": {
@@ -51,7 +102,12 @@ export function measureSequenceNode(
       return { width: 20, height: 20 };
     case "note": {
       const notation = getElementNotation("note");
-      return { width: notation.minWidth ?? 120, height: notation.minHeight ?? 60 };
+      const lines = element.name.split("\n").flatMap((line) => wrapSequenceLabel(line));
+      const longest = Math.max(8, ...lines.map((line) => line.length));
+      return {
+        width: Math.max(notation.minWidth ?? 120, longest * 7 + 24),
+        height: Math.max(notation.minHeight ?? 36, lines.length * 16 + 16),
+      };
     }
     default:
       return { width: 120, height: 48 };
@@ -187,7 +243,10 @@ export async function layoutSequence(
 
   const lifelineSpacing = Math.max(LIFELINE_SPACING,
     ...lifelines.map(l => measureSequenceNode(l).width + 64),
-    ...model.relationships.map(r => (r.name?.length ?? 0) * 8 + 80));
+    ...model.relationships.map((relationship) =>
+      Math.min((relationship.name?.length ?? 0) * 8 + 80, LIFELINE_SPACING),
+    ),
+  );
   lifelines.forEach((lifeline) => {
     const measured = measureSequenceNode(lifeline);
     const existing = nodes[lifeline.id];
@@ -207,15 +266,17 @@ export async function layoutSequence(
   });
 
   const messageYById = new Map<string, number>();
-  let messageCursorY = MESSAGE_Y_START;
-  model.relationships.forEach((relationship) => {
-    if (relationship.relationshipType !== "message") {
-      return;
-    }
+  const headBottom = Math.max(
+    HEAD_Y + 32,
+    ...lifelines.map((lifeline) => HEAD_Y + sequenceLifelineHeadHeight(lifeline)),
+  );
+  let messageCursorY = Math.max(MESSAGE_Y_START, headBottom + 28);
 
+  const placeMessage = (relationship: Extract<UmlModel["relationships"][number], { relationshipType: "message" }>) => {
     const y = messageCursorY;
     const selfCall = relationship.sourceId === relationship.targetId;
-    messageCursorY += MESSAGE_Y_SPACING + (selfCall ? 32 : 0);
+    const labelLines = relationship.name !== undefined ? wrapSequenceLabel(relationship.name, 32).length : 1;
+    messageCursorY += MESSAGE_Y_SPACING + Math.max(0, labelLines - 1) * 14 + (selfCall ? 32 : 0);
     messageYById.set(relationship.id, y);
     maxMessageY = Math.max(maxMessageY, y + (selfCall ? 28 : 0));
 
@@ -241,7 +302,87 @@ export async function layoutSequence(
         y: Math.max(targetNode.y, y - targetNode.height / 2),
       };
     }
-  });
+  };
+
+  const placeTimelineNote = (element: UmlElement) => {
+    if (element.elementType !== "note") {
+      return;
+    }
+    const measured = measureSequenceNode(element);
+    const lifelineNodes = (element.noteLifelineIds ?? [])
+      .map((id) => nodes[id])
+      .filter((node): node is OverlayNode => node !== undefined);
+    let x = LIFELINE_START_X;
+    let width = measured.width;
+    const placement = element.notePlacement ?? "over";
+    if (lifelineNodes.length > 0) {
+      const left = Math.min(...lifelineNodes.map((node) => node.x));
+      const right = Math.max(...lifelineNodes.map((node) => node.x + node.width));
+      const first = lifelineNodes[0];
+      if (placement === "left") {
+        x = left - measured.width - 16;
+      } else if (placement === "right") {
+        x = right + 16;
+      } else if (lifelineNodes.length === 1 && first !== undefined) {
+        x = first.x + first.width / 2 - measured.width / 2;
+      } else {
+        x = left;
+        width = Math.max(measured.width, right - left);
+      }
+    }
+    nodes[element.id] = {
+      id: element.id,
+      x,
+      y: messageCursorY,
+      width,
+      height: measured.height,
+    };
+    maxMessageY = Math.max(maxMessageY, messageCursorY + measured.height);
+    messageCursorY += measured.height + 16;
+  };
+
+  const indexedNotes = model.elements.filter(
+    (element) => element.elementType === "note" && element.interactionIndex !== undefined,
+  );
+  if (indexedNotes.length === 0) {
+    for (const relationship of model.relationships) {
+      if (relationship.relationshipType !== "message") {
+        continue;
+      }
+      placeMessage(relationship);
+    }
+  } else {
+    type TimelineEvent =
+      | { index: number; kind: "message"; relationship: Extract<UmlModel["relationships"][number], { relationshipType: "message" }> }
+      | { index: number; kind: "note"; element: UmlElement };
+    const events: TimelineEvent[] = [];
+    let fallback = 0;
+    for (const relationship of model.relationships) {
+      if (relationship.relationshipType !== "message") {
+        continue;
+      }
+      events.push({
+        index: relationship.interactionIndex ?? fallback,
+        kind: "message",
+        relationship,
+      });
+      fallback += 1;
+    }
+    for (const note of indexedNotes) {
+      if (note.interactionIndex === undefined) {
+        continue;
+      }
+      events.push({ index: note.interactionIndex, kind: "note", element: note });
+    }
+    events.sort((left, right) => left.index - right.index);
+    for (const event of events) {
+      if (event.kind === "note") {
+        placeTimelineNote(event.element);
+        continue;
+      }
+      placeMessage(event.relationship);
+    }
+  }
 
   for (const element of model.elements) {
     if (element.elementType !== "executionSpecification") {
@@ -305,13 +446,90 @@ export async function layoutSequence(
     };
   }
 
-  const fragmentNodes = layoutCombinedFragments(model, { ...pruned, nodes, edges }, messageYById);
+  const fragmentNodes = encloseSequenceFrames(
+    model,
+    layoutCombinedFragments(model, { ...pruned, nodes, edges }, messageYById),
+  );
+  let contentBottom = maxMessageY;
+  for (const node of Object.values(fragmentNodes)) {
+    contentBottom = Math.max(contentBottom, node.y + node.height);
+  }
+  for (const lifeline of lifelines) {
+    const node = fragmentNodes[lifeline.id];
+    if (node === undefined) {
+      continue;
+    }
+    fragmentNodes[lifeline.id] = {
+      ...node,
+      height: Math.max(node.height, contentBottom - node.y + LIFELINE_PADDING_BOTTOM),
+    };
+  }
 
   return {
     ...pruned,
     nodes: fragmentNodes,
     edges,
   };
+}
+
+function encloseSequenceFrames(
+  model: UmlModel,
+  nodes: Record<string, OverlayNode>,
+): Record<string, OverlayNode> {
+  const next = { ...nodes };
+  const fragments = model.elements.filter(
+    (element): element is CombinedFragmentElement => element.elementType === "combinedFragment",
+  );
+  const messageIdsOf = (fragment: CombinedFragmentElement) =>
+    fragment.operands.flatMap((operand) => operand.messageIds);
+
+  const grow = (id: string, box: OverlayNode, pad: number) => {
+    const node = next[id];
+    if (node === undefined) {
+      return;
+    }
+    const x = Math.min(node.x, box.x - pad);
+    const y = Math.min(node.y, box.y - pad);
+    const right = Math.max(node.x + node.width, box.x + box.width + pad);
+    const bottom = Math.max(node.y + node.height, box.y + box.height + pad);
+    next[id] = { ...node, x, y, width: right - x, height: bottom - y };
+  };
+
+  for (const note of model.elements) {
+    if (note.elementType !== "note" || note.noteHostFragmentId === undefined) {
+      continue;
+    }
+    const box = next[note.id];
+    if (box !== undefined) {
+      grow(note.noteHostFragmentId, box, 12);
+    }
+  }
+
+  const ordered = [...fragments].sort(
+    (left, right) => messageIdsOf(left).length - messageIdsOf(right).length,
+  );
+  for (const inner of ordered) {
+    const innerIds = messageIdsOf(inner);
+    const innerNode = next[inner.id];
+    if (innerIds.length === 0 || innerNode === undefined) {
+      continue;
+    }
+    for (const outer of fragments) {
+      if (outer.id === inner.id) {
+        continue;
+      }
+      const outerIds = messageIdsOf(outer);
+      if (outerIds.length <= innerIds.length) {
+        continue;
+      }
+      if (!innerIds.every((id) => outerIds.includes(id))) {
+        continue;
+      }
+      grow(outer.id, innerNode, 18);
+    }
+  }
+
+  return next;
 }
 
 export function createSequenceFixtureModel(): UmlModel {

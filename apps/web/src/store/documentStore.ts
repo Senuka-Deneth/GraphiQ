@@ -15,8 +15,8 @@ import {
   type UmlModel,
 } from "@graphiq/uml-model";
 import type { MessageSort, RelationshipType } from "@graphiq/uml-model";
-import { parse, replaceDiagramHeaderTitle } from "@graphiq/uml-dsl";
-import { compileDiagram, hasBlockingParseErrors, print, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
+import { detectMarkupKind, parse, replaceDiagramHeaderTitle } from "@graphiq/uml-dsl";
+import { compileDiagram, hasBlockingParseErrors, print, printPlantUml, printSequenceMarkup, synthesizeSequenceExecutionSpecs, type PrintSource } from "@graphiq/uml-print";
 import { isConnectorAllowed, validate } from "@graphiq/uml-rules";
 import type { Result } from "@graphiq/uml-core";
 import { create } from "zustand";
@@ -502,6 +502,12 @@ function printDocumentDsl(
     document.title.trim().length > 0 && document.title !== defaultTitle
       ? document.title
       : undefined;
+  if (detectMarkupKind(document.dsl) === document.kind) {
+    if (document.kind === "sequence") {
+      return printSequenceMarkup(model, { name: title });
+    }
+    return printPlantUml(document.kind, model, { name: title });
+  }
   return print(document.kind, model, { name: title, source: source ?? undefined });
 }
 
@@ -806,6 +812,48 @@ export const useDocumentStore = create<DocumentStoreState>((set, get) => {
 
       const extracted = extractGraphiqDsl(text);
       if (extracted === null) {
+        const markupKind = detectMarkupKind(text);
+        if (markupKind !== null && isImplementedDiagramKind(markupKind)) {
+          const compiled = compileDiagram(markupKind, text);
+          if (
+            compiled.model === undefined ||
+            compiled.ast === undefined ||
+            hasBlockingParseErrors(compiled.diagnostics)
+          ) {
+            set({
+              diagnostics: compiled.diagnostics,
+              parseTimer: null,
+            });
+            return;
+          }
+          const markupName = compiled.ast.name;
+          const normalized =
+            markupKind === "sequence"
+              ? printSequenceMarkup(compiled.model, { name: markupName })
+              : printPlantUml(markupKind, compiled.model, { name: markupName });
+          const { document } = get();
+          const kindChanged = document.kind !== markupKind;
+          const nextDocument = kindChanged
+            ? createDocumentForKind(markupKind, normalized)
+            : { ...document, dsl: normalized };
+          set((state) => ({
+            document: nextDocument,
+            diagnostics: [],
+            lastGoodModel: emptyModel(markupKind),
+            lastGoodOverlay: emptyOverlay(),
+            lastParseSource: null,
+            dslRevision: state.dslRevision + 1,
+            parseTimer: null,
+            relationshipTool: DEFAULT_RELATIONSHIP_TOOL_BY_KIND[markupKind],
+          }));
+          if (kindChanged) {
+            void import("../persist/initDocumentPersistence.js").then(({ persistNewDocument }) =>
+              persistNewDocument(nextDocument),
+            );
+          }
+          void get().runParse();
+          return;
+        }
         set({
           diagnostics: [
             {

@@ -11,6 +11,11 @@ type NamedElementBase = {
   id: string;
   name: string;
   parentId?: string;
+  interactionIndex?: number;
+  notePlacement?: "left" | "right" | "over";
+  noteLifelineIds?: string[];
+  noteHostFragmentId?: string;
+  noteHostOperandIndex?: number;
 };
 
 type ClassifierElementBase = NamedElementBase & {
@@ -66,11 +71,16 @@ export type CombinedFragmentElement = NamedElementBase & {
   operator: CombinedFragmentOperator;
   operands: CombinedFragmentOperand[];
   interactionIndex?: number;
+  hostOperandIndex?: number;
 };
+
+export type LifelineHead = "rectangle" | "actor";
 
 export type LifelineElement = NamedElementBase & {
   elementType: "lifeline";
   classifierName?: string;
+  head?: LifelineHead;
+  stereotype?: string;
 };
 
 export type ExecutionSpecificationElement = NamedElementBase & {
@@ -178,8 +188,8 @@ export type NewUmlElement =
   | WithOptional<Omit<EnumerationElement, "id">, "literals">
   | WithOptional<Omit<InstanceSpecificationElement, "id">, "slots">
   | Omit<PseudostateElement, "id">
-  | WithOptional<Omit<CombinedFragmentElement, "id">, "operands">
-  | WithOptional<Omit<LifelineElement, "id">, "classifierName">
+  | WithOptional<Omit<CombinedFragmentElement, "id">, "operands" | "interactionIndex" | "hostOperandIndex">
+  | WithOptional<Omit<LifelineElement, "id">, "classifierName" | "head" | "stereotype">
   | WithOptional<
       Omit<ExecutionSpecificationElement, "id">,
       "startMessageId" | "finishMessageId"

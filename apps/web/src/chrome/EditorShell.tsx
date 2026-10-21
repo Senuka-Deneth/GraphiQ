@@ -8,10 +8,13 @@ import { DiagnosticsList } from "./DiagnosticsList.js";
 import { DslEditor } from "./DslEditor.js";
 import { EdgeStyleToolbar } from "./EdgeStyleToolbar.js";
 import { confirmAndDownloadDslGuide } from "../dsl-guide/downloadDslGuide.js";
+import { diagramCodeFilename } from "../export/diagramCodeFilename.js";
+import { downloadText } from "../export/downloadExport.js";
 import type { ExportEntryState } from "../export/exportSettings.js";
 import { KindCanvas } from "../canvas/KindCanvas.js";
 import {
   DiagnosticsIcon,
+  DownloadIcon,
   DslIcon,
   ImportIcon,
 } from "./icons.js";
@@ -185,7 +188,7 @@ export function EditorShell({
       <input
         ref={importInputRef}
         type="file"
-        accept=".md,.dsl,.txt,text/markdown,text/plain"
+        accept=".md,.dsl,.txt,.puml,.plantuml,.wsd,text/markdown,text/plain"
         className="hidden"
         data-testid="import-dsl-input"
         onChange={(event) => {
@@ -222,6 +225,21 @@ export function EditorShell({
             <button type="button" className="graphiq-glass-button graphiq-expand-button"
               aria-label="Upload code" onClick={handleImportDslClick}>
               <ImportIcon /><span className="graphiq-button-label">Upload code</span>
+            </button>
+            <button
+              type="button"
+              className="graphiq-glass-button graphiq-expand-button"
+              data-testid="download-diagram-code"
+              aria-label="Download code"
+              onClick={() => {
+                downloadText(
+                  dsl,
+                  diagramCodeFilename(title, kind, dsl),
+                  "text/plain;charset=utf-8",
+                );
+              }}
+            >
+              <DownloadIcon /><span className="graphiq-button-label">Download code</span>
             </button>
             <button
               type="button"

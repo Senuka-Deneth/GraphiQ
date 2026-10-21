@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addElement, emptyModel } from "@graphiq/uml-model";
+import { addElement, emptyModel, type UmlModel } from "@graphiq/uml-model";
 import { layoutDocument } from "./layoutDocument.js";
 import { layoutObject } from "./layoutObject.js";
 import { createClassFixtureModel, layoutClass, measureClassNode } from "./layoutClass.js";
@@ -653,6 +653,112 @@ describe("layoutSequence", () => {
 
     const incremental = await layoutSequence(withNote.value, pinnedOverlay, "incremental");
     expect(incremental.nodes["lifeline-customer"]?.x).toBe(24);
+  });
+
+  it("places timeline notes between messages and pads outer fragment frames", async () => {
+    const model: UmlModel = {
+      id: "markup-layout",
+      kind: "sequence",
+      elements: [
+        { id: "a", elementType: "lifeline", name: "A" },
+        { id: "b", elementType: "lifeline", name: "B" },
+        {
+          id: "note-poll",
+          elementType: "note",
+          name: "daily poll",
+          interactionIndex: 1,
+          notePlacement: "over",
+          noteLifelineIds: ["a"],
+          noteHostFragmentId: "outer",
+          noteHostOperandIndex: 0,
+        },
+        {
+          id: "outer",
+          elementType: "combinedFragment",
+          name: "outer",
+          operator: "alt",
+          interactionIndex: 2,
+          operands: [
+            { guard: "yes", messageIds: ["m1", "m2"] },
+            { guard: "no", messageIds: ["m3"] },
+          ],
+        },
+        {
+          id: "inner",
+          elementType: "combinedFragment",
+          name: "inner",
+          operator: "par",
+          parentId: "outer",
+          hostOperandIndex: 0,
+          interactionIndex: 3,
+          operands: [{ guard: "both", messageIds: ["m1", "m2"] }],
+        },
+      ],
+      relationships: [
+        {
+          id: "m0",
+          relationshipType: "message",
+          sourceId: "a",
+          targetId: "b",
+          messageSort: "synchCall",
+          name: "before",
+          interactionIndex: 0,
+        },
+        {
+          id: "m1",
+          relationshipType: "message",
+          sourceId: "a",
+          targetId: "b",
+          messageSort: "synchCall",
+          name: "one",
+          interactionIndex: 4,
+        },
+        {
+          id: "m2",
+          relationshipType: "message",
+          sourceId: "b",
+          targetId: "a",
+          messageSort: "reply",
+          name: "two",
+          interactionIndex: 5,
+        },
+        {
+          id: "m3",
+          relationshipType: "message",
+          sourceId: "a",
+          targetId: "b",
+          messageSort: "synchCall",
+          name: "three",
+          interactionIndex: 6,
+        },
+      ],
+    };
+    const overlay = await layoutSequence(model, emptyOverlay(), "full");
+    const before = overlay.edges.m0?.waypoints?.[0]?.y;
+    const note = overlay.nodes["note-poll"];
+    const first = overlay.edges.m1?.waypoints?.[0]?.y;
+    const outer = overlay.nodes.outer;
+    const inner = overlay.nodes.inner;
+    expect(before).toBeDefined();
+    expect(note).toBeDefined();
+    expect(first).toBeDefined();
+    expect(outer).toBeDefined();
+    expect(inner).toBeDefined();
+    if (
+      before === undefined ||
+      note === undefined ||
+      first === undefined ||
+      outer === undefined ||
+      inner === undefined
+    ) {
+      throw new Error("expected sequence geometry");
+    }
+    expect(note.y).toBeGreaterThan(before);
+    expect(first).toBeGreaterThan(note.y);
+    expect(outer.x).toBeLessThanOrEqual(inner.x);
+    expect(outer.y).toBeLessThanOrEqual(inner.y);
+    expect(outer.x + outer.width).toBeGreaterThanOrEqual(inner.x + inner.width);
+    expect(outer.y + outer.height).toBeGreaterThanOrEqual(inner.y + inner.height);
   });
 });
 

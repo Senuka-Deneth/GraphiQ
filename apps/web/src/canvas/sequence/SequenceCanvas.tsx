@@ -6,13 +6,100 @@ import { useCanvasMode } from "../canvasMode.js";
 import { DEFAULT_STROKE_WIDTH } from "../canvasDefaults.js";
 import { useDocumentStore, type StencilDropKind } from "../../store/documentStore.js";
 import { DeleteIcon } from "../../chrome/icons.js";
+import { wrapSequenceLabel } from "@graphiq/uml-layout";
 import {
   dashStrokeStyle,
   lifelineDisplayName,
-  lifelineHeadHeight,
   sequenceModelToSvg,
   strokeForDiagnostic,
+  type SequenceLifelineRender,
 } from "./modelToSvg.js";
+
+function LifelineHead({
+  lifeline,
+  selected,
+}: {
+  lifeline: SequenceLifelineRender;
+  selected: boolean;
+}) {
+  const stroke = selected
+    ? "#0f172a"
+    : strokeForDiagnostic(lifeline.diagnosticSeverity) ?? "#334155";
+  const lines = wrapSequenceLabel(lifelineDisplayName(lifeline));
+  if (lifeline.head === "actor") {
+    const center = lifeline.centerX;
+    const top = lifeline.y + 8;
+    return (
+      <g data-head="actor">
+        <rect
+          x={lifeline.x}
+          y={lifeline.y}
+          width={lifeline.width}
+          height={lifeline.headHeight}
+          fill="transparent"
+        />
+        <circle cx={center} cy={top + 8} r={8} fill="#ffffff" stroke={stroke} />
+        <line x1={center} y1={top + 16} x2={center} y2={top + 34} stroke={stroke} />
+        <line x1={center - 12} y1={top + 22} x2={center + 12} y2={top + 22} stroke={stroke} />
+        <line x1={center} y1={top + 34} x2={center - 10} y2={top + 48} stroke={stroke} />
+        <line x1={center} y1={top + 34} x2={center + 10} y2={top + 48} stroke={stroke} />
+        <text
+          x={center}
+          y={lifeline.y + 68}
+          textAnchor="middle"
+          data-testid="lifeline-name"
+          className="fill-slate-900 text-xs"
+        >
+          {lines.map((line, index) => (
+            <tspan key={index} x={center} dy={index === 0 ? 0 : 16}>
+              {line}
+            </tspan>
+          ))}
+        </text>
+      </g>
+    );
+  }
+
+  const stereotype = lifeline.stereotype;
+  const textTop = lifeline.y + (stereotype !== undefined && stereotype.length > 0 ? 30 : 20);
+  return (
+    <g data-head="rectangle" data-stereotype={stereotype}>
+      <rect
+        x={lifeline.x}
+        y={lifeline.y}
+        width={lifeline.width}
+        height={lifeline.headHeight}
+        fill="#ffffff"
+        stroke={stroke}
+        strokeWidth={selected ? 2 : 1}
+        rx={2}
+      />
+      {stereotype !== undefined && stereotype.length > 0 ? (
+        <text
+          x={lifeline.x + lifeline.width / 2}
+          y={lifeline.y + 16}
+          textAnchor="middle"
+          className="fill-slate-600 text-[10px]"
+        >
+          {`«${stereotype}»`}
+        </text>
+      ) : null}
+      <text
+        x={lifeline.x + lifeline.width / 2}
+        y={textTop}
+        textAnchor="middle"
+        data-testid="lifeline-name"
+        className="fill-slate-900 text-xs"
+      >
+        {lines.map((line, index) => (
+          <tspan key={index} x={lifeline.x + lifeline.width / 2} dy={index === 0 ? 0 : 16}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  );
+}
 
 export function SequenceCanvas({
   onSelectedNodeChange,
@@ -221,8 +308,6 @@ export function SequenceCanvas({
     [onSelectedEdgeChange, onSelectedNodeChange],
   );
 
-  const headHeight = lifelineHeadHeight();
-
   return (
     <div
       className={`relative h-full w-full ${isPreview ? "bg-transparent" : "bg-slate-50"}`}
@@ -329,36 +414,17 @@ export function SequenceCanvas({
           >
             <line
               x1={lifeline.centerX}
-              y1={lifeline.y + headHeight}
+              y1={lifeline.y + lifeline.headHeight}
               x2={lifeline.centerX}
               y2={lifeline.y + lifeline.height}
               stroke={strokeForDiagnostic(lifeline.diagnosticSeverity) ?? "#64748b"}
               strokeDasharray="6 4"
               strokeWidth={1}
             />
-            <rect
-              x={lifeline.x}
-              y={lifeline.y}
-              width={lifeline.width}
-              height={headHeight}
-              fill="#ffffff"
-              stroke={
-                selectedLifelineId === lifeline.id
-                  ? "#0f172a"
-                  : strokeForDiagnostic(lifeline.diagnosticSeverity) ?? "#334155"
-              }
-              strokeWidth={selectedLifelineId === lifeline.id ? 2 : 1}
-              rx={2}
+            <LifelineHead
+              lifeline={lifeline}
+              selected={selectedLifelineId === lifeline.id}
             />
-            <text
-              x={lifeline.x + lifeline.width / 2}
-              y={lifeline.y + headHeight / 2 + 4}
-              textAnchor="middle"
-              data-testid="lifeline-name"
-              className="fill-slate-900 text-xs"
-            >
-              {lifelineDisplayName(lifeline)}
-            </text>
           </g>
           );
         })}
@@ -381,12 +447,15 @@ export function SequenceCanvas({
               rx={2}
             />
             <text
-              x={node.x + node.width / 2}
-              y={node.y + node.height / 2 + 4}
-              textAnchor="middle"
+              x={node.x + 8}
+              y={node.y + 16}
               className="fill-amber-950 text-xs"
             >
-              {element.name}
+              {element.name.split("\n").flatMap((line) => wrapSequenceLabel(line)).map((line, index) => (
+                <tspan key={index} x={node.x + 8} dy={index === 0 ? 0 : 16}>
+                  {line}
+                </tspan>
+              ))}
             </text>
           </g>
         ))}
@@ -408,6 +477,8 @@ export function SequenceCanvas({
         {renderable.messages.map((message) => {
           const stroke = strokeForDiagnostic(message.diagnosticSeverity) ?? "#0f172a";
           const dashProps = message.lineStyle === "dash" ? dashStrokeStyle : {};
+          const labelLines = message.label !== undefined ? wrapSequenceLabel(message.label, 32) : [];
+          const labelX = message.selfCall ? message.x1 + 54 : (message.x1 + message.x2) / 2;
           return (
             <g
               key={message.id}
@@ -424,14 +495,18 @@ export function SequenceCanvas({
                 {...dashProps}
               />
               {message.messageSort === "deleteMessage" ? <path d={`M ${message.x2 - 8} ${message.y - 8} l 16 16 M ${message.x2 + 8} ${message.y - 8} l -16 16`} stroke={stroke} strokeWidth="2" /> : null}
-              {message.label !== undefined ? (
+              {labelLines.length > 0 ? (
                 <text
-                  x={message.selfCall ? message.x1 + 54 : (message.x1 + message.x2) / 2}
-                  y={message.y - 6}
+                  x={labelX}
+                  y={message.y - 8 - (labelLines.length - 1) * 14}
                   textAnchor={message.selfCall ? "start" : "middle"}
                   className="fill-slate-700 text-xs"
                 >
-                  {message.label}
+                  {labelLines.map((line, index) => (
+                    <tspan key={index} x={labelX} dy={index === 0 ? 0 : 14}>
+                      {line}
+                    </tspan>
+                  ))}
                 </text>
               ) : null}
             </g>
